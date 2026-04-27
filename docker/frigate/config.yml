@@ -1,0 +1,39 @@
+mqtt:
+  enabled: true
+  host: mosquitto
+  port: 1883
+detectors:
+  cpu1:
+    type: cpu
+    num_threads: 3
+objects:
+  track:
+  - person
+  - car
+  - cat
+  - dog
+  filters:
+    person:
+      min_area: 2000
+      min_score: 0.6
+      threshold: 0.7
+record:
+  enabled: true
+  alerts:
+    retain:
+      days: 14
+  detections:
+    retain:
+      days: 14
+  continuous:
+    days: 0
+  motion:
+    days: 7
+snapshots:
+  enabled: true
+  timestamp: true
+  bounding_box: true
+  retain:
+    default: 14
+cameras: {}
+version: 0.17-0

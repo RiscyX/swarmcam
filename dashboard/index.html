@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SwarmCam</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --border: #2a2d3a;
+      --accent: #4f8ef7;
+      --accent-dim: #1e3a6e;
+      --green: #3ecf8e;
+      --yellow: #f5a623;
+      --red: #e54d4d;
+      --text: #e2e4ec;
+      --muted: #6b7280;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 14px;
+      min-height: 100vh;
+    }
+
+    header {
+      padding: 20px 32px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    header h1 { font-size: 18px; font-weight: 600; letter-spacing: .5px; }
+    header span { color: var(--muted); font-size: 13px; }
+
+    .dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 6px var(--green);
+    }
+
+    main { padding: 32px; max-width: 1100px; margin: 0 auto; }
+
+    /* --- Discovery panel --- */
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 32px;
+    }
+
+    .panel h2 { font-size: 15px; font-weight: 600; margin-bottom: 16px; }
+
+    .controls {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: flex-end;
+    }
+
+    .field { display: flex; flex-direction: column; gap: 6px; }
+    .field label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+
+    input[type="text"], input[type="number"] {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      padding: 8px 12px;
+      font-size: 14px;
+      width: 200px;
+      outline: none;
+      transition: border-color .15s;
+    }
+    input:focus { border-color: var(--accent); }
+
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding-bottom: 2px;
+    }
+    .checkbox-row label { color: var(--text); font-size: 13px; text-transform: none; letter-spacing: 0; }
+    input[type="checkbox"] { accent-color: var(--accent); width: 16px; height: 16px; cursor: pointer; }
+
+    button#scan-btn {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 9px 22px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity .15s;
+      white-space: nowrap;
+    }
+    button#scan-btn:disabled { opacity: .5; cursor: default; }
+    button#scan-btn:hover:not(:disabled) { opacity: .85; }
+
+    /* --- Log --- */
+    #log {
+      margin-top: 16px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      font-size: 12px;
+      color: var(--muted);
+      max-height: 160px;
+      overflow-y: auto;
+      display: none;
+    }
+    #log.active { display: block; }
+    #log .line { padding: 1px 0; }
+    #log .line.found { color: var(--green); }
+    #log .line.warn  { color: var(--yellow); }
+
+    /* --- Camera grid --- */
+    #cameras-section h2 { font-size: 15px; font-weight: 600; margin-bottom: 16px; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 16px;
+    }
+
+    .camera-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      animation: fadein .3s ease;
+    }
+    @keyframes fadein { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; } }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .card-header .name { font-weight: 600; font-size: 15px; }
+    .badge {
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 99px;
+      background: var(--accent-dim);
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .info-row span:last-child { color: var(--text); }
+
+    .battery-bar {
+      height: 6px;
+      border-radius: 99px;
+      background: var(--border);
+      overflow: hidden;
+    }
+    .battery-fill {
+      height: 100%;
+      border-radius: 99px;
+      transition: width .4s ease;
+    }
+
+    .rtsp-box {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-family: monospace;
+      font-size: 11px;
+      color: var(--accent);
+      word-break: break-all;
+      cursor: pointer;
+      transition: border-color .15s;
+      position: relative;
+    }
+    .rtsp-box:hover { border-color: var(--accent); }
+    .rtsp-box::after {
+      content: 'copy';
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 10px;
+      color: var(--muted);
+    }
+
+    .empty {
+      color: var(--muted);
+      text-align: center;
+      padding: 48px 0;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="dot"></div>
+  <h1>SwarmCam</h1>
+  <span>distributed camera swarm</span>
+</header>
+
+<main>
+  <div class="panel">
+    <h2>Discovery</h2>
+    <div class="controls">
+      <div class="field">
+        <label>Subnet</label>
+        <input type="text" id="subnet" placeholder="auto-detect" />
+      </div>
+      <div class="field">
+        <label>Port</label>
+        <input type="number" id="port" value="8080" style="width:90px" />
+      </div>
+      <div class="field">
+        <label>Timeout (s)</label>
+        <input type="number" id="timeout" value="1.0" step="0.5" style="width:90px" />
+      </div>
+      <div class="field">
+        <label>&nbsp;</label>
+        <div class="checkbox-row">
+          <input type="checkbox" id="update-frigate" />
+          <label for="update-frigate">Frigate config frissítése</label>
+        </div>
+      </div>
+      <button id="scan-btn" onclick="startScan()">Scan Network</button>
+    </div>
+    <div id="log"></div>
+  </div>
+
+  <div id="cameras-section">
+    <h2>Cameras <span id="count" style="color:var(--muted);font-weight:400"></span></h2>
+    <div class="grid" id="grid">
+      <div class="empty">Még nem futott le discovery. Kattints a "Scan Network" gombra.</div>
+    </div>
+  </div>
+</main>
+
+<script>
+  const API = 'http://localhost:8000';
+
+  async function startScan() {
+    const btn = document.getElementById('scan-btn');
+    const log = document.getElementById('log');
+    btn.disabled = true;
+    btn.textContent = 'Scanning…';
+    log.innerHTML = '';
+    log.className = 'active';
+
+    const body = {
+      port: parseInt(document.getElementById('port').value),
+      timeout: parseFloat(document.getElementById('timeout').value),
+      update_frigate: document.getElementById('update-frigate').checked,
+    };
+    const subnet = document.getElementById('subnet').value.trim();
+    if (subnet) body.subnet = subnet;
+
+    const resp = await fetch(`${API}/api/discover/stream`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+
+      const parts = buffer.split('\n\n');
+      buffer = parts.pop();
+
+      for (const chunk of parts) {
+        const eventLine = chunk.match(/^event: (.+)$/m)?.[1];
+        const dataLine  = chunk.match(/^data: (.+)$/m)?.[1];
+        if (!dataLine) continue;
+
+        if (eventLine === 'progress') {
+          const text = JSON.parse(dataLine);
+          const div = document.createElement('div');
+          div.className = 'line' + (text.startsWith('[+]') ? ' found' : text.startsWith('[!]') ? ' warn' : '');
+          div.textContent = text;
+          log.appendChild(div);
+          log.scrollTop = log.scrollHeight;
+        }
+
+        if (eventLine === 'result') {
+          renderCameras(JSON.parse(dataLine));
+        }
+
+        if (eventLine === 'done') {
+          btn.disabled = false;
+          btn.textContent = 'Scan Network';
+        }
+      }
+    }
+  }
+
+  function batteryColor(level) {
+    if (level === null) return 'var(--muted)';
+    if (level > 50) return 'var(--green)';
+    if (level > 20) return 'var(--yellow)';
+    return 'var(--red)';
+  }
+
+  function renderCameras(cameras) {
+    const grid = document.getElementById('grid');
+    const count = document.getElementById('count');
+    grid.innerHTML = '';
+
+    if (!cameras.length) {
+      grid.innerHTML = '<div class="empty">Nem találtam egyetlen IP Webcam kamerát sem.</div>';
+      count.textContent = '';
+      return;
+    }
+
+    count.textContent = `(${cameras.length})`;
+
+    for (const cam of cameras) {
+      const batt = cam.battery_level;
+      const color = batteryColor(batt);
+      const res = cam.resolution ? `${cam.resolution[0]}×${cam.resolution[1]}` : '—';
+      const orient = cam.orientation ?? '—';
+      const charging = cam.battery_charging ? ' ⚡' : '';
+
+      grid.insertAdjacentHTML('beforeend', `
+        <div class="camera-card">
+          <div class="card-header">
+            <span class="name">${cam.name}</span>
+            <span class="badge">LIVE</span>
+          </div>
+
+          <div class="info-row"><span>IP</span><span>${cam.ip}:${cam.port}</span></div>
+          <div class="info-row"><span>Felbontás</span><span>${res}</span></div>
+          <div class="info-row"><span>Orientáció</span><span>${orient}</span></div>
+          <div class="info-row">
+            <span>Akkumulátor</span>
+            <span style="color:${color}">${batt !== null ? batt + '%' + charging : '—'}</span>
+          </div>
+
+          ${batt !== null ? `
+          <div>
+            <div class="battery-bar">
+              <div class="battery-fill" style="width:${batt}%;background:${color}"></div>
+            </div>
+          </div>` : ''}
+
+          <div class="rtsp-box" onclick="copyRtsp(this, '${cam.rtsp_url}')">${cam.rtsp_url}</div>
+        </div>
+      `);
+    }
+  }
+
+  function copyRtsp(el, url) {
+    navigator.clipboard.writeText(url);
+    const orig = el.style.borderColor;
+    el.style.borderColor = 'var(--green)';
+    setTimeout(() => el.style.borderColor = orig, 800);
+  }
+
+  // Induláskor betölti az utolsó eredményt
+  fetch(`${API}/api/cameras`)
+    .then(r => r.json())
+    .then(cameras => { if (cameras.length) renderCameras(cameras); })
+    .catch(() => {});
+</script>
+</body>
+</html>
