@@ -1,0 +1,19 @@
+# Docker volumes (runtime data, ne kerüljön gitbe)
+docker/media/
+docker/mosquitto/data/
+docker/mosquitto/log/
+docker/frigate/db/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+.env
+
+# IDE / local tooling
+.idea/
+.vscode/
+.claude/
+*.swp

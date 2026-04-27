@@ -1,0 +1,47 @@
+services:
+  frigate:
+    container_name: frigate
+    image: ghcr.io/blakeblackshear/frigate:stable
+    restart: unless-stopped
+    shm_size: "256mb"
+    volumes:
+      - ./frigate/config.yml:/config/config.yml
+      - frigate_db:/config
+      - ./media:/media/frigate
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - "5000:5000"   # Frigate web UI
+      - "8554:8554"   # RTSP restream
+      - "8555:8555/tcp"
+      - "8555:8555/udp"
+    environment:
+      FRIGATE_RTSP_PASSWORD: ""
+    # GPU / Coral (production NUC – uncomment as needed)
+    # devices:
+    #   - /dev/apex_0:/dev/apex_0      # Coral TPU
+    #   - /dev/dri/renderD128          # Intel iGPU
+    depends_on:
+      - mosquitto
+    networks:
+      - swarmcam
+
+  mosquitto:
+    container_name: mosquitto
+    image: eclipse-mosquitto:2
+    restart: unless-stopped
+    volumes:
+      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf
+      - ./mosquitto/data:/mosquitto/data
+      - ./mosquitto/log:/mosquitto/log
+    ports:
+      - "1883:1883"   # MQTT
+      - "9001:9001"   # MQTT over WebSocket (dashboard)
+    networks:
+      - swarmcam
+
+volumes:
+  frigate_db:
+
+networks:
+  swarmcam:
+    driver: bridge
