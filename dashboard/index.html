@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SwarmCam</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📷</text></svg>">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -20,6 +21,8 @@
       --muted: #6b7280;
     }
 
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
     body {
       background: var(--bg);
       color: var(--text);
@@ -35,7 +38,6 @@
       align-items: center;
       gap: 12px;
     }
-
     header h1 { font-size: 18px; font-weight: 600; letter-spacing: .5px; }
     header span { color: var(--muted); font-size: 13px; }
 
@@ -47,17 +49,34 @@
 
     main { padding: 32px; max-width: 1100px; margin: 0 auto; }
 
-    /* --- Discovery panel --- */
+    /* --- Panel --- */
     .panel {
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 12px;
       padding: 24px;
-      margin-bottom: 32px;
+      margin-bottom: 24px;
     }
 
-    .panel h2 { font-size: 15px; font-weight: 600; margin-bottom: 16px; }
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      user-select: none;
+    }
+    .panel-header h2 { font-size: 15px; font-weight: 600; }
+    .panel-header .chevron {
+      color: var(--muted);
+      font-size: 12px;
+      transition: transform .2s;
+    }
+    .panel-header .chevron.open { transform: rotate(180deg); }
 
+    .panel-body { margin-top: 20px; }
+    .panel-body.hidden { display: none; }
+
+    /* --- Controls (discovery) --- */
     .controls {
       display: flex;
       gap: 12px;
@@ -68,18 +87,20 @@
     .field { display: flex; flex-direction: column; gap: 6px; }
     .field label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
 
-    input[type="text"], input[type="number"] {
+    input[type="text"], input[type="number"], select {
       background: var(--bg);
       border: 1px solid var(--border);
       border-radius: 8px;
       color: var(--text);
       padding: 8px 12px;
       font-size: 14px;
-      width: 200px;
       outline: none;
       transition: border-color .15s;
     }
-    input:focus { border-color: var(--accent); }
+    input[type="text"]   { width: 200px; }
+    input[type="number"] { width: 100px; }
+    select { width: 180px; cursor: pointer; }
+    input:focus, select:focus { border-color: var(--accent); }
 
     .checkbox-row {
       display: flex;
@@ -90,9 +111,67 @@
     .checkbox-row label { color: var(--text); font-size: 13px; text-transform: none; letter-spacing: 0; }
     input[type="checkbox"] { accent-color: var(--accent); width: 16px; height: 16px; cursor: pointer; }
 
-    button#scan-btn {
-      background: var(--accent);
-      color: #fff;
+    /* --- Settings grid --- */
+    .settings-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 24px;
+    }
+
+    .settings-section { display: flex; flex-direction: column; gap: 12px; }
+    .settings-section h3 {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .6px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* Radio cards (decoder) */
+    .radio-group { display: flex; flex-wrap: wrap; gap: 8px; }
+    .radio-card {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 14px;
+      cursor: pointer;
+      transition: border-color .15s;
+      font-size: 13px;
+    }
+    .radio-card:has(input:checked) {
+      border-color: var(--accent);
+      background: var(--accent-dim);
+    }
+    .radio-card input { accent-color: var(--accent); }
+
+    /* Object toggles */
+    .object-group { display: flex; flex-wrap: wrap; gap: 8px; }
+    .obj-toggle {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px 12px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: border-color .15s;
+    }
+    .obj-toggle:has(input:checked) {
+      border-color: var(--accent);
+      background: var(--accent-dim);
+    }
+
+    .settings-row { display: flex; gap: 12px; flex-wrap: wrap; }
+
+    /* --- Buttons --- */
+    .btn {
       border: none;
       border-radius: 8px;
       padding: 9px 22px;
@@ -102,8 +181,26 @@
       transition: opacity .15s;
       white-space: nowrap;
     }
-    button#scan-btn:disabled { opacity: .5; cursor: default; }
-    button#scan-btn:hover:not(:disabled) { opacity: .85; }
+    .btn:disabled { opacity: .5; cursor: default; }
+    .btn:hover:not(:disabled) { opacity: .85; }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-ghost {
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid var(--border);
+    }
+
+    .save-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+    }
+    .save-status { font-size: 13px; }
+    .save-status.ok   { color: var(--green); }
+    .save-status.err  { color: var(--red); }
 
     /* --- Log --- */
     #log {
@@ -145,120 +242,391 @@
     }
     @keyframes fadein { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; } }
 
-    .card-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
+    .card-header { display: flex; align-items: center; justify-content: space-between; }
     .card-header .name { font-weight: 600; font-size: 15px; }
     .badge {
-      font-size: 11px;
-      padding: 3px 8px;
-      border-radius: 99px;
-      background: var(--accent-dim);
-      color: var(--accent);
-      font-weight: 600;
+      font-size: 11px; padding: 3px 8px; border-radius: 99px;
+      background: var(--accent-dim); color: var(--accent); font-weight: 600;
     }
 
     .info-row {
-      display: flex;
-      justify-content: space-between;
-      color: var(--muted);
-      font-size: 13px;
+      display: flex; justify-content: space-between;
+      color: var(--muted); font-size: 13px;
     }
     .info-row span:last-child { color: var(--text); }
 
-    .battery-bar {
-      height: 6px;
-      border-radius: 99px;
-      background: var(--border);
-      overflow: hidden;
-    }
-    .battery-fill {
-      height: 100%;
-      border-radius: 99px;
-      transition: width .4s ease;
-    }
+    .battery-bar { height: 6px; border-radius: 99px; background: var(--border); overflow: hidden; }
+    .battery-fill { height: 100%; border-radius: 99px; transition: width .4s ease; }
 
     .rtsp-box {
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 8px 10px;
-      font-family: monospace;
-      font-size: 11px;
-      color: var(--accent);
-      word-break: break-all;
-      cursor: pointer;
-      transition: border-color .15s;
-      position: relative;
+      background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+      padding: 8px 10px; font-family: monospace; font-size: 11px; color: var(--accent);
+      word-break: break-all; cursor: pointer; transition: border-color .15s; position: relative;
     }
     .rtsp-box:hover { border-color: var(--accent); }
     .rtsp-box::after {
-      content: 'copy';
-      position: absolute;
-      right: 8px;
-      top: 50%;
-      transform: translateY(-50%);
-      font-size: 10px;
-      color: var(--muted);
+      content: 'copy'; position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+      font-size: 10px; color: var(--muted);
     }
 
-    .empty {
-      color: var(--muted);
-      text-align: center;
-      padding: 48px 0;
-      font-size: 13px;
+    .empty { color: var(--muted); text-align: center; padding: 48px 0; font-size: 13px; }
+
+    /* --- Login overlay --- */
+    #login-overlay {
+      position: fixed; inset: 0;
+      background: rgba(15,17,23,0.97);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 1000;
+    }
+    #login-overlay.hidden { display: none; }
+    .login-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 40px;
+      width: 100%; max-width: 360px;
+      display: flex; flex-direction: column; gap: 20px;
+    }
+    .login-card h2 { font-size: 20px; font-weight: 700; }
+    .login-card .field input { width: 100%; }
+    .login-error { color: var(--red); font-size: 13px; min-height: 18px; }
+    .login-hint { color: var(--muted); font-size: 12px; line-height: 1.5; }
+
+    /* --- Snapshot --- */
+    .cam-snapshot {
+      width: 100%; aspect-ratio: 16/9;
+      border-radius: 8px; object-fit: cover;
+      background: #0a0c14; display: block;
+    }
+    .cam-snapshot-wrap { position: relative; }
+    .cam-snapshot-wrap .snap-offline {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: #0a0c14; border-radius: 8px;
+      color: var(--muted); font-size: 12px;
     }
   </style>
 </head>
 <body>
 
+<!-- Login overlay -->
+<div id="login-overlay">
+  <div class="login-card">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="dot"></div>
+      <h2>SwarmCam</h2>
+    </div>
+    <div class="field">
+      <label>Felhasználónév</label>
+      <input type="text" id="login-user" autocomplete="username" placeholder="admin" />
+    </div>
+    <div class="field">
+      <label>Jelszó</label>
+      <input type="password" id="login-pass" autocomplete="current-password" />
+    </div>
+    <button class="btn btn-primary" id="login-btn" onclick="doLogin()">Bejelentkezés</button>
+    <div class="login-error" id="login-error"></div>
+    <p class="login-hint">A hitelesítési adatok a Frigate NVR rendszerből származnak.<br>Első bejelentkezés előtt hozz létre felhasználót a Frigate UI-ban (<code>http://localhost:5000</code>).</p>
+  </div>
+</div>
+
 <header>
   <div class="dot"></div>
   <h1>SwarmCam</h1>
   <span>distributed camera swarm</span>
+  <button class="btn btn-ghost" id="logout-btn" onclick="logout()" style="margin-left:auto;font-size:12px;padding:6px 14px;display:none">Kijelentkezés</button>
 </header>
 
 <main>
+
+  <!-- Discovery -->
   <div class="panel">
-    <h2>Discovery</h2>
-    <div class="controls">
-      <div class="field">
-        <label>Subnet</label>
-        <input type="text" id="subnet" placeholder="auto-detect" />
-      </div>
-      <div class="field">
-        <label>Port</label>
-        <input type="number" id="port" value="8080" style="width:90px" />
-      </div>
-      <div class="field">
-        <label>Timeout (s)</label>
-        <input type="number" id="timeout" value="1.0" step="0.5" style="width:90px" />
-      </div>
-      <div class="field">
-        <label>&nbsp;</label>
-        <div class="checkbox-row">
-          <input type="checkbox" id="update-frigate" />
-          <label for="update-frigate">Frigate config frissítése</label>
-        </div>
-      </div>
-      <button id="scan-btn" onclick="startScan()">Scan Network</button>
+    <div class="panel-header" onclick="togglePanel('discovery-body', this)">
+      <h2>Discovery</h2>
+      <span class="chevron open">&#9660;</span>
     </div>
-    <div id="log"></div>
+    <div class="panel-body" id="discovery-body">
+      <div class="controls">
+        <div class="field">
+          <label>Hálózat</label>
+          <select id="subnet-select" style="min-width:220px">
+            <option value="">auto-detect</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Port</label>
+          <input type="number" id="port" value="8080" style="width:90px" />
+        </div>
+        <div class="field">
+          <label>Timeout (s)</label>
+          <input type="number" id="timeout" value="1.0" step="0.5" style="width:90px" />
+        </div>
+        <div class="field">
+          <label>&nbsp;</label>
+          <div class="checkbox-row">
+            <input type="checkbox" id="update-frigate" />
+            <label for="update-frigate">Frigate config frissítése</label>
+          </div>
+        </div>
+        <button class="btn btn-primary" id="scan-btn" onclick="startScan()">Scan Network</button>
+      <button class="btn btn-ghost" id="reset-btn" onclick="resetCameras()" title="Törli az összes kamerát a Frigate configból és restartol">Reset Cameras</button>
+      <button class="btn btn-ghost" id="rec-del-btn" onclick="clearRecordings()" title="Törli az összes felvételt és clipet" style="color:var(--red);border-color:var(--red)">Delete Recordings</button>
+      </div>
+      <div id="log"></div>
+    </div>
   </div>
 
+  <!-- Settings -->
+  <div class="panel">
+    <div class="panel-header" onclick="togglePanel('settings-body', this)">
+      <h2>Settings</h2>
+      <span class="chevron">&#9660;</span>
+    </div>
+    <div class="panel-body hidden" id="settings-body">
+      <div class="settings-grid">
+
+        <!-- Hardware -->
+        <div class="settings-section">
+          <h3>Hardware dekóder</h3>
+          <div class="radio-group">
+            <label class="radio-card">
+              <input type="radio" name="decoder" value="cpu" /> CPU
+            </label>
+            <label class="radio-card" title="GPU videó dekódolás (NVDEC) + CPU AI inferencia">
+              <input type="radio" name="decoder" value="nvidia" /> NVIDIA (NVDEC)
+            </label>
+            <label class="radio-card">
+              <input type="radio" name="decoder" value="intel" /> Intel iGPU
+            </label>
+            <label class="radio-card">
+              <input type="radio" name="decoder" value="coral" /> Coral TPU
+            </label>
+          </div>
+        </div>
+
+        <!-- Detection -->
+        <div class="settings-section">
+          <h3>Detekció</h3>
+          <div class="settings-row">
+            <div class="field">
+              <label>FPS</label>
+              <select id="det-fps">
+                <option value="1">1 fps</option>
+                <option value="2">2 fps</option>
+                <option value="5">5 fps</option>
+                <option value="10" selected>10 fps</option>
+                <option value="15">15 fps</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Felbontás</label>
+              <select id="det-res">
+                <option value="640x360">640 × 360</option>
+                <option value="1280x720">1280 × 720</option>
+                <option value="1920x1080" selected>1920 × 1080</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stream -->
+        <div class="settings-section">
+          <h3>Stream transport</h3>
+          <div class="radio-group">
+            <label class="radio-card">
+              <input type="radio" name="rtsp" value="tcp" checked /> TCP
+            </label>
+            <label class="radio-card">
+              <input type="radio" name="rtsp" value="udp" /> UDP
+            </label>
+          </div>
+        </div>
+
+        <!-- Objects -->
+        <div class="settings-section">
+          <h3>Követett objektumok</h3>
+          <div class="object-group">
+            <label class="obj-toggle">
+              <input type="checkbox" name="obj" value="person" checked /> person
+            </label>
+            <label class="obj-toggle">
+              <input type="checkbox" name="obj" value="car" checked /> car
+            </label>
+            <label class="obj-toggle">
+              <input type="checkbox" name="obj" value="cat" /> cat
+            </label>
+            <label class="obj-toggle">
+              <input type="checkbox" name="obj" value="dog" /> dog
+            </label>
+            <label class="obj-toggle">
+              <input type="checkbox" name="obj" value="bicycle" /> bicycle
+            </label>
+            <label class="obj-toggle">
+              <input type="checkbox" name="obj" value="motorcycle" /> motorcycle
+            </label>
+          </div>
+        </div>
+
+        <!-- Recording -->
+        <div class="settings-section">
+          <h3>Felvétel megőrzés</h3>
+          <div class="settings-row">
+            <div class="field">
+              <label>Mozgás (nap)</label>
+              <input type="number" id="rec-motion" value="7" min="1" max="90" />
+            </div>
+            <div class="field">
+              <label>Esemény (nap)</label>
+              <input type="number" id="rec-event" value="14" min="1" max="90" />
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="save-row">
+        <button class="btn btn-primary" id="save-btn" onclick="saveSettings()">Mentés &amp; Alkalmazás</button>
+        <button class="btn btn-ghost" onclick="loadSettings()">Visszaállítás</button>
+        <span class="save-status" id="save-status"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cameras -->
   <div id="cameras-section">
     <h2>Cameras <span id="count" style="color:var(--muted);font-weight:400"></span></h2>
     <div class="grid" id="grid">
       <div class="empty">Még nem futott le discovery. Kattints a "Scan Network" gombra.</div>
     </div>
   </div>
+
 </main>
 
 <script>
   const API = 'http://localhost:8000';
+  const TOKEN_KEY = 'swarmcam_jwt';
+  const _snapIntervals = {};
 
+  // ---------------------------------------------------------------------------
+  // Auth
+  // ---------------------------------------------------------------------------
+  function getToken() { return localStorage.getItem(TOKEN_KEY); }
+  function setToken(t) { localStorage.setItem(TOKEN_KEY, t); }
+  function clearToken() { localStorage.removeItem(TOKEN_KEY); }
+
+  function authHeaders(extra = {}) {
+    const t = getToken();
+    return t ? { 'Authorization': `Bearer ${t}`, ...extra } : extra;
+  }
+
+  function showLogin() {
+    document.getElementById('login-overlay').classList.remove('hidden');
+    document.getElementById('logout-btn').style.display = 'none';
+  }
+  function hideLogin() {
+    document.getElementById('login-overlay').classList.add('hidden');
+    document.getElementById('logout-btn').style.display = '';
+  }
+
+  async function doLogin() {
+    const btn = document.getElementById('login-btn');
+    const err = document.getElementById('login-error');
+    btn.disabled = true;
+    btn.textContent = 'Bejelentkezés...';
+    err.textContent = '';
+    try {
+      const r = await fetch(`${API}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user: document.getElementById('login-user').value,
+          password: document.getElementById('login-pass').value,
+        }),
+      });
+      const data = await r.json();
+      if (r.ok && data.token) {
+        setToken(data.token);
+        hideLogin();
+        initApp();
+      } else {
+        err.textContent = data.message || data.detail || 'Hibás felhasználónév vagy jelszó';
+      }
+    } catch (e) {
+      err.textContent = 'Kapcsolódási hiba: ' + e.message;
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Bejelentkezés';
+    }
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !document.getElementById('login-overlay').classList.contains('hidden')) {
+      doLogin();
+    }
+  });
+
+  function logout() {
+    clearToken();
+    location.reload();
+  }
+
+  async function checkAuth() {
+    const t = getToken();
+    if (!t) { showLogin(); return; }
+    try {
+      const r = await fetch(`${API}/api/auth/me`, { headers: authHeaders() });
+      if (r.ok) { hideLogin(); initApp(); }
+      else if (r.status === 401) { clearToken(); showLogin(); }
+      else { showLogin(); }
+    } catch {
+      // API nem elérhető – login nélkül is engedjük (dev mode)
+      hideLogin(); initApp();
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Panel toggle
+  // ---------------------------------------------------------------------------
+  function togglePanel(bodyId, header) {
+    const body = document.getElementById(bodyId);
+    const chevron = header.querySelector('.chevron');
+    body.classList.toggle('hidden');
+    chevron.classList.toggle('open');
+  }
+
+  // ---------------------------------------------------------------------------
+  // Discovery
+  // ---------------------------------------------------------------------------
+  async function clearRecordings() {
+    const btn = document.getElementById('rec-del-btn');
+    btn.disabled = true;
+    btn.textContent = 'Deleting…';
+    try {
+      const r = await fetch(`${API}/api/recordings`, { method: 'DELETE', headers: authHeaders() });
+      const res = await r.json();
+      alert(`Törölve: ${res.cleared_mb} MB`);
+    } catch (e) {
+      alert('Hiba: ' + e.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Delete Recordings';
+    }
+  }
+
+  async function resetCameras() {
+    const btn = document.getElementById('reset-btn');
+    btn.disabled = true;
+    btn.textContent = 'Resetting…';
+    try {
+      await fetch(`${API}/api/cameras/reset`, { method: 'POST', headers: authHeaders() });
+      renderCameras([]);
+    } catch(e) {
+      alert('Hiba: ' + e.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Reset Cameras';
+    }
+  }
   async function startScan() {
     const btn = document.getElementById('scan-btn');
     const log = document.getElementById('log');
@@ -272,24 +640,23 @@
       timeout: parseFloat(document.getElementById('timeout').value),
       update_frigate: document.getElementById('update-frigate').checked,
     };
-    const subnet = document.getElementById('subnet').value.trim();
+    const subnet = document.getElementById('subnet-select').value.trim();
     if (subnet) body.subnet = subnet;
 
     const resp = await fetch(`${API}/api/discover/stream`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(body),
     });
 
     const reader = resp.body.getReader();
-    const decoder = new TextDecoder();
+    const dec = new TextDecoder();
     let buffer = '';
 
     while (true) {
       const { value, done } = await reader.read();
       if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-
+      buffer += dec.decode(value, { stream: true });
       const parts = buffer.split('\n\n');
       buffer = parts.pop();
 
@@ -306,11 +673,10 @@
           log.appendChild(div);
           log.scrollTop = log.scrollHeight;
         }
-
         if (eventLine === 'result') {
-          renderCameras(JSON.parse(dataLine));
+          const found = JSON.parse(dataLine);
+          if (found.length > 0) renderCameras(found);
         }
-
         if (eventLine === 'done') {
           btn.disabled = false;
           btn.textContent = 'Scan Network';
@@ -319,6 +685,93 @@
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // Settings
+  // ---------------------------------------------------------------------------
+  async function loadSettings() {
+    try {
+      const r = await fetch(`${API}/api/config`, { headers: authHeaders() });
+      if (!r.ok) return;
+      const s = await r.json();
+
+      // Decoder
+      document.querySelectorAll('input[name="decoder"]').forEach(el => {
+        el.checked = el.value === s.decoder;
+      });
+
+      // FPS
+      document.getElementById('det-fps').value = s.detection_fps;
+
+      // Resolution
+      document.getElementById('det-res').value = `${s.detection_width}x${s.detection_height}`;
+
+      // RTSP transport
+      document.querySelectorAll('input[name="rtsp"]').forEach(el => {
+        el.checked = el.value === s.rtsp_transport;
+      });
+
+      // Objects
+      document.querySelectorAll('input[name="obj"]').forEach(el => {
+        el.checked = s.objects.includes(el.value);
+      });
+
+      // Record
+      document.getElementById('rec-motion').value = s.record_motion_days;
+      document.getElementById('rec-event').value  = s.record_event_days;
+
+    } catch (e) {
+      console.warn('Config betöltés sikertelen:', e);
+    }
+  }
+
+  async function saveSettings() {
+    const btn = document.getElementById('save-btn');
+    const status = document.getElementById('save-status');
+    btn.disabled = true;
+    btn.textContent = 'Mentés…';
+    status.textContent = '';
+    status.className = 'save-status';
+
+    const [w, h] = document.getElementById('det-res').value.split('x').map(Number);
+
+    const body = {
+      decoder:            document.querySelector('input[name="decoder"]:checked')?.value ?? 'cpu',
+      detection_fps:      parseInt(document.getElementById('det-fps').value),
+      detection_width:    w,
+      detection_height:   h,
+      rtsp_transport:     document.querySelector('input[name="rtsp"]:checked')?.value ?? 'tcp',
+      record_motion_days: parseInt(document.getElementById('rec-motion').value),
+      record_event_days:  parseInt(document.getElementById('rec-event').value),
+      objects: [...document.querySelectorAll('input[name="obj"]:checked')].map(e => e.value),
+    };
+
+    try {
+      const r = await fetch(`${API}/api/config`, {
+        method: 'POST',
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify(body),
+      });
+      const res = await r.json();
+      if (res.decoder_changed) {
+        status.textContent = 'Mentve – stack újraindítva';
+      } else if (res.frigate_restarted) {
+        status.textContent = 'Mentve – Frigate újraindítva';
+      } else {
+        status.textContent = 'Mentve – Frigate nem fut, konfig alkalmazva indításkor';
+      }
+      status.className = 'save-status ok';
+    } catch (e) {
+      status.textContent = 'Hiba: ' + e.message;
+      status.className = 'save-status err';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Mentés & Alkalmazás';
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Cameras
+  // ---------------------------------------------------------------------------
   function batteryColor(level) {
     if (level === null) return 'var(--muted)';
     if (level > 50) return 'var(--green)';
@@ -327,7 +780,7 @@
   }
 
   function renderCameras(cameras) {
-    const grid = document.getElementById('grid');
+    const grid  = document.getElementById('grid');
     const count = document.getElementById('count');
     grid.innerHTML = '';
 
@@ -338,54 +791,207 @@
     }
 
     count.textContent = `(${cameras.length})`;
-
     for (const cam of cameras) {
-      const batt = cam.battery_level;
-      const color = batteryColor(batt);
-      const res = cam.resolution ? `${cam.resolution[0]}×${cam.resolution[1]}` : '—';
-      const orient = cam.orientation ?? '—';
+      const batt     = cam.battery_level;
+      const color    = batteryColor(batt);
+      const res      = cam.resolution ? `${cam.resolution[0]}×${cam.resolution[1]}` : '—';
+      const orient   = cam.orientation ?? '—';
       const charging = cam.battery_charging ? ' ⚡' : '';
+      const temp     = cam.battery_temp_c != null ? `${cam.battery_temp_c}°C` : '—';
+      const space    = cam.free_space_gb  != null ? `${cam.free_space_gb} GB` : '—';
+      const conns    = cam.video_connections ?? 0;
+      const nv       = cam.night_vision ? 'be' : 'ki';
+      const quality  = cam.quality != null ? cam.quality + '%' : '—';
 
+      const safeIp = cam.ip.replace(/\./g, '_');
       grid.insertAdjacentHTML('beforeend', `
-        <div class="camera-card">
+        <div class="camera-card" id="card-${safeIp}">
+          <div class="cam-snapshot-wrap">
+            <img id="snap-${safeIp}" class="cam-snapshot" alt="Camera view"
+                 onerror="this.style.visibility='hidden';document.getElementById('snap-off-${safeIp}').style.display='flex'"
+                 onload="this.style.visibility='';document.getElementById('snap-off-${safeIp}').style.display='none'" />
+            <div class="snap-offline" id="snap-off-${safeIp}">Nincs kép</div>
+          </div>
           <div class="card-header">
             <span class="name">${cam.name}</span>
-            <span class="badge">LIVE</span>
+            <span class="badge" id="badge-${safeIp}">${conns > 0 ? 'LIVE ●' : 'IDLE'}</span>
           </div>
-
           <div class="info-row"><span>IP</span><span>${cam.ip}:${cam.port}</span></div>
           <div class="info-row"><span>Felbontás</span><span>${res}</span></div>
           <div class="info-row"><span>Orientáció</span><span>${orient}</span></div>
+          <div class="info-row"><span>Minőség</span><span id="quality-${safeIp}">${quality}</span></div>
+          <div class="info-row"><span>Éjjellátó</span><span id="nv-${safeIp}">${nv}</span></div>
+          <div class="info-row"><span>Szabad tárhely</span><span id="space-${safeIp}">${space}</span></div>
           <div class="info-row">
             <span>Akkumulátor</span>
-            <span style="color:${color}">${batt !== null ? batt + '%' + charging : '—'}</span>
+            <span id="batt-${safeIp}" style="color:${color}">${batt != null ? batt + '%' + charging : '—'}</span>
           </div>
-
-          ${batt !== null ? `
-          <div>
-            <div class="battery-bar">
-              <div class="battery-fill" style="width:${batt}%;background:${color}"></div>
-            </div>
-          </div>` : ''}
-
+          <div><div class="battery-bar">
+            <div class="battery-fill" id="battbar-${safeIp}" style="width:${batt ?? 0}%;background:${color}"></div>
+          </div></div>
+          <div class="info-row"><span>Hőmérséklet</span><span id="temp-${safeIp}">${temp}</span></div>
           <div class="rtsp-box" onclick="copyRtsp(this, '${cam.rtsp_url}')">${cam.rtsp_url}</div>
         </div>
       `);
+      startSnapshot(cam);
     }
   }
 
   function copyRtsp(el, url) {
     navigator.clipboard.writeText(url);
-    const orig = el.style.borderColor;
     el.style.borderColor = 'var(--green)';
-    setTimeout(() => el.style.borderColor = orig, 800);
+    setTimeout(() => el.style.borderColor = '', 800);
   }
 
-  // Induláskor betölti az utolsó eredményt
-  fetch(`${API}/api/cameras`)
-    .then(r => r.json())
-    .then(cameras => { if (cameras.length) renderCameras(cameras); })
-    .catch(() => {});
+  // ---------------------------------------------------------------------------
+  // System capabilities → GPU opciók grayout
+  // ---------------------------------------------------------------------------
+  async function checkSystem() {
+    try {
+      const r = await fetch(`${API}/api/system`, { headers: authHeaders() });
+      const sys = await r.json();
+
+      const nvidiaCards = document.querySelectorAll('input[name="decoder"][value="nvidia"]');
+      const intelCards  = document.querySelectorAll('input[name="decoder"][value="intel"]');
+
+      nvidiaCards.forEach(el => {
+        const card = el.closest('.radio-card');
+        if (!sys.nvidia_docker) {
+          el.disabled = true;
+          card.style.opacity = '.4';
+          card.title = sys.nvidia_gpu
+            ? 'GPU észlelve, de nvidia-container-toolkit nincs telepítve'
+            : 'Nem található NVIDIA GPU';
+        }
+      });
+
+      intelCards.forEach(el => {
+        const card = el.closest('.radio-card');
+        if (!sys.intel_gpu) {
+          el.disabled = true;
+          card.style.opacity = '.4';
+          card.title = 'Intel iGPU (/dev/dri/renderD128) nem elérhető';
+        }
+      });
+    } catch (e) {
+      console.warn('System check sikertelen:', e);
+    }
+  }
+
+  async function loadNetworks() {
+    try {
+      const r = await fetch(`${API}/api/networks`, { headers: authHeaders() });
+      const nets = await r.json();
+      const sel = document.getElementById('subnet-select');
+      nets.forEach(n => {
+        const opt = document.createElement('option');
+        opt.value = n.subnet;
+        opt.textContent = `${n.iface}  ${n.ip}  (${n.subnet})`;
+        sel.appendChild(opt);
+      });
+      if (nets.length === 1) sel.value = nets[0].subnet;
+    } catch (e) {
+      console.warn('Hálózatok betöltése sikertelen:', e);
+    }
+  }
+
+  function updateCameraHealth(cameras) {
+    const grid = document.getElementById('grid');
+    const isEmpty = grid && grid.querySelector('.empty');
+    // Ha még nincsenek kártyák, hozzuk létre őket a health adatokból
+    if (grid && (isEmpty || !grid.querySelector('.camera-card'))) {
+      renderCameras(cameras.map(c => ({
+        ...c,
+        rtsp_url: c.rtsp_url || `rtsp://${c.ip}:${c.port || 8080}/h264_ulaw.sdp`,
+        resolution: null, orientation: null,
+      })));
+    }
+    for (const cam of cameras) {
+      const safeIp = cam.ip.replace(/\./g, '_');
+      const card = document.getElementById(`card-${safeIp}`);
+      if (!card) continue;
+
+      const batt     = cam.battery_level;
+      const color    = batteryColor(batt);
+      const charging = cam.battery_charging ? ' ⚡' : '';
+      const temp     = cam.battery_temp_c != null ? `${cam.battery_temp_c}°C` : '—';
+      const space    = cam.free_space_gb  != null ? `${cam.free_space_gb} GB` : '—';
+      const conns    = cam.video_connections ?? 0;
+      const nv       = cam.night_vision ? 'be' : 'ki';
+      const quality  = cam.quality != null ? cam.quality + '%' : '—';
+
+      const badge = document.getElementById(`badge-${safeIp}`);
+      if (badge) {
+        if (!cam.online) {
+          badge.textContent = 'OFFLINE';
+          badge.style.background = 'var(--red)';
+          card.style.opacity = '.5';
+        } else {
+          badge.textContent = conns > 0 ? 'LIVE ●' : 'IDLE';
+          badge.style.background = '';
+          card.style.opacity = '';
+        }
+      }
+
+      const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+      set(`quality-${safeIp}`, quality);
+      set(`nv-${safeIp}`, nv);
+      set(`space-${safeIp}`, space);
+      set(`temp-${safeIp}`, temp);
+
+      const battEl = document.getElementById(`batt-${safeIp}`);
+      if (battEl) {
+        battEl.textContent = batt != null ? batt + '%' + charging : '—';
+        battEl.style.color = color;
+      }
+      const barEl = document.getElementById(`battbar-${safeIp}`);
+      if (barEl) {
+        barEl.style.width   = (batt ?? 0) + '%';
+        barEl.style.background = color;
+      }
+    }
+  }
+
+  function connectHealthWS() {
+    const ws = new WebSocket(`ws://localhost:8000/ws/cameras`);
+    ws.onmessage = e => {
+      const msg = JSON.parse(e.data);
+      if (msg.type === 'status') updateCameraHealth(msg.cameras);
+    };
+    ws.onclose = () => setTimeout(connectHealthWS, 5000);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Snapshot
+  // ---------------------------------------------------------------------------
+  function startSnapshot(cam) {
+    const safeIp = cam.ip.replace(/\./g, '_');
+    const imgId = `snap-${safeIp}`;
+    const refresh = () => {
+      const el = document.getElementById(imgId);
+      if (el) el.src = `${API}/api/cameras/${cam.name}/snapshot?t=${Date.now()}`;
+    };
+    refresh();
+    clearInterval(_snapIntervals[safeIp]);
+    _snapIntervals[safeIp] = setInterval(refresh, 3000);
+  }
+
+  // ---------------------------------------------------------------------------
+  // App init (called after auth)
+  // ---------------------------------------------------------------------------
+  function initApp() {
+    fetch(`${API}/api/cameras`, { headers: authHeaders() })
+      .then(r => r.json())
+      .then(cameras => { if (cameras.length) renderCameras(cameras); })
+      .catch(() => {});
+    loadSettings();
+    checkSystem();
+    loadNetworks();
+    connectHealthWS();
+  }
+
+  // Induláskor auth ellenőrzés
+  checkAuth();
 </script>
 </body>
 </html>
