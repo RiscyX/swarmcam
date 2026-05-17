@@ -19,19 +19,19 @@ _PLACEHOLDER_GIF = (
 async def get_recording_events(
     camera: Optional[str] = None,
     label: Optional[str] = None,
-    start_time: Optional[float] = None,
-    end_time: Optional[float] = None,
+    after: Optional[float] = None,
+    before: Optional[float] = None,
     limit: int = 50,
 ):
-    params: dict = {"limit": limit, "has_clip": "true"}
+    params: dict = {"limit": limit, "has_clip": 1}
     if camera:
         params["camera"] = camera
     if label:
         params["label"] = label
-    if start_time:
-        params["after"] = start_time
-    if end_time:
-        params["before"] = end_time
+    if after:
+        params["after"] = after
+    if before:
+        params["before"] = before
 
     try:
         r = await frigate_get("/api/events", params=params)

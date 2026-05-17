@@ -1,5 +1,6 @@
 function startSnapshot(cam) {
   const safeIp = cam.ip.replace(/\./g, '_');
+  _streamMode[safeIp] = 'snap';
   const refresh = () => {
     const el = document.getElementById(`snap-${safeIp}`);
     if (el) el.src = `${API}/api/cameras/${cam.name}/snapshot?t=${Date.now()}`;

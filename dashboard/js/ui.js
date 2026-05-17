@@ -6,6 +6,8 @@ function showSection(name) {
   if (name === 'health' && Object.keys(_healthData).length) {
     updateHealthTable(Object.values(_healthData));
   }
+  if (name === 'events')     searchEvents();
+  if (name === 'recordings') searchRecordings();
 }
 
 function tickClock() {

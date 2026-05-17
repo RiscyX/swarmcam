@@ -26,27 +26,18 @@ function renderLiveFeed() {
     return;
   }
   feed.innerHTML = _liveEvents.map(e => {
-    const ts = e.timestamp ? new Date(e.timestamp * 1000).toLocaleTimeString('hu-HU') : '';
-    const cam = e.camera || '—';
-    const label = e.label || '—';
-    const score = e.score != null ? Math.round(e.score * 100) + '%' : '';
-    const thumb = e.id ? `<img class="ev-thumb" src="${API}/api/events/${e.id}/thumbnail" onerror="this.style.display='none'">` : '';
-    return `<div class="event-card">
-      ${thumb}
-      <div class="ev-info">
-        <span class="ev-label">${label}</span>
-        <span class="ev-cam">${cam}</span>
-        ${score ? `<span class="ev-score">${score}</span>` : ''}
-        ${ts ? `<span class="ev-ts">${ts}</span>` : ''}
-      </div>
-    </div>`;
+    const ts    = e.timestamp ? new Date(e.timestamp * 1000).toLocaleTimeString('hu-HU') : '';
+    const cam   = e.camera || '—';
+    const label = e.label  || '—';
+    const score = e.score  != null ? Math.round(e.score * 100) + '%' : '';
+    return eventCardHTML(e.id, label, cam, score, ts);
   }).join('');
 }
 
 async function searchEvents() {
-  const camera = document.getElementById('ev-cam-select')?.value || '';
+  const camera = document.getElementById('ev-cam-select')?.value  || '';
   const label  = document.getElementById('ev-label-select')?.value || '';
-  const date   = document.getElementById('ev-date')?.value || '';
+  const date   = document.getElementById('ev-date')?.value        || '';
   const listEl = document.getElementById('event-list');
   if (!listEl) return;
 
@@ -57,7 +48,7 @@ async function searchEvents() {
   if (label && label !== 'all') params.set('label', label);
   if (date) {
     const d = new Date(date);
-    params.set('after', Math.floor(d.getTime() / 1000));
+    params.set('after',  Math.floor(d.getTime() / 1000));
     d.setDate(d.getDate() + 1);
     params.set('before', Math.floor(d.getTime() / 1000));
   }
@@ -66,36 +57,48 @@ async function searchEvents() {
     const r = await fetch(`${API}/api/events?${params}`, { headers: authHeaders() });
     if (!r.ok) throw new Error(r.status);
     const events = await r.json();
-    if (!events.length) {
-      listEl.innerHTML = '<div class="empty-feed">Nincs találat</div>';
-      return;
-    }
-    listEl.innerHTML = events.map(e => renderEventCard(e)).join('');
+    if (!events.length) { listEl.innerHTML = '<div class="empty-feed">Nincs találat</div>'; return; }
+    listEl.innerHTML = events.map(e => {
+      const ts    = e.start_time ? new Date(e.start_time * 1000).toLocaleString('hu-HU') : '';
+      const label = e.label     || '—';
+      const cam   = e.camera    || '—';
+      const score = e.top_score != null ? Math.round(e.top_score * 100) + '%' : '';
+      return eventCardHTML(e.id, label, cam, score, ts);
+    }).join('');
   } catch {
     listEl.innerHTML = '<div class="empty-feed err">Hiba a lekérdezés során</div>';
   }
 }
 
-function renderEventCard(e) {
-  const ts = e.start_time ? new Date(e.start_time * 1000).toLocaleString('hu-HU') : '';
-  const label = e.label || '—';
-  const cam = e.camera || '—';
-  const score = e.top_score != null ? Math.round(e.top_score * 100) + '%' : '';
-  const thumb = e.id ? `<img class="ev-thumb" src="${API}/api/events/${e.id}/thumbnail" onerror="this.style.display='none'">` : '';
-  return `<div class="event-card">
+function eventCardHTML(id, label, cam, score, ts) {
+  const thumb = id
+    ? `<img class="ev-thumb" src="${API}/api/events/${id}/thumbnail" loading="lazy" onerror="this.style.visibility='hidden'">`
+    : '<div class="ev-thumb"></div>';
+  const onclick = id ? `onclick="viewEventSnapshot('${id}')"` : '';
+  return `<div class="event-card${id ? ' ev-clickable' : ''}" ${onclick}>
     ${thumb}
     <div class="ev-info">
       <span class="ev-label">${label}</span>
       <span class="ev-cam">${cam}</span>
       ${score ? `<span class="ev-score">${score}</span>` : ''}
-      ${ts ? `<span class="ev-ts">${ts}</span>` : ''}
+      ${ts    ? `<span class="ev-ts">${ts}</span>`       : ''}
     </div>
   </div>`;
 }
 
-function initEvents() {
-  populateEventCamSelect();
-  renderLiveFeed();
+function viewEventSnapshot(eventId) {
+  const modal = document.getElementById('ev-snapshot-modal');
+  const img   = document.getElementById('ev-snapshot-img');
+  if (!modal || !img) return;
+  img.src = `${API}/api/events/${eventId}/thumbnail`;
+  modal.classList.remove('hidden');
+}
+
+function closeSnapshotModal() {
+  const modal = document.getElementById('ev-snapshot-modal');
+  const img   = document.getElementById('ev-snapshot-img');
+  if (img)   img.src = '';
+  if (modal) modal.classList.add('hidden');
 }
 
 function populateEventCamSelect() {

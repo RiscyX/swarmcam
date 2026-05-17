@@ -26,6 +26,8 @@ class CameraSettings(BaseModel):
     quality: int | None = None
     video_size: str | None = None
     night_vision: str | None = None
+    video_fps: int | None = None
+    mirror_flip: str | None = None
 
 
 @router.get("/api/cameras")
@@ -54,7 +56,7 @@ async def camera_stream(name: str):
     try:
         r = await loop.run_in_executor(
             None,
-            lambda: http.get(f"http://{ip}:{port}/videofeed", stream=True, timeout=5),
+            lambda: http.get(f"http://{ip}:{port}/videofeed", stream=True, timeout=3),
         )
     except Exception:
         raise HTTPException(503, "Camera unreachable")
@@ -125,12 +127,15 @@ async def get_camera_settings(name: str):
         )
         if r.status_code != 200:
             raise HTTPException(503, "Camera unreachable")
-        curvals = r.json().get("curvals", {})
+        data = r.json()
+        curvals = data.get("curvals", {})
         return CameraSettings(
             orientation=curvals.get("orientation"),
             quality=int(curvals["quality"]) if "quality" in curvals else None,
             video_size=curvals.get("video_size"),
             night_vision=curvals.get("night_vision"),
+            video_fps=int(curvals["video_fps"]) if "video_fps" in curvals else None,
+            mirror_flip=curvals.get("mirror_flip"),
         )
     except HTTPException:
         raise
@@ -152,8 +157,8 @@ async def set_camera_settings(name: str, body: CameraSettings):
             r = await loop.run_in_executor(
                 None,
                 lambda k=key, v=value: http.get(
-                    f"http://{ip}:{port}/command.json",
-                    params={"cmd": f"{k}={v}"},
+                    f"http://{ip}:{port}/settings/{k}",
+                    params={"set": str(v)},
                     timeout=3,
                 ),
             )
