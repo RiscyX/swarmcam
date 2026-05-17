@@ -28,7 +28,7 @@ function enterFullscreen(safeIp) {
   const torchBtn   = document.getElementById('fs-torch-btn');
   const torchLabel = document.getElementById('fs-torch-label');
 
-  nameEl.textContent = cam.name.replace('cam_', '').replace(/_/g, '.');
+  nameEl.textContent = cam.display_name || cam.name.replace('cam_', '').replace(/_/g, '.');
   body.innerHTML = '';
 
   const img = document.createElement('img');

@@ -1,4 +1,6 @@
 import asyncio
+import json
+import pathlib
 
 import requests as http
 from fastapi import APIRouter, HTTPException
@@ -16,9 +18,30 @@ _PLACEHOLDER_GIF = (
     b"\x00\x00\x02\x02D\x01\x00;"
 )
 
+_ALIASES_FILE = pathlib.Path(__file__).parent.parent / "aliases.json"
+
+
+def _load_aliases() -> dict:
+    try:
+        return json.loads(_ALIASES_FILE.read_text())
+    except Exception:
+        return {}
+
+
+def _save_aliases(aliases: dict) -> None:
+    _ALIASES_FILE.write_text(json.dumps(aliases, indent=2, ensure_ascii=False))
+
+
+def _default_display(name: str) -> str:
+    return name.replace("cam_", "").replace("_", ".")
+
 
 class TorchRequest(BaseModel):
     enabled: bool
+
+
+class AliasRequest(BaseModel):
+    alias: str
 
 
 class CameraSettings(BaseModel):
@@ -28,11 +51,18 @@ class CameraSettings(BaseModel):
     night_vision: str | None = None
     video_fps: int | None = None
     mirror_flip: str | None = None
+    ffc: str | None = None
 
 
 @router.get("/api/cameras")
 def get_cameras():
-    return state._last_cameras
+    aliases = _load_aliases()
+    result = []
+    for cam in state._last_cameras:
+        c = dict(cam)
+        c["display_name"] = aliases.get(cam["name"], _default_display(cam["name"]))
+        result.append(c)
+    return result
 
 
 @router.get("/api/cameras/{name}/snapshot")
@@ -136,6 +166,7 @@ async def get_camera_settings(name: str):
             night_vision=curvals.get("night_vision"),
             video_fps=int(curvals["video_fps"]) if "video_fps" in curvals else None,
             mirror_flip=curvals.get("mirror_flip"),
+            ffc=curvals.get("ffc"),
         )
     except HTTPException:
         raise
@@ -167,3 +198,24 @@ async def set_camera_settings(name: str, body: CameraSettings):
         except Exception:
             pass
     return {"ok": len(applied) > 0, "applied": applied}
+
+
+@router.patch("/api/cameras/{name}/alias")
+def set_camera_alias(name: str, body: AliasRequest):
+    aliases = _load_aliases()
+    stripped = body.alias.strip()
+    if stripped:
+        aliases[name] = stripped
+    else:
+        aliases.pop(name, None)
+    _save_aliases(aliases)
+    return {
+        "ok": True,
+        "display_name": aliases.get(name, _default_display(name)),
+    }
+
+
+@router.get("/api/cameras/{name}/alias")
+def get_camera_alias(name: str):
+    aliases = _load_aliases()
+    return {"alias": aliases.get(name, "")}
