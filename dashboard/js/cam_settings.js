@@ -25,9 +25,22 @@ async function loadCamSettings(name) {
     const orient = document.querySelector(`input[name="cs-orient"][value="${s.orientation}"]`);
     if (orient) orient.checked = true;
 
+    const flipEl = document.getElementById('cs-flip');
+    if (flipEl && s.mirror_flip != null) flipEl.value = s.mirror_flip;
+
     const qSlider = document.getElementById('cs-quality');
     const qVal    = document.getElementById('cs-quality-val');
-    if (qSlider && s.quality != null) { qSlider.value = s.quality; if (qVal) qVal.textContent = s.quality; }
+    if (qSlider && s.quality != null) {
+      qSlider.value = s.quality;
+      if (qVal) qVal.textContent = s.quality;
+    }
+
+    const fpsSlider = document.getElementById('cs-fps');
+    const fpsVal    = document.getElementById('cs-fps-val');
+    if (fpsSlider && s.video_fps != null) {
+      fpsSlider.value = s.video_fps;
+      if (fpsVal) fpsVal.textContent = s.video_fps;
+    }
 
     const vsEl = document.getElementById('cs-video-size');
     if (vsEl && s.video_size) vsEl.value = s.video_size;
@@ -46,16 +59,20 @@ async function saveCamSettings() {
   if (!name) return;
   const statusEl = document.getElementById('cs-status');
 
-  const orientEl = document.querySelector('input[name="cs-orient"]:checked');
-  const qSlider  = document.getElementById('cs-quality');
-  const vsEl     = document.getElementById('cs-video-size');
-  const nvEl     = document.getElementById('cs-night-vision');
+  const orientEl  = document.querySelector('input[name="cs-orient"]:checked');
+  const flipEl    = document.getElementById('cs-flip');
+  const qSlider   = document.getElementById('cs-quality');
+  const fpsSlider = document.getElementById('cs-fps');
+  const vsEl      = document.getElementById('cs-video-size');
+  const nvEl      = document.getElementById('cs-night-vision');
 
   const body = {};
-  if (orientEl)        body.orientation  = orientEl.value;
-  if (qSlider?.value)  body.quality      = parseInt(qSlider.value);
-  if (vsEl?.value)     body.video_size   = vsEl.value;
-  if (nvEl?.value)     body.night_vision = nvEl.value;
+  if (orientEl)         body.orientation  = orientEl.value;
+  if (flipEl?.value) body.mirror_flip = flipEl.value;
+  if (qSlider?.value)   body.quality      = parseInt(qSlider.value);
+  if (fpsSlider?.value) body.video_fps    = parseInt(fpsSlider.value);
+  if (vsEl?.value)      body.video_size   = vsEl.value;
+  if (nvEl?.value)      body.night_vision = nvEl.value;
 
   if (statusEl) { statusEl.textContent = 'Alkalmazás…'; statusEl.className = 'save-msg'; }
   try {

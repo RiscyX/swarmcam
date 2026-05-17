@@ -63,7 +63,7 @@ function renderCameras(cameras) {
       </div>`);
 
     _cameras[safeIp] = cam;
-    startLiveStream(cam);
+    startSnapshot(cam);
     loadCameraStats(cam);
   }
 }

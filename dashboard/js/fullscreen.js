@@ -14,6 +14,14 @@ function enterFullscreen(safeIp) {
   _fsCam        = cam;
   _fsTorchState = !!_torchState[safeIp];
 
+  // Pause all background card streams/snapshots
+  Object.keys(_cameras).forEach(ip => {
+    clearInterval(_snapIntervals[ip]);
+    delete _snapIntervals[ip];
+    const cardImg = document.getElementById(`snap-${ip}`);
+    if (cardImg) cardImg.src = '';
+  });
+
   const overlay    = document.getElementById('fullscreen-overlay');
   const body       = document.getElementById('fs-body');
   const nameEl     = document.getElementById('fs-name');
@@ -35,7 +43,16 @@ function enterFullscreen(safeIp) {
 }
 
 function exitFullscreen() {
-  document.getElementById('fullscreen-overlay').classList.remove('active');
   if (_fsImg) { _fsImg.src = ''; _fsImg = null; }
+  document.getElementById('fullscreen-overlay').classList.remove('active');
   _fsCam = null;
+
+  // Resume background card streams after a short delay to avoid burst
+  setTimeout(() => {
+    Object.values(_cameras).forEach(cam => {
+      const safeIp = cam.ip.replace(/\./g, '_');
+      if (_streamMode[safeIp] === 'live') startLiveStream(cam);
+      else startSnapshot(cam);
+    });
+  }, 100);
 }

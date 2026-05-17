@@ -50,6 +50,28 @@
   <div class="fullscreen-body" id="fs-body"></div>
 </div>
 
+<!-- EVENT SNAPSHOT MODAL -->
+<div id="ev-snapshot-modal" class="media-modal hidden" onclick="if(event.target===this)closeSnapshotModal()">
+  <div class="media-modal-box">
+    <button class="media-modal-close" onclick="closeSnapshotModal()">✕</button>
+    <img id="ev-snapshot-img" src="" alt="" style="max-width:100%;max-height:80vh;border-radius:6px;display:block;">
+  </div>
+</div>
+
+<!-- RECORDINGS PLAYER MODAL -->
+<div id="rec-modal" class="media-modal hidden" onclick="if(event.target===this)closePlayer()">
+  <div class="media-modal-box" style="width:min(900px,95vw)">
+    <div class="media-modal-header">
+      <span id="rec-modal-info" class="media-modal-info"></span>
+      <div style="display:flex;gap:8px;align-items:center">
+        <a id="rec-modal-dl" class="btn btn-ghost" href="#" download style="font-size:11px;text-decoration:none">⬇ Letöltés</a>
+        <button class="media-modal-close" style="position:static" onclick="closePlayer()">✕</button>
+      </div>
+    </div>
+    <video id="rec-modal-video" controls style="width:100%;max-height:70vh;background:#000;border-radius:0 0 8px 8px;display:block;"></video>
+  </div>
+</div>
+
 <!-- APP -->
 <div class="app">
 
@@ -308,6 +330,21 @@
             <div class="radio-group">
               <label class="radio-card"><input type="radio" name="cs-orient" value="portrait" /> Portrait</label>
               <label class="radio-card"><input type="radio" name="cs-orient" value="landscape" /> Landscape</label>
+              <label class="radio-card"><input type="radio" name="cs-orient" value="reverse_portrait" /> Fordított portrait</label>
+              <label class="radio-card"><input type="radio" name="cs-orient" value="reverse_landscape" /> Fordított landscape</label>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">Kép tükrözés</div>
+            <div class="field">
+              <span class="field-label">Flip</span>
+              <select id="cs-flip">
+                <option value="none">Nincs</option>
+                <option value="flip_v">Függőleges</option>
+                <option value="flip_h">Vízszintes</option>
+                <option value="flip_hv">Mindkettő</option>
+              </select>
             </div>
           </div>
 
@@ -321,10 +358,20 @@
           </div>
 
           <div class="card">
+            <div class="card-title">Képkocka / mp (FPS)</div>
+            <div class="field">
+              <span class="field-label">FPS: <span id="cs-fps-val">15</span></span>
+              <input type="range" id="cs-fps" min="1" max="30" value="15"
+                oninput="document.getElementById('cs-fps-val').textContent=this.value" />
+            </div>
+          </div>
+
+          <div class="card">
             <div class="card-title">Felbontás</div>
             <div class="field">
               <span class="field-label">Felbontás</span>
               <select id="cs-video-size">
+                <option value="320x240">320×240</option>
                 <option value="640x480">640×480</option>
                 <option value="1280x720">1280×720</option>
                 <option value="1920x1080" selected>1920×1080</option>
@@ -428,14 +475,6 @@
 
           <div class="rec-body">
             <div id="rec-list"><div class="empty-feed">Keress rá a felvételekre</div></div>
-          </div>
-
-          <div id="rec-player" class="rec-player hidden">
-            <div class="rec-player-header">
-              <span id="rec-player-info"></span>
-              <button class="btn btn-ghost" onclick="closePlayer()">✕ Bezárás</button>
-            </div>
-            <video id="rec-video" controls style="width:100%;max-height:480px;background:#000"></video>
           </div>
         </div>
       </section>
@@ -544,22 +583,22 @@
   </div>
 </div>
 
-<script src="js/constants.js"></script>
-<script src="js/state.js"></script>
-<script src="js/auth.js"></script>
-<script src="js/ui.js"></script>
-<script src="js/cameras.js"></script>
-<script src="js/health.js"></script>
-<script src="js/stream.js"></script>
-<script src="js/torch.js"></script>
-<script src="js/fullscreen.js"></script>
-<script src="js/discovery.js"></script>
-<script src="js/settings.js"></script>
-<script src="js/cam_settings.js"></script>
-<script src="js/events.js"></script>
-<script src="js/recordings.js"></script>
-<script src="js/faces.js"></script>
-<script src="js/users.js"></script>
-<script src="js/app.js"></script>
+<script src="js/constants.js?v=5"></script>
+<script src="js/state.js?v=5"></script>
+<script src="js/auth.js?v=5"></script>
+<script src="js/ui.js?v=5"></script>
+<script src="js/cameras.js?v=5"></script>
+<script src="js/health.js?v=5"></script>
+<script src="js/stream.js?v=5"></script>
+<script src="js/torch.js?v=5"></script>
+<script src="js/fullscreen.js?v=5"></script>
+<script src="js/discovery.js?v=5"></script>
+<script src="js/settings.js?v=5"></script>
+<script src="js/cam_settings.js?v=5"></script>
+<script src="js/events.js?v=5"></script>
+<script src="js/recordings.js?v=5"></script>
+<script src="js/faces.js?v=5"></script>
+<script src="js/users.js?v=5"></script>
+<script src="js/app.js?v=5"></script>
 </body>
 </html>
