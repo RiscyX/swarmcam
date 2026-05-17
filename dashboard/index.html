@@ -5,520 +5,943 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SwarmCam</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📷</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;400;500;600;700;900&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
     :root {
-      --bg: #0f1117;
-      --surface: #1a1d27;
-      --border: #2a2d3a;
-      --accent: #4f8ef7;
-      --accent-dim: #1e3a6e;
-      --green: #3ecf8e;
-      --yellow: #f5a623;
-      --red: #e54d4d;
-      --text: #e2e4ec;
-      --muted: #6b7280;
+      --bg:        #06080c;
+      --panel:     #0a0d13;
+      --surface:   #0e1219;
+      --surface2:  #121820;
+      --border:    #1a2030;
+      --border-hi: #252e40;
+      --amber:     #e8a500;
+      --amber-lo:  rgba(232,165,0,0.07);
+      --amber-mid: rgba(232,165,0,0.15);
+      --green:     #25c068;
+      --green-lo:  rgba(37,192,104,0.1);
+      --red:       #e04545;
+      --red-lo:    rgba(224,69,69,0.1);
+      --blue:      #4a9eff;
+      --text:      #bfcbdc;
+      --text-dim:  #6a7d96;
+      --text-muted:#384858;
+      --sidebar-w: 196px;
+      --topbar-h:  50px;
+      --font-ui:   'Barlow Condensed', sans-serif;
+      --font-mono: 'IBM Plex Mono', monospace;
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
 
     body {
       background: var(--bg);
+      background-image: radial-gradient(rgba(255,255,255,0.025) 1px, transparent 1px);
+      background-size: 26px 26px;
       color: var(--text);
-      font-family: 'Inter', system-ui, sans-serif;
+      font-family: var(--font-ui);
       font-size: 14px;
       min-height: 100vh;
     }
 
-    header {
-      padding: 20px 32px;
+    /* ── APP SHELL ─────────────────────────────────────── */
+    .app { display: flex; height: 100vh; overflow: hidden; }
+
+    /* ── SIDEBAR ───────────────────────────────────────── */
+    .sidebar {
+      width: var(--sidebar-w);
+      min-width: var(--sidebar-w);
+      background: var(--panel);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      z-index: 10;
+    }
+    .sidebar::after {
+      content: '';
+      position: absolute; top: 0; right: -1px;
+      width: 1px; height: 100%;
+      background: linear-gradient(to bottom, transparent 0%, var(--amber) 40%, transparent 100%);
+      opacity: 0.18;
+      pointer-events: none;
+    }
+
+    .s-logo {
+      padding: 18px 18px 16px;
       border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      gap: 12px;
     }
-    header h1 { font-size: 18px; font-weight: 600; letter-spacing: .5px; }
-    header span { color: var(--muted); font-size: 13px; }
-
-    .dot {
-      width: 8px; height: 8px; border-radius: 50%;
-      background: var(--green);
-      box-shadow: 0 0 6px var(--green);
-    }
-
-    main { padding: 32px; max-width: 1100px; margin: 0 auto; }
-
-    /* --- Panel --- */
-    .panel {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 24px;
-      margin-bottom: 24px;
-    }
-
-    .panel-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      cursor: pointer;
-      user-select: none;
-    }
-    .panel-header h2 { font-size: 15px; font-weight: 600; }
-    .panel-header .chevron {
-      color: var(--muted);
-      font-size: 12px;
-      transition: transform .2s;
-    }
-    .panel-header .chevron.open { transform: rotate(180deg); }
-
-    .panel-body { margin-top: 20px; }
-    .panel-body.hidden { display: none; }
-
-    /* --- Controls (discovery) --- */
-    .controls {
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-      align-items: flex-end;
-    }
-
-    .field { display: flex; flex-direction: column; gap: 6px; }
-    .field label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
-
-    input[type="text"], input[type="number"], select {
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      color: var(--text);
-      padding: 8px 12px;
-      font-size: 14px;
-      outline: none;
-      transition: border-color .15s;
-    }
-    input[type="text"]   { width: 200px; }
-    input[type="number"] { width: 100px; }
-    select { width: 180px; cursor: pointer; }
-    input:focus, select:focus { border-color: var(--accent); }
-
-    .checkbox-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding-bottom: 2px;
-    }
-    .checkbox-row label { color: var(--text); font-size: 13px; text-transform: none; letter-spacing: 0; }
-    input[type="checkbox"] { accent-color: var(--accent); width: 16px; height: 16px; cursor: pointer; }
-
-    /* --- Settings grid --- */
-    .settings-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 24px;
-    }
-
-    .settings-section { display: flex; flex-direction: column; gap: 12px; }
-    .settings-section h3 {
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--muted);
+    .s-logo-name {
+      font-family: var(--font-ui);
+      font-weight: 900;
+      font-size: 21px;
+      letter-spacing: 3.5px;
       text-transform: uppercase;
-      letter-spacing: .6px;
-      padding-bottom: 8px;
-      border-bottom: 1px solid var(--border);
+      color: var(--amber);
+      line-height: 1;
+    }
+    .s-logo-sub {
+      font-family: var(--font-mono);
+      font-size: 8.5px;
+      color: var(--text-muted);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-top: 5px;
     }
 
-    /* Radio cards (decoder) */
-    .radio-group { display: flex; flex-wrap: wrap; gap: 8px; }
-    .radio-card {
+    .s-nav { flex: 1; padding: 10px 0; display: flex; flex-direction: column; gap: 1px; }
+
+    .nav-btn {
       display: flex;
       align-items: center;
-      gap: 8px;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 8px 14px;
-      cursor: pointer;
-      transition: border-color .15s;
+      gap: 9px;
+      padding: 10px 18px;
+      background: transparent;
+      border: none;
+      color: var(--text-dim);
+      font-family: var(--font-ui);
+      font-weight: 600;
       font-size: 13px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: color 0.12s, background 0.12s;
+      position: relative;
+      width: 100%;
+      text-align: left;
     }
-    .radio-card:has(input:checked) {
-      border-color: var(--accent);
-      background: var(--accent-dim);
+    .nav-btn:hover { color: var(--text); background: rgba(255,255,255,0.025); }
+    .nav-btn.active {
+      color: var(--amber);
+      background: var(--amber-lo);
     }
-    .radio-card input { accent-color: var(--accent); }
+    .nav-btn.active::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 5px; bottom: 5px;
+      width: 2px;
+      background: var(--amber);
+      border-radius: 0 2px 2px 0;
+    }
+    .nav-icon { width: 15px; height: 15px; flex-shrink: 0; stroke: currentColor; fill: none; stroke-width: 1.6; }
 
-    /* Object toggles */
-    .object-group { display: flex; flex-wrap: wrap; gap: 8px; }
-    .obj-toggle {
+    .s-bottom {
+      padding: 14px 18px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+    .s-stat {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+    .s-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--text-muted); flex-shrink: 0; }
+    .s-dot.on  { background: var(--green); box-shadow: 0 0 5px var(--green); }
+    .s-dot.off { background: var(--red); }
+
+    /* ── MAIN AREA ─────────────────────────────────────── */
+    .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+    .topbar {
+      height: var(--topbar-h);
+      min-height: var(--topbar-h);
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 22px;
+      gap: 16px;
+    }
+    .topbar-title {
+      font-family: var(--font-ui);
+      font-weight: 700;
+      font-size: 14px;
+      letter-spacing: 2.5px;
+      text-transform: uppercase;
+      color: var(--text);
+      flex: 1;
+    }
+    .topbar-pill {
       display: flex;
       align-items: center;
       gap: 6px;
-      background: var(--bg);
+      background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 6px 12px;
-      cursor: pointer;
-      font-size: 13px;
-      transition: border-color .15s;
+      border-radius: 3px;
+      padding: 4px 10px;
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      color: var(--text-dim);
     }
-    .obj-toggle:has(input:checked) {
-      border-color: var(--accent);
-      background: var(--accent-dim);
-    }
+    .pill-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--text-muted); }
+    .pill-dot.live { background: var(--green); animation: blink 2s ease-in-out infinite; }
 
-    .settings-row { display: flex; gap: 12px; flex-wrap: wrap; }
-
-    /* --- Buttons --- */
-    .btn {
-      border: none;
-      border-radius: 8px;
-      padding: 9px 22px;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: opacity .15s;
-      white-space: nowrap;
-    }
-    .btn:disabled { opacity: .5; cursor: default; }
-    .btn:hover:not(:disabled) { opacity: .85; }
-    .btn-primary { background: var(--accent); color: #fff; }
-    .btn-ghost {
-      background: transparent;
-      color: var(--muted);
-      border: 1px solid var(--border);
-    }
-
-    .save-row {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-top: 20px;
-      padding-top: 20px;
-      border-top: 1px solid var(--border);
-    }
-    .save-status { font-size: 13px; }
-    .save-status.ok   { color: var(--green); }
-    .save-status.err  { color: var(--red); }
-
-    /* --- Log --- */
-    #log {
-      margin-top: 16px;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 12px 16px;
-      font-family: 'JetBrains Mono', 'Fira Code', monospace;
-      font-size: 12px;
-      color: var(--muted);
-      max-height: 160px;
-      overflow-y: auto;
+    #logout-btn {
       display: none;
+      background: transparent;
+      border: 1px solid var(--border-hi);
+      border-radius: 3px;
+      color: var(--text-dim);
+      font-family: var(--font-ui);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      padding: 5px 14px;
+      cursor: pointer;
+      transition: border-color 0.12s, color 0.12s;
     }
-    #log.active { display: block; }
-    #log .line { padding: 1px 0; }
-    #log .line.found { color: var(--green); }
-    #log .line.warn  { color: var(--yellow); }
+    #logout-btn:hover { border-color: var(--red); color: var(--red); }
 
-    /* --- Camera grid --- */
-    #cameras-section h2 { font-size: 15px; font-weight: 600; margin-bottom: 16px; }
+    /* ── CONTENT ───────────────────────────────────────── */
+    .content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 22px;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+    }
+    .section { display: none; }
+    .section.active { display: block; }
 
-    .grid {
+    /* ── CAMERA GRID ───────────────────────────────────── */
+    .cam-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-      gap: 16px;
+      grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+      gap: 14px;
     }
 
     .camera-card {
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 20px;
+      border-radius: 3px;
+      overflow: hidden;
+      animation: fadeIn 0.25s ease;
+      transition: border-color 0.15s;
+    }
+    .camera-card:hover { border-color: var(--border-hi); }
+    .camera-card.offline { opacity: 0.5; }
+
+    /* Feed */
+    .cam-feed {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16/9;
+      background: #030507;
+      overflow: hidden;
+    }
+    .cam-feed::after {
+      content: '';
+      position: absolute; inset: 0;
+      background: repeating-linear-gradient(to bottom, transparent 0, transparent 2px, rgba(0,0,0,0.055) 2px, rgba(0,0,0,0.055) 4px);
+      pointer-events: none;
+      z-index: 2;
+    }
+    .cam-feed img,
+    .cam-feed video {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .feed-offline {
+      position: absolute; inset: 0;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: #030507;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 1.5px;
+      z-index: 3;
+    }
+
+    .feed-badge {
+      position: absolute; top: 7px; left: 7px;
+      display: flex; align-items: center; gap: 5px;
+      background: rgba(6,8,12,0.82);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 2px;
+      padding: 2px 7px;
+      font-family: var(--font-mono);
+      font-size: 9.5px;
+      font-weight: 500;
+      letter-spacing: 1.5px;
+      color: var(--text-dim);
+      z-index: 4;
+    }
+    .feed-badge.live   { border-color: rgba(37,192,104,0.3); color: var(--green); }
+    .feed-badge.offl   { border-color: rgba(224,69,69,0.3);  color: var(--red); }
+    .feed-badge .fbdot {
+      width: 5px; height: 5px; border-radius: 50%;
+      background: currentColor;
+    }
+    .feed-badge.live .fbdot { animation: blink 1.4s ease-in-out infinite; }
+
+    .stream-toggle {
+      position: absolute; bottom: 7px; right: 7px;
+      background: rgba(6,8,12,0.82);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 2px;
+      color: var(--text-dim);
+      font-family: var(--font-mono);
+      font-size: 9px;
+      font-weight: 500;
+      letter-spacing: 1px;
+      padding: 2px 7px;
+      cursor: pointer;
+      z-index: 4;
+      transition: border-color 0.12s, color 0.12s;
+    }
+    .stream-toggle:hover { border-color: var(--amber-mid); color: var(--amber); }
+    .stream-toggle.is-live { border-color: rgba(37,192,104,0.3); color: var(--green); }
+
+    .cam-actions { display: flex; gap: 6px; }
+    .action-btn {
+      display: flex; align-items: center; gap: 5px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 3px;
+      color: var(--text-dim);
+      font-family: var(--font-mono);
+      font-size: 9px;
+      font-weight: 500;
+      letter-spacing: 1px;
+      padding: 4px 10px;
+      cursor: pointer;
+      transition: border-color 0.12s, color 0.12s, background 0.12s;
+    }
+    .action-btn:hover { border-color: var(--amber-mid); color: var(--amber); }
+    .action-btn.torch-on { border-color: rgba(255,220,50,0.4); color: #ffd93d; background: rgba(255,220,50,0.07); }
+
+    /* Card body */
+    .cam-body { padding: 13px 14px; display: flex; flex-direction: column; gap: 10px; }
+
+    .cam-head { display: flex; align-items: center; justify-content: space-between; }
+    .cam-name {
+      font-family: var(--font-ui);
+      font-weight: 700;
+      font-size: 15px;
+      letter-spacing: 0.8px;
+      color: var(--text);
+    }
+    .cam-status {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: 1.5px;
+      font-weight: 500;
+      padding: 2px 6px;
+      border-radius: 2px;
+      text-transform: uppercase;
+      background: var(--surface2);
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+    }
+    .cam-status.live   { background: var(--green-lo); color: var(--green); border-color: rgba(37,192,104,0.2); }
+    .cam-status.offl   { background: var(--red-lo);   color: var(--red);   border-color: rgba(224,69,69,0.2); }
+
+    .cam-data {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+      font-size: 0;
+    }
+    .data-cell {
+      background: var(--surface);
+      padding: 5px 8px;
       display: flex;
       flex-direction: column;
-      gap: 14px;
-      animation: fadein .3s ease;
+      gap: 1px;
     }
-    @keyframes fadein { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; } }
-
-    .card-header { display: flex; align-items: center; justify-content: space-between; }
-    .card-header .name { font-weight: 600; font-size: 15px; }
-    .badge {
-      font-size: 11px; padding: 3px 8px; border-radius: 99px;
-      background: var(--accent-dim); color: var(--accent); font-weight: 600;
+    .data-lbl {
+      font-family: var(--font-ui);
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+    .data-val {
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      color: var(--text);
     }
 
-    .info-row {
-      display: flex; justify-content: space-between;
-      color: var(--muted); font-size: 13px;
-    }
-    .info-row span:last-child { color: var(--text); }
-
-    .battery-bar { height: 6px; border-radius: 99px; background: var(--border); overflow: hidden; }
-    .battery-fill { height: 100%; border-radius: 99px; transition: width .4s ease; }
+    .cam-batt { display: flex; align-items: center; gap: 9px; }
+    .batt-bar { flex: 1; height: 3px; background: var(--border); border-radius: 99px; overflow: hidden; }
+    .batt-fill { height: 100%; border-radius: 99px; transition: width 0.4s ease; }
+    .batt-lbl { font-family: var(--font-mono); font-size: 11px; white-space: nowrap; min-width: 46px; text-align: right; }
 
     .rtsp-box {
-      background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
-      padding: 8px 10px; font-family: monospace; font-size: 11px; color: var(--accent);
-      word-break: break-all; cursor: pointer; transition: border-color .15s; position: relative;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      padding: 6px 10px;
+      font-family: var(--font-mono);
+      font-size: 9.5px;
+      color: var(--blue);
+      word-break: break-all;
+      cursor: pointer;
+      transition: border-color 0.12s;
+      position: relative;
+      padding-right: 36px;
     }
-    .rtsp-box:hover { border-color: var(--accent); }
+    .rtsp-box:hover { border-color: var(--blue); }
     .rtsp-box::after {
-      content: 'copy'; position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
-      font-size: 10px; color: var(--muted);
+      content: 'COPY';
+      position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+      font-size: 8px;
+      color: var(--text-muted);
+      letter-spacing: 1px;
     }
 
-    .empty { color: var(--muted); text-align: center; padding: 48px 0; font-size: 13px; }
+    .empty-state {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; padding: 80px 24px; text-align: center; gap: 14px;
+    }
+    .empty-state svg { color: var(--text-muted); opacity: 0.3; }
+    .empty-title {
+      font-family: var(--font-ui);
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text-dim);
+    }
+    .empty-sub {
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      color: var(--text-muted);
+      max-width: 260px;
+      line-height: 1.75;
+    }
 
-    /* --- Login overlay --- */
+    /* ── DISCOVERY ─────────────────────────────────────── */
+    .disc-wrap {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      max-width: 780px;
+    }
+    @media (max-width: 660px) { .disc-wrap { grid-template-columns: 1fr; } }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 18px;
+    }
+    .card-title {
+      font-family: var(--font-ui);
+      font-weight: 700;
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 14px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
+    .field:last-of-type { margin-bottom: 0; }
+    .field-label {
+      font-family: var(--font-ui);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+    .field input, .field select {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      color: var(--text);
+      padding: 7px 10px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      outline: none;
+      transition: border-color 0.12s;
+      width: 100%;
+    }
+    .field input:focus, .field select:focus { border-color: var(--amber); }
+    .field select { cursor: pointer; }
+
+    .field-row { display: flex; gap: 10px; }
+    .field-row .field { flex: 1; }
+
+    .chk-row {
+      display: flex; align-items: center; gap: 7px; cursor: pointer;
+      font-family: var(--font-ui); font-size: 12px; font-weight: 500;
+      letter-spacing: 0.3px; color: var(--text);
+    }
+    .chk-row input { accent-color: var(--amber); width: 13px; height: 13px; }
+
+    .disc-actions { display: flex; flex-direction: column; gap: 8px; }
+
+    .disc-log-wrap { grid-column: 1 / -1; }
+    #log {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      padding: 10px 13px;
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      color: var(--text-muted);
+      max-height: 200px;
+      overflow-y: auto;
+      display: none;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+      line-height: 1.65;
+    }
+    #log.active { display: block; }
+    #log .line.found { color: var(--green); }
+    #log .line.warn  { color: var(--amber); }
+
+    /* ── SETTINGS ──────────────────────────────────────── */
+    .settings-wrap {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+      gap: 14px;
+      max-width: 880px;
+    }
+
+    .radio-group { display: flex; flex-wrap: wrap; gap: 6px; }
+    .radio-card {
+      display: flex; align-items: center; gap: 6px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      padding: 6px 12px;
+      cursor: pointer;
+      transition: border-color 0.12s, background 0.12s, color 0.12s;
+      font-family: var(--font-ui);
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-dim);
+      letter-spacing: 0.3px;
+    }
+    .radio-card:has(input:checked) { border-color: var(--amber); background: var(--amber-lo); color: var(--amber); }
+    .radio-card:has(input:disabled) { opacity: 0.32; cursor: not-allowed; }
+    .radio-card input { accent-color: var(--amber); }
+
+    .obj-group { display: flex; flex-wrap: wrap; gap: 6px; }
+    .obj-toggle {
+      display: flex; align-items: center; gap: 5px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      padding: 5px 10px;
+      cursor: pointer;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-dim);
+      transition: border-color 0.12s, background 0.12s, color 0.12s;
+    }
+    .obj-toggle:has(input:checked) { border-color: var(--amber); background: var(--amber-lo); color: var(--amber); }
+    .obj-toggle input { accent-color: var(--amber); }
+
+    .settings-row { display: flex; gap: 10px; }
+    .settings-row .field { flex: 1; }
+
+    .save-bar {
+      grid-column: 1 / -1;
+      display: flex; align-items: center; gap: 12px;
+      padding-top: 2px;
+    }
+    .save-msg { font-family: var(--font-mono); font-size: 10.5px; }
+    .save-msg.ok  { color: var(--green); }
+    .save-msg.err { color: var(--red); }
+
+    /* ── BUTTONS ───────────────────────────────────────── */
+    .btn {
+      border: none;
+      border-radius: 2px;
+      padding: 8px 20px;
+      font-family: var(--font-ui);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: opacity 0.12s, filter 0.12s;
+      white-space: nowrap;
+    }
+    .btn:disabled { opacity: 0.4; cursor: default; }
+    .btn-primary  { background: var(--amber); color: #06080c; }
+    .btn-primary:hover:not(:disabled) { filter: brightness(1.08); }
+    .btn-ghost {
+      background: transparent;
+      border: 1px solid var(--border-hi);
+      color: var(--text-dim);
+    }
+    .btn-ghost:hover:not(:disabled) { border-color: var(--text-dim); color: var(--text); }
+    .btn-danger {
+      background: transparent;
+      border: 1px solid rgba(224,69,69,0.25);
+      color: var(--red);
+    }
+    .btn-danger:hover:not(:disabled) { background: var(--red-lo); }
+
+    /* ── LOGIN ─────────────────────────────────────────── */
     #login-overlay {
       position: fixed; inset: 0;
-      background: rgba(15,17,23,0.97);
+      background: rgba(6,8,12,0.97);
+      background-image: radial-gradient(rgba(255,255,255,0.02) 1px, transparent 1px);
+      background-size: 26px 26px;
       display: flex; align-items: center; justify-content: center;
       z-index: 1000;
     }
     #login-overlay.hidden { display: none; }
-    .login-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 40px;
-      width: 100%; max-width: 360px;
-      display: flex; flex-direction: column; gap: 20px;
-    }
-    .login-card h2 { font-size: 20px; font-weight: 700; }
-    .login-card .field input { width: 100%; }
-    .login-error { color: var(--red); font-size: 13px; min-height: 18px; }
-    .login-hint { color: var(--muted); font-size: 12px; line-height: 1.5; }
 
-    /* --- Snapshot --- */
-    .cam-snapshot {
-      width: 100%; aspect-ratio: 16/9;
-      border-radius: 8px; object-fit: cover;
-      background: #0a0c14; display: block;
+    .login-box {
+      width: 100%; max-width: 348px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 36px;
+      position: relative;
+      overflow: hidden;
     }
-    .cam-snapshot-wrap { position: relative; }
-    .cam-snapshot-wrap .snap-offline {
-      position: absolute; inset: 0;
-      display: flex; align-items: center; justify-content: center;
-      background: #0a0c14; border-radius: 8px;
-      color: var(--muted); font-size: 12px;
+    .login-box::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: var(--amber);
     }
+
+    .login-logo { margin-bottom: 28px; }
+    .login-logo-name {
+      font-family: var(--font-ui);
+      font-weight: 900;
+      font-size: 30px;
+      letter-spacing: 5px;
+      text-transform: uppercase;
+      color: var(--amber);
+      line-height: 1;
+    }
+    .login-logo-sub {
+      font-family: var(--font-mono);
+      font-size: 8.5px;
+      color: var(--text-muted);
+      letter-spacing: 2.5px;
+      text-transform: uppercase;
+      margin-top: 5px;
+    }
+
+    .login-field { margin-bottom: 12px; }
+    .login-field label {
+      display: block;
+      font-family: var(--font-ui);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 5px;
+    }
+    .login-field input {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      color: var(--text);
+      padding: 9px 11px;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.12s;
+    }
+    .login-field input:focus { border-color: var(--amber); }
+
+    #login-btn { width: 100%; margin: 6px 0 10px; }
+    #login-error { font-family: var(--font-mono); font-size: 10.5px; color: var(--red); min-height: 15px; }
+
+    .login-hint {
+      margin-top: 18px;
+      padding-top: 18px;
+      border-top: 1px solid var(--border);
+      font-family: var(--font-mono);
+      font-size: 9.5px;
+      color: var(--text-muted);
+      line-height: 1.75;
+    }
+    .login-hint code { color: var(--blue); }
+
+    /* ── ANIMATIONS ────────────────────────────────────── */
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; } }
+    @keyframes blink  { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 99px; }
   </style>
 </head>
 <body>
 
-<!-- Login overlay -->
+<!-- LOGIN -->
 <div id="login-overlay">
-  <div class="login-card">
-    <div style="display:flex;align-items:center;gap:10px">
-      <div class="dot"></div>
-      <h2>SwarmCam</h2>
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="login-logo-name">SwarmCam</div>
+      <div class="login-logo-sub">distributed surveillance system</div>
     </div>
-    <div class="field">
-      <label>Felhasználónév</label>
+    <div class="login-field">
+      <label for="login-user">Felhasználónév</label>
       <input type="text" id="login-user" autocomplete="username" placeholder="admin" />
     </div>
-    <div class="field">
-      <label>Jelszó</label>
+    <div class="login-field">
+      <label for="login-pass">Jelszó</label>
       <input type="password" id="login-pass" autocomplete="current-password" />
     </div>
     <button class="btn btn-primary" id="login-btn" onclick="doLogin()">Bejelentkezés</button>
-    <div class="login-error" id="login-error"></div>
-    <p class="login-hint">A hitelesítési adatok a Frigate NVR rendszerből származnak.<br>Első bejelentkezés előtt hozz létre felhasználót a Frigate UI-ban (<code>http://localhost:5000</code>).</p>
+    <div id="login-error"></div>
+    <div class="login-hint">
+      Hitelesítés a Frigate NVR rendszeren keresztül.<br>
+      Első bejelentkezés előtt hozz létre felhasználót:<br>
+      <code>http://localhost:5000</code>
+    </div>
   </div>
 </div>
 
-<header>
-  <div class="dot"></div>
-  <h1>SwarmCam</h1>
-  <span>distributed camera swarm</span>
-  <button class="btn btn-ghost" id="logout-btn" onclick="logout()" style="margin-left:auto;font-size:12px;padding:6px 14px;display:none">Kijelentkezés</button>
-</header>
+<!-- APP -->
+<div class="app">
 
-<main>
-
-  <!-- Discovery -->
-  <div class="panel">
-    <div class="panel-header" onclick="togglePanel('discovery-body', this)">
-      <h2>Discovery</h2>
-      <span class="chevron open">&#9660;</span>
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="s-logo">
+      <div class="s-logo-name">SwarmCam</div>
+      <div class="s-logo-sub">surveillance system</div>
     </div>
-    <div class="panel-body" id="discovery-body">
-      <div class="controls">
-        <div class="field">
-          <label>Hálózat</label>
-          <select id="subnet-select" style="min-width:220px">
-            <option value="">auto-detect</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>Port</label>
-          <input type="number" id="port" value="8080" style="width:90px" />
-        </div>
-        <div class="field">
-          <label>Timeout (s)</label>
-          <input type="number" id="timeout" value="1.0" step="0.5" style="width:90px" />
-        </div>
-        <div class="field">
-          <label>&nbsp;</label>
-          <div class="checkbox-row">
-            <input type="checkbox" id="update-frigate" />
-            <label for="update-frigate">Frigate config frissítése</label>
-          </div>
-        </div>
-        <button class="btn btn-primary" id="scan-btn" onclick="startScan()">Scan Network</button>
-      <button class="btn btn-ghost" id="reset-btn" onclick="resetCameras()" title="Törli az összes kamerát a Frigate configból és restartol">Reset Cameras</button>
-      <button class="btn btn-ghost" id="rec-del-btn" onclick="clearRecordings()" title="Törli az összes felvételt és clipet" style="color:var(--red);border-color:var(--red)">Delete Recordings</button>
+
+    <nav class="s-nav">
+      <button class="nav-btn active" data-sec="cameras" onclick="showSection('cameras')">
+        <svg class="nav-icon" viewBox="0 0 16 16"><rect x="1" y="4" width="14" height="10" rx="1.5"/><circle cx="8" cy="9" r="2.5"/><path d="M5 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1" stroke-linecap="round"/></svg>
+        Cameras
+      </button>
+      <button class="nav-btn" data-sec="discovery" onclick="showSection('discovery')">
+        <svg class="nav-icon" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5"/><circle cx="8" cy="8" r="2.8"/><line x1="8" y1="1.5" x2="8" y2="5"/><line x1="8" y1="11" x2="8" y2="14.5"/><line x1="1.5" y1="8" x2="5" y2="8"/><line x1="11" y1="8" x2="14.5" y2="8"/></svg>
+        Discovery
+      </button>
+      <button class="nav-btn" data-sec="settings" onclick="showSection('settings')">
+        <svg class="nav-icon" viewBox="0 0 16 16"><circle cx="8" cy="8" r="2.5"/><path d="M8 1.5v1.6M8 12.9v1.6M1.5 8h1.6M12.9 8h1.6M3.4 3.4l1.1 1.1M11.5 11.5l1.1 1.1M3.4 12.6l1.1-1.1M11.5 4.5l1.1-1.1" stroke-linecap="round"/></svg>
+        Settings
+      </button>
+    </nav>
+
+    <div class="s-bottom">
+      <div class="s-stat">
+        <div class="s-dot" id="ws-dot"></div>
+        <span id="ws-txt">connecting</span>
       </div>
-      <div id="log"></div>
-    </div>
-  </div>
-
-  <!-- Settings -->
-  <div class="panel">
-    <div class="panel-header" onclick="togglePanel('settings-body', this)">
-      <h2>Settings</h2>
-      <span class="chevron">&#9660;</span>
-    </div>
-    <div class="panel-body hidden" id="settings-body">
-      <div class="settings-grid">
-
-        <!-- Hardware -->
-        <div class="settings-section">
-          <h3>Hardware dekóder</h3>
-          <div class="radio-group">
-            <label class="radio-card">
-              <input type="radio" name="decoder" value="cpu" /> CPU
-            </label>
-            <label class="radio-card" title="GPU videó dekódolás (NVDEC) + CPU AI inferencia">
-              <input type="radio" name="decoder" value="nvidia" /> NVIDIA (NVDEC)
-            </label>
-            <label class="radio-card">
-              <input type="radio" name="decoder" value="intel" /> Intel iGPU
-            </label>
-            <label class="radio-card">
-              <input type="radio" name="decoder" value="coral" /> Coral TPU
-            </label>
-          </div>
-        </div>
-
-        <!-- Detection -->
-        <div class="settings-section">
-          <h3>Detekció</h3>
-          <div class="settings-row">
-            <div class="field">
-              <label>FPS</label>
-              <select id="det-fps">
-                <option value="1">1 fps</option>
-                <option value="2">2 fps</option>
-                <option value="5">5 fps</option>
-                <option value="10" selected>10 fps</option>
-                <option value="15">15 fps</option>
-              </select>
-            </div>
-            <div class="field">
-              <label>Felbontás</label>
-              <select id="det-res">
-                <option value="640x360">640 × 360</option>
-                <option value="1280x720">1280 × 720</option>
-                <option value="1920x1080" selected>1920 × 1080</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        <!-- Stream -->
-        <div class="settings-section">
-          <h3>Stream transport</h3>
-          <div class="radio-group">
-            <label class="radio-card">
-              <input type="radio" name="rtsp" value="tcp" checked /> TCP
-            </label>
-            <label class="radio-card">
-              <input type="radio" name="rtsp" value="udp" /> UDP
-            </label>
-          </div>
-        </div>
-
-        <!-- Objects -->
-        <div class="settings-section">
-          <h3>Követett objektumok</h3>
-          <div class="object-group">
-            <label class="obj-toggle">
-              <input type="checkbox" name="obj" value="person" checked /> person
-            </label>
-            <label class="obj-toggle">
-              <input type="checkbox" name="obj" value="car" checked /> car
-            </label>
-            <label class="obj-toggle">
-              <input type="checkbox" name="obj" value="cat" /> cat
-            </label>
-            <label class="obj-toggle">
-              <input type="checkbox" name="obj" value="dog" /> dog
-            </label>
-            <label class="obj-toggle">
-              <input type="checkbox" name="obj" value="bicycle" /> bicycle
-            </label>
-            <label class="obj-toggle">
-              <input type="checkbox" name="obj" value="motorcycle" /> motorcycle
-            </label>
-          </div>
-        </div>
-
-        <!-- Recording -->
-        <div class="settings-section">
-          <h3>Felvétel megőrzés</h3>
-          <div class="settings-row">
-            <div class="field">
-              <label>Mozgás (nap)</label>
-              <input type="number" id="rec-motion" value="7" min="1" max="90" />
-            </div>
-            <div class="field">
-              <label>Esemény (nap)</label>
-              <input type="number" id="rec-event" value="14" min="1" max="90" />
-            </div>
-          </div>
-        </div>
-
-      </div>
-
-      <div class="save-row">
-        <button class="btn btn-primary" id="save-btn" onclick="saveSettings()">Mentés &amp; Alkalmazás</button>
-        <button class="btn btn-ghost" onclick="loadSettings()">Visszaállítás</button>
-        <span class="save-status" id="save-status"></span>
+      <div class="s-stat">
+        <div class="s-dot" style="background:var(--amber)"></div>
+        <span id="clock" style="color:var(--amber)">--:--:--</span>
       </div>
     </div>
-  </div>
+  </aside>
 
-  <!-- Cameras -->
-  <div id="cameras-section">
-    <h2>Cameras <span id="count" style="color:var(--muted);font-weight:400"></span></h2>
-    <div class="grid" id="grid">
-      <div class="empty">Még nem futott le discovery. Kattints a "Scan Network" gombra.</div>
+  <!-- Main -->
+  <div class="main">
+    <header class="topbar">
+      <span class="topbar-title" id="section-label">Cameras</span>
+      <div class="topbar-pill">
+        <div class="pill-dot" id="cam-pill-dot"></div>
+        <span id="count">0 cameras</span>
+      </div>
+      <button id="logout-btn" onclick="logout()">Kijelentkezés</button>
+    </header>
+
+    <div class="content">
+
+      <!-- CAMERAS -->
+      <section id="section-cameras" class="section active">
+        <div class="cam-grid" id="grid">
+          <div class="empty-state" style="grid-column:1/-1">
+            <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><rect x="2" y="6" width="20" height="15" rx="2"/><circle cx="12" cy="13.5" r="3"/><path d="M9 6V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1"/></svg>
+            <div class="empty-title">No cameras detected</div>
+            <div class="empty-sub">Run a network scan from the Discovery tab to find IP Webcam devices on your network.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- DISCOVERY -->
+      <section id="section-discovery" class="section">
+        <div class="disc-wrap">
+
+          <div class="card">
+            <div class="card-title">Scan Configuration</div>
+            <div class="field">
+              <span class="field-label">Hálózat</span>
+              <select id="subnet-select"><option value="">auto-detect</option></select>
+            </div>
+            <div class="field-row">
+              <div class="field">
+                <span class="field-label">Port</span>
+                <input type="number" id="port" value="8080" />
+              </div>
+              <div class="field">
+                <span class="field-label">Timeout (s)</span>
+                <input type="number" id="timeout" value="1.0" step="0.5" />
+              </div>
+            </div>
+            <div class="field">
+              <label class="chk-row">
+                <input type="checkbox" id="update-frigate" />
+                <span>Frigate config frissítése</span>
+              </label>
+            </div>
+            <button class="btn btn-primary" id="scan-btn" onclick="startScan()" style="width:100%">Scan Network</button>
+          </div>
+
+          <div class="card">
+            <div class="card-title">Camera Management</div>
+            <div class="disc-actions">
+              <button class="btn btn-ghost" id="reset-btn" onclick="resetCameras()" style="width:100%">Reset Cameras</button>
+              <button class="btn btn-danger" id="rec-del-btn" onclick="clearRecordings()" style="width:100%">Delete Recordings</button>
+            </div>
+          </div>
+
+          <div class="disc-log-wrap">
+            <div id="log"></div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- SETTINGS -->
+      <section id="section-settings" class="section">
+        <div class="settings-wrap">
+
+          <div class="card">
+            <div class="card-title">Hardware dekóder</div>
+            <div class="radio-group">
+              <label class="radio-card"><input type="radio" name="decoder" value="cpu" /> CPU</label>
+              <label class="radio-card" title="NVDEC + CPU AI"><input type="radio" name="decoder" value="nvidia" /> NVIDIA</label>
+              <label class="radio-card"><input type="radio" name="decoder" value="intel" /> Intel iGPU</label>
+              <label class="radio-card"><input type="radio" name="decoder" value="coral" /> Coral TPU</label>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">Detekció</div>
+            <div class="settings-row">
+              <div class="field">
+                <span class="field-label">FPS</span>
+                <select id="det-fps">
+                  <option value="1">1 fps</option>
+                  <option value="2">2 fps</option>
+                  <option value="5">5 fps</option>
+                  <option value="10" selected>10 fps</option>
+                  <option value="15">15 fps</option>
+                </select>
+              </div>
+              <div class="field">
+                <span class="field-label">Felbontás</span>
+                <select id="det-res">
+                  <option value="640x360">640×360</option>
+                  <option value="1280x720">1280×720</option>
+                  <option value="1920x1080" selected>1920×1080</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">Stream transport</div>
+            <div class="radio-group">
+              <label class="radio-card"><input type="radio" name="rtsp" value="tcp" checked /> TCP</label>
+              <label class="radio-card"><input type="radio" name="rtsp" value="udp" /> UDP</label>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">Követett objektumok</div>
+            <div class="obj-group">
+              <label class="obj-toggle"><input type="checkbox" name="obj" value="person" checked /> person</label>
+              <label class="obj-toggle"><input type="checkbox" name="obj" value="car" checked /> car</label>
+              <label class="obj-toggle"><input type="checkbox" name="obj" value="cat" /> cat</label>
+              <label class="obj-toggle"><input type="checkbox" name="obj" value="dog" /> dog</label>
+              <label class="obj-toggle"><input type="checkbox" name="obj" value="bicycle" /> bicycle</label>
+              <label class="obj-toggle"><input type="checkbox" name="obj" value="motorcycle" /> motorcycle</label>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">Felvétel megőrzés</div>
+            <div class="settings-row">
+              <div class="field">
+                <span class="field-label">Mozgás (nap)</span>
+                <input type="number" id="rec-motion" value="7" min="1" max="90" />
+              </div>
+              <div class="field">
+                <span class="field-label">Esemény (nap)</span>
+                <input type="number" id="rec-event" value="14" min="1" max="90" />
+              </div>
+            </div>
+          </div>
+
+          <div class="save-bar">
+            <button class="btn btn-primary" id="save-btn" onclick="saveSettings()">Mentés &amp; Alkalmazás</button>
+            <button class="btn btn-ghost" onclick="loadSettings()">Visszaállítás</button>
+            <span class="save-msg" id="save-status"></span>
+          </div>
+
+        </div>
+      </section>
+
     </div>
   </div>
-
-</main>
+</div>
 
 <script>
-  const API = 'http://localhost:8000';
+  const API       = 'http://localhost:8000';
   const TOKEN_KEY = 'swarmcam_jwt';
   const _snapIntervals = {};
+  const _streamMode    = {};
+  const _torchState    = {};
+  const _cameras       = {};
 
-  // ---------------------------------------------------------------------------
-  // Auth
-  // ---------------------------------------------------------------------------
-  function getToken() { return localStorage.getItem(TOKEN_KEY); }
-  function setToken(t) { localStorage.setItem(TOKEN_KEY, t); }
+  /* NAVIGATION */
+  const SEC_LABELS = { cameras: 'Cameras', discovery: 'Discovery', settings: 'Settings' };
+
+  function showSection(name) {
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.getElementById(`section-${name}`).classList.add('active');
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b.dataset.sec === name));
+    document.getElementById('section-label').textContent = SEC_LABELS[name] || name;
+  }
+
+  /* CLOCK */
+  function tickClock() {
+    const el = document.getElementById('clock');
+    if (el) el.textContent = new Date().toLocaleTimeString('hu-HU', { hour12: false });
+  }
+  setInterval(tickClock, 1000); tickClock();
+
+  /* AUTH */
+  function getToken()   { return localStorage.getItem(TOKEN_KEY); }
+  function setToken(t)  { localStorage.setItem(TOKEN_KEY, t); }
   function clearToken() { localStorage.removeItem(TOKEN_KEY); }
-
   function authHeaders(extra = {}) {
     const t = getToken();
     return t ? { 'Authorization': `Bearer ${t}`, ...extra } : extra;
   }
-
   function showLogin() {
     document.getElementById('login-overlay').classList.remove('hidden');
     document.getElementById('logout-btn').style.display = 'none';
@@ -531,9 +954,7 @@
   async function doLogin() {
     const btn = document.getElementById('login-btn');
     const err = document.getElementById('login-error');
-    btn.disabled = true;
-    btn.textContent = 'Bejelentkezés...';
-    err.textContent = '';
+    btn.disabled = true; btn.textContent = 'Bejelentkezés…'; err.textContent = '';
     try {
       const r = await fetch(`${API}/api/auth/login`, {
         method: 'POST',
@@ -544,31 +965,16 @@
         }),
       });
       const data = await r.json();
-      if (r.ok && data.token) {
-        setToken(data.token);
-        hideLogin();
-        initApp();
-      } else {
-        err.textContent = data.message || data.detail || 'Hibás felhasználónév vagy jelszó';
-      }
-    } catch (e) {
-      err.textContent = 'Kapcsolódási hiba: ' + e.message;
-    } finally {
-      btn.disabled = false;
-      btn.textContent = 'Bejelentkezés';
-    }
+      if (r.ok && data.token) { setToken(data.token); hideLogin(); initApp(); }
+      else err.textContent = data.message || data.detail || 'Hibás felhasználónév vagy jelszó';
+    } catch (e) { err.textContent = 'Kapcsolódási hiba: ' + e.message; }
+    finally { btn.disabled = false; btn.textContent = 'Bejelentkezés'; }
   }
 
   document.addEventListener('keydown', e => {
-    if (e.key === 'Enter' && !document.getElementById('login-overlay').classList.contains('hidden')) {
-      doLogin();
-    }
+    if (e.key === 'Enter' && !document.getElementById('login-overlay').classList.contains('hidden')) doLogin();
   });
-
-  function logout() {
-    clearToken();
-    location.reload();
-  }
+  function logout() { clearToken(); location.reload(); }
 
   async function checkAuth() {
     const t = getToken();
@@ -578,62 +984,36 @@
       if (r.ok) { hideLogin(); initApp(); }
       else if (r.status === 401) { clearToken(); showLogin(); }
       else { showLogin(); }
-    } catch {
-      // API nem elérhető – login nélkül is engedjük (dev mode)
-      hideLogin(); initApp();
-    }
+    } catch { hideLogin(); initApp(); }
   }
 
-  // ---------------------------------------------------------------------------
-  // Panel toggle
-  // ---------------------------------------------------------------------------
-  function togglePanel(bodyId, header) {
-    const body = document.getElementById(bodyId);
-    const chevron = header.querySelector('.chevron');
-    body.classList.toggle('hidden');
-    chevron.classList.toggle('open');
-  }
-
-  // ---------------------------------------------------------------------------
-  // Discovery
-  // ---------------------------------------------------------------------------
+  /* DISCOVERY */
   async function clearRecordings() {
     const btn = document.getElementById('rec-del-btn');
-    btn.disabled = true;
-    btn.textContent = 'Deleting…';
+    btn.disabled = true; btn.textContent = 'Deleting…';
     try {
       const r = await fetch(`${API}/api/recordings`, { method: 'DELETE', headers: authHeaders() });
       const res = await r.json();
       alert(`Törölve: ${res.cleared_mb} MB`);
-    } catch (e) {
-      alert('Hiba: ' + e.message);
-    } finally {
-      btn.disabled = false;
-      btn.textContent = 'Delete Recordings';
-    }
+    } catch (e) { alert('Hiba: ' + e.message); }
+    finally { btn.disabled = false; btn.textContent = 'Delete Recordings'; }
   }
 
   async function resetCameras() {
     const btn = document.getElementById('reset-btn');
-    btn.disabled = true;
-    btn.textContent = 'Resetting…';
+    btn.disabled = true; btn.textContent = 'Resetting…';
     try {
       await fetch(`${API}/api/cameras/reset`, { method: 'POST', headers: authHeaders() });
       renderCameras([]);
-    } catch(e) {
-      alert('Hiba: ' + e.message);
-    } finally {
-      btn.disabled = false;
-      btn.textContent = 'Reset Cameras';
-    }
+    } catch (e) { alert('Hiba: ' + e.message); }
+    finally { btn.disabled = false; btn.textContent = 'Reset Cameras'; }
   }
+
   async function startScan() {
     const btn = document.getElementById('scan-btn');
     const log = document.getElementById('log');
-    btn.disabled = true;
-    btn.textContent = 'Scanning…';
-    log.innerHTML = '';
-    log.className = 'active';
+    btn.disabled = true; btn.textContent = 'Scanning…';
+    log.innerHTML = ''; log.className = 'active';
 
     const body = {
       port: parseInt(document.getElementById('port').value),
@@ -652,99 +1032,59 @@
     const reader = resp.body.getReader();
     const dec = new TextDecoder();
     let buffer = '';
-
     while (true) {
       const { value, done } = await reader.read();
       if (done) break;
       buffer += dec.decode(value, { stream: true });
-      const parts = buffer.split('\n\n');
-      buffer = parts.pop();
-
+      const parts = buffer.split('\n\n'); buffer = parts.pop();
       for (const chunk of parts) {
-        const eventLine = chunk.match(/^event: (.+)$/m)?.[1];
-        const dataLine  = chunk.match(/^data: (.+)$/m)?.[1];
+        const evLine   = chunk.match(/^event: (.+)$/m)?.[1];
+        const dataLine = chunk.match(/^data: (.+)$/m)?.[1];
         if (!dataLine) continue;
-
-        if (eventLine === 'progress') {
+        if (evLine === 'progress') {
           const text = JSON.parse(dataLine);
           const div = document.createElement('div');
           div.className = 'line' + (text.startsWith('[+]') ? ' found' : text.startsWith('[!]') ? ' warn' : '');
           div.textContent = text;
-          log.appendChild(div);
-          log.scrollTop = log.scrollHeight;
+          log.appendChild(div); log.scrollTop = log.scrollHeight;
         }
-        if (eventLine === 'result') {
-          const found = JSON.parse(dataLine);
-          if (found.length > 0) renderCameras(found);
-        }
-        if (eventLine === 'done') {
-          btn.disabled = false;
-          btn.textContent = 'Scan Network';
-        }
+        if (evLine === 'result') { const found = JSON.parse(dataLine); if (found.length > 0) renderCameras(found); }
+        if (evLine === 'done')   { btn.disabled = false; btn.textContent = 'Scan Network'; }
       }
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // Settings
-  // ---------------------------------------------------------------------------
+  /* SETTINGS */
   async function loadSettings() {
     try {
       const r = await fetch(`${API}/api/config`, { headers: authHeaders() });
       if (!r.ok) return;
       const s = await r.json();
-
-      // Decoder
-      document.querySelectorAll('input[name="decoder"]').forEach(el => {
-        el.checked = el.value === s.decoder;
-      });
-
-      // FPS
+      document.querySelectorAll('input[name="decoder"]').forEach(el => el.checked = el.value === s.decoder);
       document.getElementById('det-fps').value = s.detection_fps;
-
-      // Resolution
       document.getElementById('det-res').value = `${s.detection_width}x${s.detection_height}`;
-
-      // RTSP transport
-      document.querySelectorAll('input[name="rtsp"]').forEach(el => {
-        el.checked = el.value === s.rtsp_transport;
-      });
-
-      // Objects
-      document.querySelectorAll('input[name="obj"]').forEach(el => {
-        el.checked = s.objects.includes(el.value);
-      });
-
-      // Record
+      document.querySelectorAll('input[name="rtsp"]').forEach(el => el.checked = el.value === s.rtsp_transport);
+      document.querySelectorAll('input[name="obj"]').forEach(el => el.checked = s.objects.includes(el.value));
       document.getElementById('rec-motion').value = s.record_motion_days;
       document.getElementById('rec-event').value  = s.record_event_days;
-
-    } catch (e) {
-      console.warn('Config betöltés sikertelen:', e);
-    }
+    } catch (e) { console.warn('Config betöltés sikertelen:', e); }
   }
 
   async function saveSettings() {
     const btn = document.getElementById('save-btn');
     const status = document.getElementById('save-status');
-    btn.disabled = true;
-    btn.textContent = 'Mentés…';
-    status.textContent = '';
-    status.className = 'save-status';
-
+    btn.disabled = true; btn.textContent = 'Mentés…';
+    status.textContent = ''; status.className = 'save-msg';
     const [w, h] = document.getElementById('det-res').value.split('x').map(Number);
-
     const body = {
       decoder:            document.querySelector('input[name="decoder"]:checked')?.value ?? 'cpu',
       detection_fps:      parseInt(document.getElementById('det-fps').value),
-      detection_width:    w,
-      detection_height:   h,
+      detection_width: w, detection_height: h,
       rtsp_transport:     document.querySelector('input[name="rtsp"]:checked')?.value ?? 'tcp',
       record_motion_days: parseInt(document.getElementById('rec-motion').value),
       record_event_days:  parseInt(document.getElementById('rec-event').value),
       objects: [...document.querySelectorAll('input[name="obj"]:checked')].map(e => e.value),
     };
-
     try {
       const r = await fetch(`${API}/api/config`, {
         method: 'POST',
@@ -752,88 +1092,127 @@
         body: JSON.stringify(body),
       });
       const res = await r.json();
-      if (res.decoder_changed) {
-        status.textContent = 'Mentve – stack újraindítva';
-      } else if (res.frigate_restarted) {
-        status.textContent = 'Mentve – Frigate újraindítva';
-      } else {
-        status.textContent = 'Mentve – Frigate nem fut, konfig alkalmazva indításkor';
-      }
-      status.className = 'save-status ok';
-    } catch (e) {
-      status.textContent = 'Hiba: ' + e.message;
-      status.className = 'save-status err';
-    } finally {
-      btn.disabled = false;
-      btn.textContent = 'Mentés & Alkalmazás';
-    }
+      if (res.decoder_changed)       status.textContent = 'Mentve – stack újraindítva';
+      else if (res.frigate_restarted) status.textContent = 'Mentve – Frigate újraindítva';
+      else                            status.textContent = 'Mentve – Frigate nem fut, konfig alkalmazva indításkor';
+      status.className = 'save-msg ok';
+    } catch (e) { status.textContent = 'Hiba: ' + e.message; status.className = 'save-msg err'; }
+    finally { btn.disabled = false; btn.textContent = 'Mentés & Alkalmazás'; }
   }
 
-  // ---------------------------------------------------------------------------
-  // Cameras
-  // ---------------------------------------------------------------------------
-  function batteryColor(level) {
-    if (level === null) return 'var(--muted)';
-    if (level > 50) return 'var(--green)';
-    if (level > 20) return 'var(--yellow)';
+  /* CAMERAS */
+  function batteryColor(lvl) {
+    if (lvl == null) return 'var(--text-muted)';
+    if (lvl > 50)   return 'var(--green)';
+    if (lvl > 20)   return 'var(--amber)';
     return 'var(--red)';
   }
 
+  function setCount(n) {
+    const el = document.getElementById('count');
+    if (el) el.textContent = `${n} camera${n !== 1 ? 's' : ''}`;
+    const dot = document.getElementById('cam-pill-dot');
+    if (dot) dot.className = `pill-dot${n > 0 ? ' live' : ''}`;
+  }
+
   function renderCameras(cameras) {
-    const grid  = document.getElementById('grid');
-    const count = document.getElementById('count');
+    const grid = document.getElementById('grid');
+    Object.keys(_cameras).forEach(ip => {
+      if (_streamMode[ip] === 'live') { const img = document.getElementById(`snap-${ip}`); if (img) img.src = ''; }
+      clearInterval(_snapIntervals[ip]); delete _snapIntervals[ip];
+    });
     grid.innerHTML = '';
 
     if (!cameras.length) {
-      grid.innerHTML = '<div class="empty">Nem találtam egyetlen IP Webcam kamerát sem.</div>';
-      count.textContent = '';
+      setCount(0);
+      grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
+        <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><rect x="2" y="6" width="20" height="15" rx="2"/><circle cx="12" cy="13.5" r="3"/><path d="M9 6V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1"/></svg>
+        <div class="empty-title">No cameras detected</div>
+        <div class="empty-sub">Run a network scan from the Discovery tab to find IP Webcam devices on your network.</div>
+      </div>`;
       return;
     }
 
-    count.textContent = `(${cameras.length})`;
+    setCount(cameras.length);
+
     for (const cam of cameras) {
+      const safeIp   = cam.ip.replace(/\./g, '_');
       const batt     = cam.battery_level;
       const color    = batteryColor(batt);
       const res      = cam.resolution ? `${cam.resolution[0]}×${cam.resolution[1]}` : '—';
       const orient   = cam.orientation ?? '—';
       const charging = cam.battery_charging ? ' ⚡' : '';
-      const temp     = cam.battery_temp_c != null ? `${cam.battery_temp_c}°C` : '—';
-      const space    = cam.free_space_gb  != null ? `${cam.free_space_gb} GB` : '—';
+      const temp     = cam.battery_temp_c  != null ? `${cam.battery_temp_c}°C` : '—';
+      const space    = cam.free_space_gb   != null ? `${cam.free_space_gb} GB` : '—';
       const conns    = cam.video_connections ?? 0;
-      const nv       = cam.night_vision ? 'be' : 'ki';
       const quality  = cam.quality != null ? cam.quality + '%' : '—';
+      const isLive   = conns > 0;
+      const dispName = cam.name.replace('cam_', '').replace(/_/g, '.');
 
-      const safeIp = cam.ip.replace(/\./g, '_');
       grid.insertAdjacentHTML('beforeend', `
         <div class="camera-card" id="card-${safeIp}">
-          <div class="cam-snapshot-wrap">
-            <img id="snap-${safeIp}" class="cam-snapshot" alt="Camera view"
-                 onerror="this.style.visibility='hidden';document.getElementById('snap-off-${safeIp}').style.display='flex'"
-                 onload="this.style.visibility='';document.getElementById('snap-off-${safeIp}').style.display='none'" />
-            <div class="snap-offline" id="snap-off-${safeIp}">Nincs kép</div>
+          <div class="cam-feed">
+            <img id="snap-${safeIp}" alt=""
+                 onerror="this.style.visibility='hidden';const _o=document.getElementById('snap-off-${safeIp}');if(_o)_o.style.display='flex';"
+                 onload="this.style.visibility='';const _o=document.getElementById('snap-off-${safeIp}');if(_o)_o.style.display='none';" />
+            <div class="feed-offline" id="snap-off-${safeIp}">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="2" y1="2" x2="22" y2="22"/><path d="M6.71 6.71A10 10 0 0 0 3 12s4 8 9 8a9.85 9.85 0 0 0 5.29-1.71M10.59 10.59A2 2 0 0 0 9.17 12.17"/><path d="M21 21l-1.5-1.5M17 17l-2.5-2.5M12 12l-1-1"/></svg>
+              NO SIGNAL
+            </div>
+            <div class="feed-badge${isLive ? ' live' : ''}" id="badge-${safeIp}">
+              <span class="fbdot"></span>${isLive ? 'LIVE' : 'IDLE'}
+            </div>
+            <button class="stream-toggle" id="stbtn-${safeIp}" onclick="toggleStreamMode('${safeIp}')">SNAP</button>
           </div>
-          <div class="card-header">
-            <span class="name">${cam.name}</span>
-            <span class="badge" id="badge-${safeIp}">${conns > 0 ? 'LIVE ●' : 'IDLE'}</span>
+          <div class="cam-body">
+            <div class="cam-head">
+              <span class="cam-name">${dispName}</span>
+              <span class="cam-status${isLive ? ' live' : ''}" id="cbadge-${safeIp}">${isLive ? 'live' : 'idle'}</span>
+            </div>
+            <div class="cam-data">
+              <div class="data-cell">
+                <span class="data-lbl">IP</span>
+                <span class="data-val" style="font-size:10.5px">${cam.ip}:${cam.port}</span>
+              </div>
+              <div class="data-cell">
+                <span class="data-lbl">Felbontás</span>
+                <span class="data-val">${res}</span>
+              </div>
+              <div class="data-cell">
+                <span class="data-lbl">Minőség</span>
+                <span class="data-val" id="quality-${safeIp}">${quality}</span>
+              </div>
+              <div class="data-cell">
+                <span class="data-lbl">Hőmérséklet</span>
+                <span class="data-val" id="temp-${safeIp}">${temp}</span>
+              </div>
+              <div class="data-cell">
+                <span class="data-lbl">Éjjellátó</span>
+                <span class="data-val" id="nv-${safeIp}">${cam.night_vision ? 'ON' : 'OFF'}</span>
+              </div>
+              <div class="data-cell">
+                <span class="data-lbl">Szabad hely</span>
+                <span class="data-val" id="space-${safeIp}">${space}</span>
+              </div>
+            </div>
+            <div class="cam-actions">
+              <button class="action-btn" id="torch-${safeIp}" onclick="toggleTorch('${safeIp}')">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M9 2h6l1 7H8L9 2zm-1 7h8l-2 8H10L8 9zm4 8v5m0 0h-2m2 0h2"/></svg>
+                VAKU
+              </button>
+            </div>
+            <div class="cam-batt">
+              <div class="batt-bar">
+                <div class="batt-fill" id="battbar-${safeIp}" style="width:${batt ?? 0}%;background:${color}"></div>
+              </div>
+              <span class="batt-lbl" id="batt-${safeIp}" style="color:${color}">${batt != null ? batt + '%' + charging : '—'}</span>
+            </div>
+            <div class="rtsp-box" onclick="copyRtsp(this,'${cam.rtsp_url}')">${cam.rtsp_url}</div>
           </div>
-          <div class="info-row"><span>IP</span><span>${cam.ip}:${cam.port}</span></div>
-          <div class="info-row"><span>Felbontás</span><span>${res}</span></div>
-          <div class="info-row"><span>Orientáció</span><span>${orient}</span></div>
-          <div class="info-row"><span>Minőség</span><span id="quality-${safeIp}">${quality}</span></div>
-          <div class="info-row"><span>Éjjellátó</span><span id="nv-${safeIp}">${nv}</span></div>
-          <div class="info-row"><span>Szabad tárhely</span><span id="space-${safeIp}">${space}</span></div>
-          <div class="info-row">
-            <span>Akkumulátor</span>
-            <span id="batt-${safeIp}" style="color:${color}">${batt != null ? batt + '%' + charging : '—'}</span>
-          </div>
-          <div><div class="battery-bar">
-            <div class="battery-fill" id="battbar-${safeIp}" style="width:${batt ?? 0}%;background:${color}"></div>
-          </div></div>
-          <div class="info-row"><span>Hőmérséklet</span><span id="temp-${safeIp}">${temp}</span></div>
-          <div class="rtsp-box" onclick="copyRtsp(this, '${cam.rtsp_url}')">${cam.rtsp_url}</div>
-        </div>
-      `);
-      startSnapshot(cam);
+        </div>`);
+
+      _cameras[safeIp] = cam;
+      startLiveStream(cam);
     }
   }
 
@@ -843,39 +1222,21 @@
     setTimeout(() => el.style.borderColor = '', 800);
   }
 
-  // ---------------------------------------------------------------------------
-  // System capabilities → GPU opciók grayout
-  // ---------------------------------------------------------------------------
+  /* SYSTEM CHECK */
   async function checkSystem() {
     try {
       const r = await fetch(`${API}/api/system`, { headers: authHeaders() });
       const sys = await r.json();
-
-      const nvidiaCards = document.querySelectorAll('input[name="decoder"][value="nvidia"]');
-      const intelCards  = document.querySelectorAll('input[name="decoder"][value="intel"]');
-
-      nvidiaCards.forEach(el => {
-        const card = el.closest('.radio-card');
+      document.querySelectorAll('input[name="decoder"][value="nvidia"]').forEach(el => {
         if (!sys.nvidia_docker) {
           el.disabled = true;
-          card.style.opacity = '.4';
-          card.title = sys.nvidia_gpu
-            ? 'GPU észlelve, de nvidia-container-toolkit nincs telepítve'
-            : 'Nem található NVIDIA GPU';
+          el.closest('.radio-card').title = sys.nvidia_gpu ? 'nvidia-container-toolkit hiányzik' : 'NVIDIA GPU nem található';
         }
       });
-
-      intelCards.forEach(el => {
-        const card = el.closest('.radio-card');
-        if (!sys.intel_gpu) {
-          el.disabled = true;
-          card.style.opacity = '.4';
-          card.title = 'Intel iGPU (/dev/dri/renderD128) nem elérhető';
-        }
+      document.querySelectorAll('input[name="decoder"][value="intel"]').forEach(el => {
+        if (!sys.intel_gpu) { el.disabled = true; el.closest('.radio-card').title = 'Intel iGPU nem elérhető'; }
       });
-    } catch (e) {
-      console.warn('System check sikertelen:', e);
-    }
+    } catch {}
   }
 
   async function loadNetworks() {
@@ -890,16 +1251,14 @@
         sel.appendChild(opt);
       });
       if (nets.length === 1) sel.value = nets[0].subnet;
-    } catch (e) {
-      console.warn('Hálózatok betöltése sikertelen:', e);
-    }
+    } catch {}
   }
 
+  /* HEALTH WS */
   function updateCameraHealth(cameras) {
-    const grid = document.getElementById('grid');
-    const isEmpty = grid && grid.querySelector('.empty');
-    // Ha még nincsenek kártyák, hozzuk létre őket a health adatokból
-    if (grid && (isEmpty || !grid.querySelector('.camera-card'))) {
+    const grid    = document.getElementById('grid');
+    const isEmpty = grid && (grid.querySelector('.empty-state') || !grid.querySelector('.camera-card'));
+    if (isEmpty) {
       renderCameras(cameras.map(c => ({
         ...c,
         rtsp_url: c.rtsp_url || `rtsp://${c.ip}:${c.port || 8080}/h264_ulaw.sdp`,
@@ -908,67 +1267,74 @@
     }
     for (const cam of cameras) {
       const safeIp = cam.ip.replace(/\./g, '_');
-      const card = document.getElementById(`card-${safeIp}`);
+      const card   = document.getElementById(`card-${safeIp}`);
       if (!card) continue;
 
       const batt     = cam.battery_level;
       const color    = batteryColor(batt);
       const charging = cam.battery_charging ? ' ⚡' : '';
-      const temp     = cam.battery_temp_c != null ? `${cam.battery_temp_c}°C` : '—';
-      const space    = cam.free_space_gb  != null ? `${cam.free_space_gb} GB` : '—';
+      const temp     = cam.battery_temp_c  != null ? `${cam.battery_temp_c}°C` : '—';
+      const space    = cam.free_space_gb   != null ? `${cam.free_space_gb} GB` : '—';
       const conns    = cam.video_connections ?? 0;
-      const nv       = cam.night_vision ? 'be' : 'ki';
       const quality  = cam.quality != null ? cam.quality + '%' : '—';
+      const isLive   = conns > 0;
 
-      const badge = document.getElementById(`badge-${safeIp}`);
-      if (badge) {
-        if (!cam.online) {
-          badge.textContent = 'OFFLINE';
-          badge.style.background = 'var(--red)';
-          card.style.opacity = '.5';
-        } else {
-          badge.textContent = conns > 0 ? 'LIVE ●' : 'IDLE';
-          badge.style.background = '';
-          card.style.opacity = '';
+      const feedBadge = document.getElementById(`badge-${safeIp}`);
+      const cardBadge = document.getElementById(`cbadge-${safeIp}`);
+
+      if (!cam.online) {
+        card.classList.add('offline');
+        if (feedBadge) { feedBadge.className = 'feed-badge offl'; feedBadge.innerHTML = '<span class="fbdot"></span>OFFLINE'; }
+        if (cardBadge) { cardBadge.className = 'cam-status offl'; cardBadge.textContent = 'offline'; }
+      } else {
+        card.classList.remove('offline');
+        if (feedBadge) {
+          feedBadge.className = `feed-badge${isLive ? ' live' : ''}`;
+          feedBadge.innerHTML = `<span class="fbdot"></span>${isLive ? 'LIVE' : 'IDLE'}`;
+        }
+        if (cardBadge) {
+          cardBadge.className = `cam-status${isLive ? ' live' : ''}`;
+          cardBadge.textContent = isLive ? 'live' : 'idle';
         }
       }
 
-      const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+      const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
       set(`quality-${safeIp}`, quality);
-      set(`nv-${safeIp}`, nv);
+      set(`nv-${safeIp}`, cam.night_vision ? 'ON' : 'OFF');
       set(`space-${safeIp}`, space);
       set(`temp-${safeIp}`, temp);
 
       const battEl = document.getElementById(`batt-${safeIp}`);
-      if (battEl) {
-        battEl.textContent = batt != null ? batt + '%' + charging : '—';
-        battEl.style.color = color;
-      }
-      const barEl = document.getElementById(`battbar-${safeIp}`);
-      if (barEl) {
-        barEl.style.width   = (batt ?? 0) + '%';
-        barEl.style.background = color;
-      }
+      if (battEl) { battEl.textContent = batt != null ? batt + '%' + charging : '—'; battEl.style.color = color; }
+      const barEl  = document.getElementById(`battbar-${safeIp}`);
+      if (barEl)  { barEl.style.width = (batt ?? 0) + '%'; barEl.style.background = color; }
     }
   }
 
   function connectHealthWS() {
-    const ws = new WebSocket(`ws://localhost:8000/ws/cameras`);
+    const dot = document.getElementById('ws-dot');
+    const txt = document.getElementById('ws-txt');
+    const ws  = new WebSocket(`ws://localhost:8000/ws/cameras`);
+    ws.onopen = () => {
+      if (dot) dot.className = 's-dot on';
+      if (txt) txt.textContent = 'connected';
+    };
     ws.onmessage = e => {
       const msg = JSON.parse(e.data);
       if (msg.type === 'status') updateCameraHealth(msg.cameras);
     };
-    ws.onclose = () => setTimeout(connectHealthWS, 5000);
+    ws.onclose = () => {
+      if (dot) dot.className = 's-dot off';
+      if (txt) txt.textContent = 'reconnecting';
+      setTimeout(connectHealthWS, 5000);
+    };
   }
 
-  // ---------------------------------------------------------------------------
-  // Snapshot
-  // ---------------------------------------------------------------------------
+  /* SNAPSHOT */
   function startSnapshot(cam) {
     const safeIp = cam.ip.replace(/\./g, '_');
-    const imgId = `snap-${safeIp}`;
     const refresh = () => {
-      const el = document.getElementById(imgId);
+      const el = document.getElementById(`snap-${safeIp}`);
       if (el) el.src = `${API}/api/cameras/${cam.name}/snapshot?t=${Date.now()}`;
     };
     refresh();
@@ -976,13 +1342,57 @@
     _snapIntervals[safeIp] = setInterval(refresh, 3000);
   }
 
-  // ---------------------------------------------------------------------------
-  // App init (called after auth)
-  // ---------------------------------------------------------------------------
+  /* LIVE STREAM (MJPEG proxy) */
+  function startLiveStream(cam) {
+    const safeIp = cam.ip.replace(/\./g, '_');
+    const img    = document.getElementById(`snap-${safeIp}`);
+    const btn    = document.getElementById(`stbtn-${safeIp}`);
+    clearInterval(_snapIntervals[safeIp]);
+    delete _snapIntervals[safeIp];
+    if (img) img.src = `${API}/api/cameras/${cam.name}/stream`;
+    if (btn) { btn.textContent = 'LIVE'; btn.classList.add('is-live'); }
+    _streamMode[safeIp] = 'live';
+  }
+
+  function stopLiveStream(safeIp) {
+    const cam = _cameras[safeIp];
+    if (!cam) return;
+    const img = document.getElementById(`snap-${safeIp}`);
+    const btn = document.getElementById(`stbtn-${safeIp}`);
+    if (img) img.src = '';
+    if (btn) { btn.textContent = 'SNAP'; btn.classList.remove('is-live'); }
+    _streamMode[safeIp] = 'snap';
+    startSnapshot(cam);
+  }
+
+  function toggleStreamMode(safeIp) {
+    if (_streamMode[safeIp] === 'live') stopLiveStream(safeIp);
+    else { const cam = _cameras[safeIp]; if (cam) startLiveStream(cam); }
+  }
+
+  async function toggleTorch(safeIp) {
+    const cam = _cameras[safeIp];
+    if (!cam) return;
+    const btn = document.getElementById(`torch-${safeIp}`);
+    const newState = !_torchState[safeIp];
+    try {
+      const r = await fetch(`${API}/api/cameras/${cam.name}/torch`, {
+        method: 'POST',
+        headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: newState }),
+      });
+      if (r.ok) {
+        _torchState[safeIp] = newState;
+        if (btn) btn.classList.toggle('torch-on', newState);
+      }
+    } catch {}
+  }
+
+  /* INIT */
   function initApp() {
     fetch(`${API}/api/cameras`, { headers: authHeaders() })
       .then(r => r.json())
-      .then(cameras => { if (cameras.length) renderCameras(cameras); })
+      .then(cams => { if (cams.length) renderCameras(cams); })
       .catch(() => {});
     loadSettings();
     checkSystem();
@@ -990,7 +1400,6 @@
     connectHealthWS();
   }
 
-  // Induláskor auth ellenőrzés
   checkAuth();
 </script>
 </body>

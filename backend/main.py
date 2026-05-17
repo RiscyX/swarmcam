@@ -75,7 +75,7 @@ async def _health_loop():
                         "online":            True,
                         "battery_level":     int(info["batteryPercent"])        if "batteryPercent"      in info    else None,
                         "battery_charging":  bool(info.get("batteryCharging", "")),
-                        "battery_temp_c":    float(info.get("batteryTemperatureC", 0)) or None,
+                        "battery_temp_c":    round(float(info.get("batteryTemperatureC", 0)), 1) or None,
                         "free_space_gb":     round(int(info["freeSpaceBytes"]) / 1024**3, 1) if "freeSpaceBytes" in info else None,
                         "video_connections": int(status.get("video_connections", 0)),
                         "night_vision":      curvals.get("night_vision", "off") == "on",
@@ -408,6 +408,61 @@ async def camera_snapshot(name: str):
     except Exception:
         pass
     return Response(content=_PLACEHOLDER_GIF, media_type="image/gif", status_code=200)
+
+
+@app.get("/api/cameras/{name}/stream")
+async def camera_stream(name: str):
+    """MJPEG live stream proxy – directly from IP Webcam /videofeed."""
+    cam = next((c for c in _last_cameras if c["name"] == name), None)
+    if not cam:
+        raise HTTPException(404, "Camera not found")
+    ip, port = cam["ip"], cam["port"]
+
+    loop = asyncio.get_event_loop()
+    try:
+        r = await loop.run_in_executor(
+            None,
+            lambda: http.get(f"http://{ip}:{port}/videofeed", stream=True, timeout=5),
+        )
+    except Exception:
+        raise HTTPException(503, "Camera unreachable")
+
+    content_type = r.headers.get("Content-Type", "multipart/x-mixed-replace;boundary=ipcam")
+
+    async def generate():
+        try:
+            while True:
+                chunk = await loop.run_in_executor(None, r.raw.read, 8192)
+                if not chunk:
+                    break
+                yield chunk
+        finally:
+            r.close()
+
+    return StreamingResponse(generate(), media_type=content_type)
+
+
+class TorchRequest(BaseModel):
+    enabled: bool
+
+
+@app.post("/api/cameras/{name}/torch")
+async def camera_torch(name: str, body: TorchRequest):
+    """Toggle IP Webcam flashlight."""
+    cam = next((c for c in _last_cameras if c["name"] == name), None)
+    if not cam:
+        raise HTTPException(404, "Camera not found")
+    ip, port = cam["ip"], cam["port"]
+    endpoint = "enabletorch" if body.enabled else "disabletorch"
+    loop = asyncio.get_event_loop()
+    try:
+        r = await loop.run_in_executor(
+            None,
+            lambda: http.get(f"http://{ip}:{port}/{endpoint}", timeout=3),
+        )
+        return {"ok": r.status_code == 200}
+    except Exception:
+        raise HTTPException(503, "Camera unreachable")
 
 
 # ---------------------------------------------------------------------------

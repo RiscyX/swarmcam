@@ -28,7 +28,7 @@ Saját Dashboard
 ```
 
 **Fontos:** A Frigate UI-t nem használjuk – csak a Frigate REST API-ját és MQTT kimenetét.  
-A kameraképek go2rtc WebRTC stream URL-eken jelennek meg a dashboardon.
+A live kamerakép **direkt az IP Webcam MJPEG stream-jéből** jön (`/api/cameras/{name}/stream` backend proxy), nem Frigate-en keresztül – így ~0.1s a latencia. Frigate a háttérben fut: AI detekció + felvétel + MQTT events.
 
 ## Saját fejlesztés (a dolgozat lényege)
 
@@ -96,6 +96,11 @@ swarmcam/
 | `docker/docker-compose.yml` | ✅ Kész | Frigate + Mosquitto + dashboard (nginx, port 80) + go2rtc port 1984 |
 | `docker/mosquitto/mosquitto.conf` | ✅ Kész | 1883 MQTT + 9001 WebSocket, anonymous allow |
 | **Playwright tesztelés** | ✅ Kész | 7 bug megtalálva és javítva (commit: `9a7e464`) |
+| `dashboard/index.html` – MJPEG live stream | ✅ Kész | `startLiveStream()` → `img.src = /api/cameras/{name}/stream`, SNAP/LIVE toggle gomb; ~0.1s latencia |
+| `backend/main.py` – MJPEG proxy | ✅ Kész | `GET /api/cameras/{name}/stream` → IP Webcam `/videofeed` streaming proxy (`run_in_executor` + `r.raw.read`) |
+| `backend/main.py` – torch control | ✅ Kész | `POST /api/cameras/{name}/torch` `{enabled: bool}` → IP Webcam `/enabletorch` vagy `/disabletorch` |
+| `dashboard/index.html` – vaku gomb | ✅ Kész | Kamera kártyán VAKU gomb, `toggleTorch()`, sárga highlight bekapcsolt állapotban |
+| `discovery/discovery.py` – retry logika | ✅ Kész | 2x HTTP fingerprint retry, 0.5s delay (`PROBE_RETRIES`, `RETRY_DELAY`) |
 
 ### Playwright tesztelésen talált és javított bugok (2026-05-17)
 | # | Hiba | Javítás helye |
@@ -109,12 +114,21 @@ swarmcam/
 | 7 | Hiányzó favicon → 404 minden oldalbetöltésnél | `dashboard/index.html` – `<head>` |
 
 ### Következő lépések
-| Feladat | Prioritás |
+
+#### Magas prioritás – surveillance UX
+| Feladat | Részletek |
 |---|---|
-| go2rtc WebRTC live stream a kártya-nézetben (jelenleg: 3s snapshot refresh) | Közepes |
-| Frigate auth első bejelentkezés workflow – user creation guide a dashboardon | Alacsony |
-| Backend Dockerizálása (jelenleg lokálisan fut, Docker socketen át) | Alacsony |
-| Discovery retry logika (2x attempt per IP) | Alacsony |
+| **Fullscreen / szabályozható rácsnézet** | Kamera kártyán fullscreen gomb; külön "Surveillance view" ahol az összes kamera nagy képben jelenik meg (1×1, 2×2, 1+3 grid layout választható). Billentyűparancs: `F` = fullscreen, `1/2/3` = layout váltás |
+| **AI detekciós események a dashboardon** | A backend már feliratkozik `frigate/events` MQTT topicra. A frontend WebSocket `{"type":"event"}` üzenetek alapján: (1) kamera kártyán "esemény flash" animáció ha detekció van, (2) jobb oldali event feed panel: időbélyeg, kamera neve, objektum típusa (person/car/dog), thumbnail kép Frigate `/api/events/{id}/thumbnail.jpg` végpontról |
+| **Kamera átnevezés** | Backend: `PATCH /api/cameras/{name}/alias` → eltárolja a `cam_name → display_name` mappinget egy JSON fájlban (`backend/aliases.json`). Dashboard: kártyán kattintható kamera név → inline edit mező, Enter-re ment. Az alias jelenik meg mindenütt a nyers `cam_192_168_0_177` helyett |
+| **Frigate detekciós adatok a kártyákon** | `GET /api/cameras/{name}/stats` endpoint hozzáadása (Frigate `/api/stats` alapján): camera_fps, detection_fps, detected objektumok száma (utolsó 24h). Kamera kártyán megjelenítve a health adatok mellett |
+
+#### Közepes prioritás
+| Feladat | Részletek |
+|---|---|
+| **Frigate auth első bejelentkezés workflow** | Ha login 401 + Frigate anonymous módban van, a dashboard mutasson útmutatót: "Nyisd meg a http://[host]:5000 oldalt és hozz létre egy felhasználót" |
+| **Backend Dockerizálása** | Jelenleg lokálisan fut (`backend/venv/`). Dockerfile + docker-compose service hozzáadása; a Docker socket mountolása szükséges (Frigate restart miatt) |
+| **Kamera kártyák adatainak frissítése** | Az IP Webcam quality, orientation, free_space mezők nem frissülnek health polling-ban – csak discovery-kor kerülnek be. Érdemes a health loopba is bevenni ezeket |
 
 ### Auth megjegyzés
 Az auth **Frigate auth proxy**: a backend a `POST /api/auth/login` hívást továbbítja a Frigate `/api/login`-jára, a kapott JWT tokent Bearer tokenként használja. **Frigate auth első beállítása:** a felhasználónak egyszer meg kell nyitnia `http://localhost:5000` és létrehozni egy accountot, utána működik a dashboard login.

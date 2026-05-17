@@ -17,6 +17,7 @@ import ipaddress
 import json
 import socket
 import sys
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
@@ -29,6 +30,8 @@ IPCAM_PORT = 8080
 SCAN_TIMEOUT = 1.0          # socket connect timeout (s)
 HTTP_TIMEOUT = 2.0          # requests timeout (s)
 MAX_WORKERS = 128
+PROBE_RETRIES = 2           # HTTP fingerprint retry count
+RETRY_DELAY = 0.5           # delay between retries (s)
 FRIGATE_CONFIG_PATH = Path(__file__).parent.parent / "docker" / "frigate" / "config.yml"
 
 
@@ -40,34 +43,64 @@ FRIGATE_CONFIG_PATH = Path(__file__).parent.parent / "docker" / "frigate" / "con
 class Camera:
     ip: str
     port: int
-    name: str                       # egyedi név Frigate-nek (pl. "cam_192_168_1_5")
+    name: str
     rtsp_url: str
     http_url: str
-    battery_level: int | None       # 0-100, None ha nem elérhető
+    battery_level: int | None
     battery_charging: bool | None
-    resolution: tuple[int, int] | None  # (width, height)
-    orientation: str | None         # "portrait" | "landscape"
+    battery_temp_c: float | None
+    battery_voltage: float | None
+    free_space_gb: float | None
+    resolution: tuple[int, int] | None
+    orientation: str | None
+    video_connections: int
+    night_vision: bool
+    quality: int | None
     discovered_at: str = field(default_factory=lambda: datetime.now().isoformat())
 
-    def to_frigate_camera(self) -> dict:
-        """Frigate config camera entry dict-ként."""
-        width, height = self.resolution or (1920, 1080)
-        return {
+    def to_frigate_camera(self, config: dict | None = None) -> dict:
+        """
+        Frigate config camera entry dict-ként.
+        Ha config át van adva, a meglévő detect/ffmpeg beállításokat olvassa ki belőle
+        (detection fps, resolution, hwaccel, rtsp transport) ahelyett hogy hardcode-olna.
+        """
+        # Detect beállítások: config-ból, különben telefon felbontása, különben 1080p
+        detect_fps = 5
+        detect_w, detect_h = self.resolution or (1920, 1080)
+        hwaccel_args = None
+        rtsp_transport = "-rtsp_transport tcp -fflags +genpts+discardcorrupt -avoid_negative_ts make_zero"
+
+        if config:
+            # Meglévő kamera bejegyzésből olvasunk mintát, vagy első kamerából
+            sample = next(iter((config.get("cameras") or {}).values()), None)
+            if sample:
+                d = sample.get("detect", {})
+                detect_fps = d.get("fps", detect_fps)
+                detect_w   = d.get("width", detect_w)
+                detect_h   = d.get("height", detect_h)
+                ffmpeg = sample.get("ffmpeg", {})
+                hwaccel_args = ffmpeg.get("hwaccel_args")
+                for inp in ffmpeg.get("inputs", []):
+                    rtsp_transport = inp.get("input_args")
+
+        entry: dict = {
             "ffmpeg": {
-                "inputs": [
-                    {
-                        "path": self.rtsp_url,
-                        "roles": ["detect", "record"],
-                    }
-                ]
+                "inputs": [{"path": self.rtsp_url, "roles": ["detect", "record"]}]
             },
             "detect": {
                 "enabled": True,
-                "width": width,
-                "height": height,
-                "fps": 5,
+                "width": detect_w,
+                "height": detect_h,
+                "fps": detect_fps,
             },
         }
+
+        if hwaccel_args:
+            entry["ffmpeg"]["hwaccel_args"] = hwaccel_args
+        if rtsp_transport:
+            entry["ffmpeg"]["inputs"][0]["input_args"] = rtsp_transport
+
+        return entry
 
 
 # ---------------------------------------------------------------------------
@@ -124,19 +157,32 @@ def _parse_resolution(status: dict) -> tuple[int, int] | None:
 
 def _parse_orientation(status: dict) -> str | None:
     try:
-        angle = int(status["curvals"].get("orientation", "-1"))
+        val = status["curvals"].get("orientation", "")
+        if val in ("portrait", "landscape"):
+            return val
+        angle = int(val)
         return "portrait" if angle in (0, 180) else "landscape"
     except Exception:
         return None
 
 
-def _parse_battery(status: dict) -> tuple[int | None, bool | None]:
+def _parse_battery(status: dict) -> tuple[int | None, bool | None, float | None, float | None]:
     try:
-        level = int(status["curvals"]["battery_level"])
-        charging = status["curvals"].get("battery_plugged", "false").lower() == "true"
-        return level, charging
+        info = status.get("deviceInfo", {})
+        level    = int(info["batteryPercent"])
+        charging = bool(info.get("batteryCharging", ""))   # üres string = nem tölt
+        temp     = round(float(info.get("batteryTemperatureC", 0)), 1) or None
+        voltage  = float(info.get("batteryVoltage", 0)) or None
+        return level, charging, temp, voltage
     except Exception:
-        return None, None
+        return None, None, None, None
+
+
+def _parse_free_space(status: dict) -> float | None:
+    try:
+        return round(int(status["deviceInfo"]["freeSpaceBytes"]) / 1024 ** 3, 1)
+    except Exception:
+        return None
 
 
 def probe_ipcam(ip: str, port: int) -> Camera | None:
@@ -147,13 +193,21 @@ def probe_ipcam(ip: str, port: int) -> Camera | None:
     if not _port_open(ip, port, SCAN_TIMEOUT):
         return None
 
-    status = _fetch_status(ip, port)
+    status = None
+    for attempt in range(PROBE_RETRIES):
+        status = _fetch_status(ip, port)
+        if status is not None:
+            break
+        if attempt < PROBE_RETRIES - 1:
+            time.sleep(RETRY_DELAY)
     if status is None:
         return None
 
-    battery_level, battery_charging = _parse_battery(status)
-    resolution = _parse_resolution(status)
-    orientation = _parse_orientation(status)
+    battery_level, battery_charging, battery_temp, battery_voltage = _parse_battery(status)
+    resolution   = _parse_resolution(status)
+    orientation  = _parse_orientation(status)
+    free_space   = _parse_free_space(status)
+    curvals      = status.get("curvals", {})
 
     safe_ip = ip.replace(".", "_")
     return Camera(
@@ -164,8 +218,14 @@ def probe_ipcam(ip: str, port: int) -> Camera | None:
         http_url=f"http://{ip}:{port}",
         battery_level=battery_level,
         battery_charging=battery_charging,
+        battery_temp_c=battery_temp,
+        battery_voltage=battery_voltage,
+        free_space_gb=free_space,
         resolution=resolution,
         orientation=orientation,
+        video_connections=int(status.get("video_connections", 0)),
+        night_vision=curvals.get("night_vision", "off") == "on",
+        quality=int(curvals["quality"]) if "quality" in curvals else None,
     )
 
 
@@ -213,7 +273,7 @@ def update_frigate_config(cameras: list[Camera], config_path: Path = FRIGATE_CON
         config["cameras"] = {}
 
     for cam in cameras:
-        config["cameras"][cam.name] = cam.to_frigate_camera()
+        config["cameras"][cam.name] = cam.to_frigate_camera(config)
         print(f"[*] Frigate config updated: {cam.name}", file=sys.stderr)
 
     with open(config_path, "w") as f:
