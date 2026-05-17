@@ -36,3 +36,19 @@ function toggleStreamMode(safeIp) {
   if (_streamMode[safeIp] === 'live') stopLiveStream(safeIp);
   else { const cam = _cameras[safeIp]; if (cam) startLiveStream(cam); }
 }
+
+function reconnectCamStream(camName) {
+  const cam = Object.values(_cameras).find(c => c.name === camName);
+  if (!cam) return;
+  const safeIp = cam.ip.replace(/\./g, '_');
+  const img    = document.getElementById(`snap-${safeIp}`);
+  const mode   = _streamMode[safeIp] || 'snap';
+  // disconnect
+  clearInterval(_snapIntervals[safeIp]);
+  if (img) img.src = '';
+  // reconnect after 1.5s — IP Webcam restarts capture with new ffc setting
+  setTimeout(() => {
+    if (mode === 'live') startLiveStream(cam);
+    else startSnapshot(cam);
+  }, 1500);
+}

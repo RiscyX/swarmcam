@@ -97,6 +97,12 @@ async function saveCamSettings() {
     const res = await r.json();
     const applied = res.applied?.join(', ') || '—';
     if (statusEl) { statusEl.textContent = `Alkalmazva: ${applied}`; statusEl.className = 'save-msg ok'; }
+
+    // ffc változott → stream újracsatlakozás kell az új kamera aktiválásához
+    if (body.ffc !== undefined && res.applied?.includes('ffc')) {
+      reconnectCamStream(name);
+      if (statusEl) statusEl.textContent += ' · stream újracsatlakozik…';
+    }
   } catch {
     if (statusEl) { statusEl.textContent = 'Hiba az alkalmazás során'; statusEl.className = 'save-msg err'; }
   }
