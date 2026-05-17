@@ -3,45 +3,52 @@ services:
     container_name: frigate
     image: ghcr.io/blakeblackshear/frigate:stable
     restart: unless-stopped
-    shm_size: "256mb"
+    shm_size: 256mb
     volumes:
-      - ./frigate/config.yml:/config/config.yml
-      - frigate_db:/config
-      - ./media:/media/frigate
-      - /etc/localtime:/etc/localtime:ro
+    - ./frigate/config.yml:/config/config.yml
+    - frigate_db:/config
+    - ./media:/media/frigate
+    - /etc/localtime:/etc/localtime:ro
     ports:
-      - "5000:5000"   # Frigate web UI
-      - "8554:8554"   # RTSP restream
-      - "8555:8555/tcp"
-      - "8555:8555/udp"
+    - 5000:5000
+    - 1984:1984
+    - 8554:8554
+    - 8555:8555/tcp
+    - 8555:8555/udp
     environment:
-      FRIGATE_RTSP_PASSWORD: ""
-    # GPU / Coral (production NUC – uncomment as needed)
-    # devices:
-    #   - /dev/apex_0:/dev/apex_0      # Coral TPU
-    #   - /dev/dri/renderD128          # Intel iGPU
+      FRIGATE_RTSP_PASSWORD: ''
+      NVIDIA_VISIBLE_DEVICES: all
+      NVIDIA_DRIVER_CAPABILITIES: all
     depends_on:
-      - mosquitto
+    - mosquitto
     networks:
-      - swarmcam
-
+    - swarmcam
+    runtime: nvidia
   mosquitto:
     container_name: mosquitto
     image: eclipse-mosquitto:2
     restart: unless-stopped
     volumes:
-      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf
-      - ./mosquitto/data:/mosquitto/data
-      - ./mosquitto/log:/mosquitto/log
+    - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf
+    - ./mosquitto/data:/mosquitto/data
+    - ./mosquitto/log:/mosquitto/log
     ports:
-      - "1883:1883"   # MQTT
-      - "9001:9001"   # MQTT over WebSocket (dashboard)
+    - 1883:1883
+    - 9001:9001
     networks:
-      - swarmcam
-
+    - swarmcam
+  dashboard:
+    container_name: swarmcam-dashboard
+    image: nginx:alpine
+    restart: unless-stopped
+    volumes:
+    - ../dashboard:/usr/share/nginx/html:ro
+    ports:
+    - 80:80
+    networks:
+    - swarmcam
 volumes:
-  frigate_db:
-
+  frigate_db: null
 networks:
   swarmcam:
     driver: bridge
