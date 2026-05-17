@@ -36,7 +36,7 @@ function renderCameras(cameras) {
     const safeIp   = cam.ip.replace(/\./g, '_');
     const conns    = cam.video_connections ?? 0;
     const isLive   = conns > 0;
-    const dispName = cam.name.replace('cam_', '').replace(/_/g, '.');
+    const dispName = cam.display_name || cam.name.replace('cam_', '').replace(/_/g, '.');
 
     grid.insertAdjacentHTML('beforeend', `
       <div class="camera-card" id="card-${safeIp}">
@@ -99,7 +99,7 @@ function updateHealthTable(cameras) {
     const space    = data.free_space_gb   != null ? `${data.free_space_gb} GB`  : '—';
     const quality  = data.quality         != null ? data.quality + '%'          : '—';
     const nv       = data.night_vision ? 'ON' : 'OFF';
-    const dispName = (data.name || cam.name).replace('cam_', '').replace(/_/g, '.');
+    const dispName = cam.display_name || (data.name || cam.name).replace('cam_', '').replace(/_/g, '.');
     const port     = data.port || cam.port || 8080;
 
     tbody.insertAdjacentHTML('beforeend', `

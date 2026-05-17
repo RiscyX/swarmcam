@@ -326,6 +326,26 @@
           </div>
 
           <div class="card">
+            <div class="card-title">Átnevezés (alias)</div>
+            <div class="field">
+              <span class="field-label">Megjelenítési név</span>
+              <input type="text" id="cs-alias" placeholder="pl. Bejárat, Konyha…" style="flex:1" />
+            </div>
+            <div class="save-bar" style="margin-top:8px">
+              <button class="btn btn-primary" onclick="saveAlias()">Mentés</button>
+              <span class="save-msg" id="cs-alias-status"></span>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">Kamera oldala</div>
+            <div class="radio-group">
+              <label class="radio-card"><input type="radio" name="cs-ffc" value="off" /> Hátsó kamera</label>
+              <label class="radio-card"><input type="radio" name="cs-ffc" value="on" /> Előlapi kamera</label>
+            </div>
+          </div>
+
+          <div class="card">
             <div class="card-title">Orientáció</div>
             <div class="radio-group">
               <label class="radio-card"><input type="radio" name="cs-orient" value="portrait" /> Portrait</label>
@@ -583,22 +603,22 @@
   </div>
 </div>
 
-<script src="js/constants.js?v=5"></script>
-<script src="js/state.js?v=5"></script>
-<script src="js/auth.js?v=5"></script>
-<script src="js/ui.js?v=5"></script>
-<script src="js/cameras.js?v=5"></script>
-<script src="js/health.js?v=5"></script>
-<script src="js/stream.js?v=5"></script>
-<script src="js/torch.js?v=5"></script>
-<script src="js/fullscreen.js?v=5"></script>
-<script src="js/discovery.js?v=5"></script>
-<script src="js/settings.js?v=5"></script>
-<script src="js/cam_settings.js?v=5"></script>
-<script src="js/events.js?v=5"></script>
-<script src="js/recordings.js?v=5"></script>
-<script src="js/faces.js?v=5"></script>
-<script src="js/users.js?v=5"></script>
-<script src="js/app.js?v=5"></script>
+<script src="js/constants.js?v=6"></script>
+<script src="js/state.js?v=6"></script>
+<script src="js/auth.js?v=6"></script>
+<script src="js/ui.js?v=6"></script>
+<script src="js/cameras.js?v=6"></script>
+<script src="js/health.js?v=6"></script>
+<script src="js/stream.js?v=6"></script>
+<script src="js/torch.js?v=6"></script>
+<script src="js/fullscreen.js?v=6"></script>
+<script src="js/discovery.js?v=6"></script>
+<script src="js/settings.js?v=6"></script>
+<script src="js/cam_settings.js?v=6"></script>
+<script src="js/events.js?v=6"></script>
+<script src="js/recordings.js?v=6"></script>
+<script src="js/faces.js?v=6"></script>
+<script src="js/users.js?v=6"></script>
+<script src="js/app.js?v=6"></script>
 </body>
 </html>

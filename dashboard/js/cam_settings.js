@@ -4,7 +4,7 @@ function populateCamSettingsSelect() {
   const prev = sel.value;
   sel.innerHTML = '<option value="">— válassz kamerát —</option>';
   Object.values(_cameras).forEach(cam => {
-    const disp = cam.name.replace('cam_', '').replace(/_/g, '.');
+    const disp = cam.display_name || cam.name.replace('cam_', '').replace(/_/g, '.');
     const opt = document.createElement('option');
     opt.value = cam.name;
     opt.textContent = disp;
@@ -28,6 +28,9 @@ async function loadCamSettings(name) {
     const flipEl = document.getElementById('cs-flip');
     if (flipEl && s.mirror_flip != null) flipEl.value = s.mirror_flip;
 
+    const ffcEl = document.querySelector(`input[name="cs-ffc"][value="${s.ffc}"]`);
+    if (ffcEl) ffcEl.checked = true;
+
     const qSlider = document.getElementById('cs-quality');
     const qVal    = document.getElementById('cs-quality-val');
     if (qSlider && s.quality != null) {
@@ -48,6 +51,13 @@ async function loadCamSettings(name) {
     const nvEl = document.getElementById('cs-night-vision');
     if (nvEl && s.night_vision) nvEl.value = s.night_vision;
 
+    // load alias
+    const aliasEl = document.getElementById('cs-alias');
+    if (aliasEl) {
+      const ar = await fetch(`${API}/api/cameras/${name}/alias`, { headers: authHeaders() });
+      if (ar.ok) { const ad = await ar.json(); aliasEl.value = ad.alias || ''; }
+    }
+
     if (statusEl) { statusEl.textContent = 'Betöltve'; statusEl.className = 'save-msg ok'; }
   } catch {
     if (statusEl) { statusEl.textContent = 'Nem elérhető'; statusEl.className = 'save-msg err'; }
@@ -60,6 +70,7 @@ async function saveCamSettings() {
   const statusEl = document.getElementById('cs-status');
 
   const orientEl  = document.querySelector('input[name="cs-orient"]:checked');
+  const ffcEl     = document.querySelector('input[name="cs-ffc"]:checked');
   const flipEl    = document.getElementById('cs-flip');
   const qSlider   = document.getElementById('cs-quality');
   const fpsSlider = document.getElementById('cs-fps');
@@ -68,7 +79,8 @@ async function saveCamSettings() {
 
   const body = {};
   if (orientEl)         body.orientation  = orientEl.value;
-  if (flipEl?.value) body.mirror_flip = flipEl.value;
+  if (ffcEl)            body.ffc          = ffcEl.value;
+  if (flipEl?.value)    body.mirror_flip  = flipEl.value;
   if (qSlider?.value)   body.quality      = parseInt(qSlider.value);
   if (fpsSlider?.value) body.video_fps    = parseInt(fpsSlider.value);
   if (vsEl?.value)      body.video_size   = vsEl.value;
@@ -87,5 +99,39 @@ async function saveCamSettings() {
     if (statusEl) { statusEl.textContent = `Alkalmazva: ${applied}`; statusEl.className = 'save-msg ok'; }
   } catch {
     if (statusEl) { statusEl.textContent = 'Hiba az alkalmazás során'; statusEl.className = 'save-msg err'; }
+  }
+}
+
+async function saveAlias() {
+  const name    = document.getElementById('cs-cam-select')?.value;
+  const aliasEl = document.getElementById('cs-alias');
+  const statusEl = document.getElementById('cs-alias-status');
+  if (!name || !aliasEl) return;
+
+  if (statusEl) { statusEl.textContent = 'Mentés…'; statusEl.className = 'save-msg'; }
+  try {
+    const r = await fetch(`${API}/api/cameras/${name}/alias`, {
+      method: 'PATCH',
+      headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ alias: aliasEl.value }),
+    });
+    if (!r.ok) throw new Error(r.status);
+    const data = await r.json();
+
+    // update display everywhere
+    const cam = _cameras[name.replace('cam_', '').replace(/\./g, '_')]
+             || Object.values(_cameras).find(c => c.name === name);
+    if (cam) {
+      cam.display_name = data.display_name;
+      const safeIp = cam.ip.replace(/\./g, '_');
+      const nameEl = document.querySelector(`#card-${safeIp} .cam-name`);
+      if (nameEl) nameEl.textContent = data.display_name;
+    }
+    populateCamSettingsSelect();
+    document.getElementById('cs-cam-select').value = name;
+
+    if (statusEl) { statusEl.textContent = 'Mentve'; statusEl.className = 'save-msg ok'; }
+  } catch {
+    if (statusEl) { statusEl.textContent = 'Hiba'; statusEl.className = 'save-msg err'; }
   }
 }
