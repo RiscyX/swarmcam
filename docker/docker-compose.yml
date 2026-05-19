@@ -39,12 +39,13 @@ services:
     - swarmcam
   dashboard:
     container_name: swarmcam-dashboard
-    image: nginx:alpine
+    build:
+      context: ../frontend
     restart: unless-stopped
-    volumes:
-    - ../dashboard:/usr/share/nginx/html:ro
     ports:
     - 80:80
+    extra_hosts:
+    - host.docker.internal:host-gateway
     networks:
     - swarmcam
 volumes:
