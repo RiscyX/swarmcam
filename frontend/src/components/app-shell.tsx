@@ -10,7 +10,9 @@ import { useCameraSocket } from '@/hooks/use-camera-socket'
 import { setCameraTorch } from '@/lib/cameras'
 import { sectionLabels, type SectionId } from '@/lib/sections'
 import { CamerasPage } from '@/pages/cameras-page'
+import { DiscoveryPage } from '@/pages/discovery-page'
 import { PlaceholderPage } from '@/pages/placeholder-page'
+import { SettingsPage } from '@/pages/settings-page'
 import type { Camera, CameraLayout } from '@/types/camera'
 import type { FrigateLiveEvent } from '@/types/events'
 
@@ -101,6 +103,10 @@ export function AppShell() {
               paused={Boolean(fullscreenCamera)}
               torchStates={torchStates}
             />
+          ) : activeSection === 'discovery' ? (
+            <DiscoveryPage onCamerasFound={setCameras} />
+          ) : activeSection === 'settings' ? (
+            <SettingsPage />
           ) : (
             <PlaceholderPage section={activeSection} title={sectionLabels[activeSection]} />
           )}
