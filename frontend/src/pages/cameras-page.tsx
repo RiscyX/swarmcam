@@ -11,8 +11,13 @@ type CamerasPageProps = {
   error: string | null
   isLoading: boolean
   onReload: () => void
+  eventCamera: string | null
   layout: CameraLayout
   onLayoutChange: (layout: CameraLayout) => void
+  onOpenFullscreen: (camera: Camera) => void
+  onToggleTorch: (camera: Camera) => void
+  paused: boolean
+  torchStates: Record<string, boolean>
 }
 
 const layoutClasses: Record<CameraLayout, string> = {
@@ -22,7 +27,19 @@ const layoutClasses: Record<CameraLayout, string> = {
   '1plus3': 'grid-cols-1 lg:grid-cols-[2fr_1fr] lg:[&>*:first-child]:row-span-2',
 }
 
-export function CamerasPage({ cameras, error, isLoading, layout, onLayoutChange, onReload }: CamerasPageProps) {
+export function CamerasPage({
+  cameras,
+  error,
+  eventCamera,
+  isLoading,
+  layout,
+  onLayoutChange,
+  onOpenFullscreen,
+  onReload,
+  onToggleTorch,
+  paused,
+  torchStates,
+}: CamerasPageProps) {
   const [shortcuts] = useState(() => ({
     '1': () => onLayoutChange('1x1'),
     '2': () => onLayoutChange('2x2'),
@@ -67,7 +84,15 @@ export function CamerasPage({ cameras, error, isLoading, layout, onLayoutChange,
   return (
     <div className={`grid gap-4 ${layoutClasses[layout]}`}>
       {cameras.map((camera) => (
-        <CameraCard camera={camera} key={camera.name} />
+        <CameraCard
+          camera={camera}
+          isFlashing={eventCamera === camera.name}
+          isPaused={paused}
+          key={camera.name}
+          onOpenFullscreen={onOpenFullscreen}
+          onToggleTorch={onToggleTorch}
+          torchEnabled={Boolean(torchStates[camera.name])}
+        />
       ))}
     </div>
   )
