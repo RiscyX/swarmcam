@@ -3,11 +3,14 @@ import { Button } from '@/components/ui/button'
 import { useAuth } from '@/hooks/use-auth'
 import { sectionLabels, type SectionId } from '@/lib/sections'
 import type { CameraLayout } from '@/types/camera'
+import type { CameraSocketStatus } from '@/types/events'
 
 type TopbarProps = {
   activeSection: SectionId
   cameraCount: number
   cameraLayout: CameraLayout
+  liveEventCount: number
+  socketStatus: CameraSocketStatus
   onCameraLayoutChange: (layout: CameraLayout) => void
 }
 
@@ -17,7 +20,7 @@ const cameraLayouts: Array<{ id: CameraLayout; label: string }> = [
   { id: '1plus3', label: '3' },
 ]
 
-export function Topbar({ activeSection, cameraCount, cameraLayout, onCameraLayoutChange }: TopbarProps) {
+export function Topbar({ activeSection, cameraCount, cameraLayout, liveEventCount, onCameraLayoutChange, socketStatus }: TopbarProps) {
   const { logout, user } = useAuth()
 
   return (
@@ -39,6 +42,17 @@ export function Topbar({ activeSection, cameraCount, cameraLayout, onCameraLayou
             </Button>
           ))}
         </div>
+      ) : null}
+      <Badge
+        className={socketStatus === 'connected' ? 'border-swarm-green/30 bg-swarm-green/10 font-mono text-swarm-green' : 'font-mono'}
+        variant="outline"
+      >
+        ws {socketStatus}
+      </Badge>
+      {liveEventCount > 0 ? (
+        <Badge className="border-swarm-amber/30 bg-swarm-amber/10 font-mono text-swarm-amber" variant="outline">
+          {liveEventCount} events
+        </Badge>
       ) : null}
       {user ? (
         <Badge className="font-mono" variant="secondary">

@@ -9,6 +9,15 @@ export function getCameraStats(token: string, name: string) {
   return apiFetch<CameraStats>(`/api/cameras/${encodeURIComponent(name)}/stats`, { token })
 }
 
+export function setCameraTorch(token: string, name: string, enabled: boolean) {
+  return apiFetch<{ ok: boolean }>(`/api/cameras/${encodeURIComponent(name)}/torch`, {
+    method: 'POST',
+    token,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ enabled }),
+  })
+}
+
 export function cameraSnapshotUrl(name: string, timestamp = Date.now()) {
   return apiUrl(`/api/cameras/${encodeURIComponent(name)}/snapshot?t=${timestamp}`)
 }

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { CameraOff } from 'lucide-react'
+import { CameraOff, Flashlight } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -12,9 +12,14 @@ type StreamMode = 'snap' | 'live'
 
 type CameraCardProps = {
   camera: Camera
+  isFlashing: boolean
+  isPaused: boolean
+  onOpenFullscreen: (camera: Camera) => void
+  onToggleTorch: (camera: Camera) => void
+  torchEnabled: boolean
 }
 
-export function CameraCard({ camera }: CameraCardProps) {
+export function CameraCard({ camera, isFlashing, isPaused, onOpenFullscreen, onToggleTorch, torchEnabled }: CameraCardProps) {
   const { token } = useAuth()
   const imageRef = useRef<HTMLImageElement | null>(null)
   const [mode, setMode] = useState<StreamMode>('snap')
@@ -25,10 +30,10 @@ export function CameraCard({ camera }: CameraCardProps) {
   const isOnline = camera.online !== false
   const isLive = (camera.video_connections ?? 0) > 0
   const displayName = getCameraDisplayName(camera)
-  const src = mode === 'live' ? cameraStreamUrl(camera.name) : snapshotSrc
+  const src = isPaused ? '' : mode === 'live' ? cameraStreamUrl(camera.name) : snapshotSrc
 
   useEffect(() => {
-    if (mode !== 'snap') return undefined
+    if (isPaused || mode !== 'snap') return undefined
 
     function refresh() {
       setSnapshotSrc(cameraSnapshotUrl(camera.name))
@@ -37,15 +42,15 @@ export function CameraCard({ camera }: CameraCardProps) {
     refresh()
     const id = window.setInterval(refresh, 3000)
     return () => window.clearInterval(id)
-  }, [camera.name, mode])
+  }, [camera.name, isPaused, mode])
 
   useEffect(() => {
-    if (mode !== 'live') return undefined
+    if (isPaused || mode !== 'live') return undefined
     const image = imageRef.current
     return () => {
       if (image) image.src = ''
     }
-  }, [mode])
+  }, [isPaused, mode])
 
   useEffect(() => {
     let cancelled = false
@@ -72,8 +77,12 @@ export function CameraCard({ camera }: CameraCardProps) {
   }
 
   return (
-    <Card className={`overflow-hidden rounded-sm border-border bg-card transition ${isOnline ? '' : 'opacity-50'}`}>
-      <div className="relative aspect-video cursor-pointer overflow-hidden bg-[#030507]">
+    <Card
+      className={`overflow-hidden rounded-sm border-border bg-card transition ${isOnline ? '' : 'opacity-50'} ${
+        isFlashing ? 'ring-2 ring-swarm-amber shadow-[0_0_40px_rgba(232,165,0,0.35)]' : ''
+      }`}
+    >
+      <div className="relative aspect-video cursor-pointer overflow-hidden bg-[#030507]" onClick={() => onOpenFullscreen(camera)}>
         <img
           alt={`${displayName} kamera képe`}
           className="h-full w-full object-cover"
@@ -113,6 +122,18 @@ export function CameraCard({ camera }: CameraCardProps) {
           variant="outline"
         >
           {mode === 'live' ? 'LIVE' : 'SNAP'}
+        </Button>
+        <Button
+          className={torchEnabled ? 'absolute bottom-2 left-2 border-swarm-amber/50 bg-swarm-amber/10 text-swarm-amber' : 'absolute bottom-2 left-2'}
+          onClick={(event) => {
+            event.stopPropagation()
+            onToggleTorch(camera)
+          }}
+          size="sm"
+          variant="outline"
+        >
+          <Flashlight className="mr-1.5 h-3.5 w-3.5" />
+          Vaku
         </Button>
       </div>
 
