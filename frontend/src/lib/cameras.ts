@@ -26,6 +26,29 @@ export function cameraStreamUrl(name: string) {
   return apiUrl(`/api/cameras/${encodeURIComponent(name)}/stream`)
 }
 
+export type CameraSettingsPayload = {
+  orientation?: string | null
+  quality?: number | null
+  video_size?: string | null
+  night_vision?: string | null
+  video_fps?: number | null
+  mirror_flip?: string | null
+  ffc?: string | null
+}
+
+export function getCameraSettings(token: string, name: string) {
+  return apiFetch<CameraSettingsPayload>(`/api/cameras/${encodeURIComponent(name)}/settings`, { token })
+}
+
+export function saveCameraSettings(token: string, name: string, settings: CameraSettingsPayload) {
+  return apiFetch<{ ok: boolean; applied: string[] }>(`/api/cameras/${encodeURIComponent(name)}/settings`, {
+    method: 'POST',
+    token,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(settings),
+  })
+}
+
 export function setCameraAlias(token: string, name: string, alias: string) {
   return apiFetch<{ ok: boolean; display_name: string }>(`/api/cameras/${encodeURIComponent(name)}/alias`, {
     method: 'PATCH',
