@@ -10,6 +10,7 @@ import { useCameras } from '@/hooks/use-cameras'
 import { useCameraSocket } from '@/hooks/use-camera-socket'
 import { setCameraTorch } from '@/lib/cameras'
 import { sectionLabels, type SectionId } from '@/lib/sections'
+import { CameraSettingsPage } from '@/pages/camera-settings-page'
 import { CamerasPage } from '@/pages/cameras-page'
 import { DiscoveryPage } from '@/pages/discovery-page'
 import { HealthPage } from '@/pages/health-page'
@@ -123,6 +124,8 @@ export function AppShell() {
               <HealthPage cameras={cameras} isLoading={isLoading} />
             ) : activeSection === 'discovery' ? (
               <DiscoveryPage onCamerasFound={setCameras} />
+            ) : activeSection === 'camera-settings' ? (
+              <CameraSettingsPage cameras={cameras} onRenameCamera={handleRenameCamera} />
             ) : activeSection === 'settings' ? (
               <SettingsPage />
             ) : (
