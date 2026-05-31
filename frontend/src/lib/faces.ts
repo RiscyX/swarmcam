@@ -5,7 +5,7 @@ export type FaceEntry = { name: string; files: string[] }
 export type FrigateUser = { username: string; role: string }
 
 export function getFaces(token: string) {
-  return apiFetch<Record<string, { files: string[] }>>('/api/faces', { token })
+  return apiFetch<Record<string, string[] | { files: string[] }>>('/api/faces', { token })
 }
 
 export function createFace(token: string, name: string) {

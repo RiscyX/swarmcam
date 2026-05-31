@@ -117,7 +117,7 @@ export function EventsPage({ cameras }: EventsPageProps) {
               <div className="p-2">
                 <div className="flex items-center gap-1.5">
                   <span className="rounded-sm border border-swarm-green/40 bg-swarm-green/10 px-1.5 py-0.5 font-mono text-[10px] text-swarm-green">{ev.label}</span>
-                  <span className="font-mono text-[10px] text-muted-foreground">{Math.round(ev.score * 100)}%</span>
+                  <span className="font-mono text-[10px] text-muted-foreground">{ev.score != null ? `${Math.round(ev.score * 100)}%` : '—'}</span>
                 </div>
                 <div className="mt-1 truncate font-mono text-[10px] text-foreground/70">{getCamDisplay(ev.camera)}</div>
                 <div className="font-mono text-[10px] text-muted-foreground">{formatEventTime(ev.start_time)}</div>

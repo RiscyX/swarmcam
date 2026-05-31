@@ -27,6 +27,24 @@ def clear_cameras():
     return {"cleared": True}
 
 
+@router.delete("/api/cameras/{name}")
+async def delete_camera(name: str):
+    if FRIGATE_CONFIG.exists():
+        config = read_yaml(FRIGATE_CONFIG)
+        cameras = config.get("cameras") or {}
+        if name not in cameras:
+            raise HTTPException(404, "Camera not found in Frigate config")
+        del cameras[name]
+        config["cameras"] = cameras
+        write_yaml(FRIGATE_CONFIG, config)
+    state._last_cameras[:] = [c for c in state._last_cameras if c.get("name") != name]
+    try:
+        http.post(f"{FRIGATE_URL}/api/restart", timeout=5)
+    except Exception:
+        pass
+    return {"ok": True}
+
+
 @router.delete("/api/recordings")
 async def clear_recordings():
     freed = 0

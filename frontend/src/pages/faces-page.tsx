@@ -21,7 +21,11 @@ export function FacesPage() {
     setLoading(true)
     try {
       const data = await getFaces(token)
-      setFaces(Object.entries(data).map(([name, v]) => ({ name, files: v.files ?? [] })))
+      setFaces(
+        Object.entries(data)
+          .map(([name, v]) => ({ name, files: Array.isArray(v) ? v : (v.files ?? []) }))
+          .filter((f) => f.files.length > 0)
+      )
       setDisabled(false)
     } catch (e) {
       if (e instanceof ApiError && e.status === 404) setDisabled(true)
