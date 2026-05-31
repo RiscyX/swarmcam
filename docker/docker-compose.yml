@@ -37,6 +37,27 @@ services:
     - 9001:9001
     networks:
     - swarmcam
+  backend:
+    container_name: swarmcam-backend
+    build:
+      context: ..
+      dockerfile: backend/Dockerfile
+    restart: unless-stopped
+    ports:
+    - 8000:8000
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+    - ./frigate/config.yml:/swarmcam/docker/frigate/config.yml
+    - ./docker-compose.yml:/swarmcam/docker/docker-compose.yml:ro
+    - ./media:/swarmcam/docker/media
+    - ../backend/aliases.json:/swarmcam/backend/aliases.json
+    environment:
+      FRIGATE_URL: http://frigate:5000
+      MQTT_HOST: mosquitto
+    depends_on:
+    - mosquitto
+    networks:
+    - swarmcam
   dashboard:
     container_name: swarmcam-dashboard
     build:
@@ -44,8 +65,8 @@ services:
     restart: unless-stopped
     ports:
     - 80:80
-    extra_hosts:
-    - host.docker.internal:host-gateway
+    depends_on:
+    - backend
     networks:
     - swarmcam
 volumes:

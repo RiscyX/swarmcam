@@ -1,3 +1,6 @@
+# Runtime data
+backend/aliases.json
+
 # Docker volumes (runtime data, ne kerüljön gitbe)
 docker/media/
 docker/mosquitto/data/
