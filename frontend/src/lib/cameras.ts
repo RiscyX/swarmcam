@@ -26,6 +26,15 @@ export function cameraStreamUrl(name: string) {
   return apiUrl(`/api/cameras/${encodeURIComponent(name)}/stream`)
 }
 
+export function setCameraAlias(token: string, name: string, alias: string) {
+  return apiFetch<{ ok: boolean; display_name: string }>(`/api/cameras/${encodeURIComponent(name)}/alias`, {
+    method: 'PATCH',
+    token,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ alias }),
+  })
+}
+
 export function getCameraDisplayName(camera: Camera) {
   return camera.display_name || camera.name.replace('cam_', '').replace(/_/g, '.')
 }

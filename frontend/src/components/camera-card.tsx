@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
-import { CameraOff, Flashlight } from 'lucide-react'
+import { CameraOff, Flashlight, Pencil } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { useAuth } from '@/hooks/use-auth'
-import { cameraSnapshotUrl, cameraStreamUrl, getCameraDisplayName, getCameraStats } from '@/lib/cameras'
+import { cameraSnapshotUrl, cameraStreamUrl, getCameraDisplayName, getCameraStats, setCameraAlias } from '@/lib/cameras'
 import type { Camera, CameraStats } from '@/types/camera'
 
 type StreamMode = 'snap' | 'live'
@@ -15,17 +15,21 @@ type CameraCardProps = {
   isFlashing: boolean
   isPaused: boolean
   onOpenFullscreen: (camera: Camera) => void
+  onRename: (name: string, displayName: string) => void
   onToggleTorch: (camera: Camera) => void
   torchEnabled: boolean
 }
 
-export function CameraCard({ camera, isFlashing, isPaused, onOpenFullscreen, onToggleTorch, torchEnabled }: CameraCardProps) {
+export function CameraCard({ camera, isFlashing, isPaused, onOpenFullscreen, onRename, onToggleTorch, torchEnabled }: CameraCardProps) {
   const { token } = useAuth()
   const imageRef = useRef<HTMLImageElement | null>(null)
+  const inputRef = useRef<HTMLInputElement | null>(null)
   const [mode, setMode] = useState<StreamMode>('snap')
   const [snapshotSrc, setSnapshotSrc] = useState('')
   const [hasSignal, setHasSignal] = useState(true)
   const [stats, setStats] = useState<CameraStats | null>(null)
+  const [isEditing, setIsEditing] = useState(false)
+  const [editValue, setEditValue] = useState('')
 
   const isOnline = camera.online !== false
   const isLive = (camera.video_connections ?? 0) > 0
@@ -74,6 +78,30 @@ export function CameraCard({ camera, isFlashing, isPaused, onOpenFullscreen, onT
 
   function toggleMode() {
     setMode((current) => (current === 'live' ? 'snap' : 'live'))
+  }
+
+  function startEdit() {
+    setEditValue(getCameraDisplayName(camera))
+    setIsEditing(true)
+    window.setTimeout(() => inputRef.current?.select(), 0)
+  }
+
+  async function commitEdit() {
+    if (!token) return
+    const trimmed = editValue.trim()
+    setIsEditing(false)
+    if (trimmed === getCameraDisplayName(camera)) return
+    try {
+      const result = await setCameraAlias(token, camera.name, trimmed)
+      onRename(camera.name, result.display_name)
+    } catch {
+      // silently revert — the display name stays from props
+    }
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Enter') void commitEdit()
+    if (e.key === 'Escape') setIsEditing(false)
   }
 
   return (
@@ -138,7 +166,26 @@ export function CameraCard({ camera, isFlashing, isPaused, onOpenFullscreen, onT
       </div>
 
       <div className="px-3 py-2 text-center">
-        <div className="truncate font-ui text-base font-bold tracking-[0.06em] text-foreground">{displayName}</div>
+        {isEditing ? (
+          <input
+            autoFocus
+            className="w-full border-b border-swarm-amber bg-transparent text-center font-ui text-base font-bold tracking-[0.06em] text-foreground outline-none"
+            onBlur={() => void commitEdit()}
+            onChange={(e) => setEditValue(e.target.value)}
+            onKeyDown={handleKeyDown}
+            ref={inputRef}
+            value={editValue}
+          />
+        ) : (
+          <div
+            className="group relative inline-flex max-w-full cursor-text items-center gap-1 truncate font-ui text-base font-bold tracking-[0.06em] text-foreground"
+            onClick={startEdit}
+            title="Kattints az átnevezéshez"
+          >
+            <span className="truncate">{displayName}</span>
+            <Pencil className="h-3 w-3 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-60" />
+          </div>
+        )}
         <div className="mt-1 flex justify-center gap-4 font-mono text-[10px]">
           <span>
             <span className="text-muted-foreground">Cam</span>{' '}

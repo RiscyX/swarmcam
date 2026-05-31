@@ -15,6 +15,7 @@ type CamerasPageProps = {
   layout: CameraLayout
   onLayoutChange: (layout: CameraLayout) => void
   onOpenFullscreen: (camera: Camera) => void
+  onRenameCamera: (name: string, displayName: string) => void
   onToggleTorch: (camera: Camera) => void
   paused: boolean
   torchStates: Record<string, boolean>
@@ -35,6 +36,7 @@ export function CamerasPage({
   layout,
   onLayoutChange,
   onOpenFullscreen,
+  onRenameCamera,
   onReload,
   onToggleTorch,
   paused,
@@ -90,6 +92,7 @@ export function CamerasPage({
           isPaused={paused}
           key={camera.name}
           onOpenFullscreen={onOpenFullscreen}
+          onRename={onRenameCamera}
           onToggleTorch={onToggleTorch}
           torchEnabled={Boolean(torchStates[camera.name])}
         />
