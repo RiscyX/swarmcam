@@ -90,14 +90,20 @@ export function DiscoveryPage({ onCamerasFound }: DiscoveryPageProps) {
             <form className="space-y-4" onSubmit={handleScan}>
               <label className="grid gap-1.5">
                 <span className="font-ui text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">Hálózat</span>
-                <select className="h-9 rounded-sm border border-input bg-background px-3 font-mono text-sm" onChange={(event) => setSubnet(event.target.value)} value={subnet}>
-                  <option value="">auto-detect</option>
-                  {networks.map((network) => (
-                    <option key={network.subnet} value={network.subnet}>
-                      {network.iface} {network.ip} ({network.subnet})
-                    </option>
-                  ))}
-                </select>
+                <div className="flex gap-2">
+                  <Input
+                    className="font-mono"
+                    list="network-suggestions"
+                    onChange={(e) => setSubnet(e.target.value)}
+                    placeholder="auto-detect  (pl. 192.168.0.0/24)"
+                    value={subnet}
+                  />
+                  <datalist id="network-suggestions">
+                    {networks.map((n) => (
+                      <option key={n.subnet} value={n.subnet}>{n.iface} – {n.ip}</option>
+                    ))}
+                  </datalist>
+                </div>
               </label>
               <div className="grid grid-cols-2 gap-3">
                 <label className="grid gap-1.5">

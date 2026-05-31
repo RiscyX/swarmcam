@@ -174,6 +174,9 @@ async def get_camera_settings(name: str):
         raise HTTPException(503, "Camera unreachable")
 
 
+_FFC_MAP = {"on": "1", "off": "0"}
+
+
 @router.post("/api/cameras/{name}/settings")
 async def set_camera_settings(name: str, body: CameraSettings):
     cam = next((c for c in state._last_cameras if c["name"] == name), None)
@@ -183,21 +186,38 @@ async def set_camera_settings(name: str, body: CameraSettings):
     loop = asyncio.get_event_loop()
     applied = []
     fields = body.model_dump(exclude_none=True)
-    for key, value in fields.items():
-        try:
-            r = await loop.run_in_executor(
-                None,
-                lambda k=key, v=value: http.get(
-                    f"http://{ip}:{port}/settings/{k}",
-                    params={"set": str(v)},
-                    timeout=3,
-                ),
-            )
-            if r.status_code == 200:
-                applied.append(key)
-        except Exception:
-            pass
+    # Apply orientation last — IP Webcam restarts its HTTP server on orientation change,
+    # which would cause all subsequent requests in the same batch to fail.
+    ordered = sorted(fields.items(), key=lambda kv: kv[0] == "orientation")
+
+    async def _apply(k: str, v) -> bool:
+        str_v = str(v)
+        for attempt_v in _unique([str_v, _FFC_MAP.get(str_v, str_v)]):
+            try:
+                r = await loop.run_in_executor(
+                    None,
+                    lambda kk=k, vv=attempt_v: http.get(
+                        f"http://{ip}:{port}/settings/{kk}",
+                        params={"set": vv},
+                        timeout=3,
+                    ),
+                )
+                if r.status_code == 200:
+                    return True
+            except Exception:
+                pass
+        return False
+
+    for key, value in ordered:
+        if await _apply(key, value):
+            applied.append(key)
+
     return {"ok": len(applied) > 0, "applied": applied}
+
+
+def _unique(seq: list) -> list:
+    seen: set = set()
+    return [x for x in seq if not (x in seen or seen.add(x))]
 
 
 @router.patch("/api/cameras/{name}/alias")

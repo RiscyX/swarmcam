@@ -13,20 +13,43 @@ router = APIRouter()
 
 @router.get("/api/networks")
 def get_networks():
-    import netifaces
     results = []
-    for iface in netifaces.interfaces():
-        addrs = netifaces.ifaddresses(iface).get(netifaces.AF_INET, [])
-        for addr in addrs:
-            ip = addr.get("addr", "")
-            netmask = addr.get("netmask", "255.255.255.0")
-            if not ip or ip.startswith("127.") or ip.startswith("172."):
-                continue
-            try:
-                network = ipaddress.IPv4Network(f"{ip}/{netmask}", strict=False)
-                results.append({"iface": iface, "ip": ip, "subnet": str(network)})
-            except Exception:
-                pass
+    seen: set[str] = set()
+
+    # Primary: derive subnet from registered cameras (most reliable in Docker).
+    # If cameras are at 192.168.0.x we know the correct /24 subnet.
+    for cam in state._last_cameras:
+        ip = cam.get("ip", "")
+        if not ip:
+            continue
+        try:
+            subnet = str(ipaddress.IPv4Network(f"{ip}/24", strict=False))
+            if subnet not in seen:
+                seen.add(subnet)
+                results.append({"iface": "cameras", "ip": ip, "subnet": subnet})
+        except Exception:
+            pass
+
+    # Fallback: netifaces (works when not inside Docker or host-networked)
+    try:
+        import netifaces
+        for iface in netifaces.interfaces():
+            addrs = netifaces.ifaddresses(iface).get(netifaces.AF_INET, [])
+            for addr in addrs:
+                ip = addr.get("addr", "")
+                netmask = addr.get("netmask", "255.255.255.0")
+                if not ip or ip.startswith("127.") or ip.startswith("172."):
+                    continue
+                try:
+                    subnet = str(ipaddress.IPv4Network(f"{ip}/{netmask}", strict=False))
+                    if subnet not in seen:
+                        seen.add(subnet)
+                        results.append({"iface": iface, "ip": ip, "subnet": subnet})
+                except Exception:
+                    pass
+    except Exception:
+        pass
+
     return results
 
 

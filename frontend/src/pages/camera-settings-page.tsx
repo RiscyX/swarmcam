@@ -2,12 +2,13 @@ import { useEffect, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/hooks/use-auth'
-import { getCameraDisplayName, getCameraSettings, saveCameraSettings, setCameraAlias, type CameraSettingsPayload } from '@/lib/cameras'
+import { deleteCamera, getCameraDisplayName, getCameraSettings, saveCameraSettings, setCameraAlias, type CameraSettingsPayload } from '@/lib/cameras'
 import type { Camera } from '@/types/camera'
 
 type CameraSettingsPageProps = {
   cameras: Camera[]
   onRenameCamera: (name: string, displayName: string) => void
+  onDeleteCamera: (name: string) => void
 }
 
 type Status = 'idle' | 'loading' | 'saving' | 'saved' | 'error'
@@ -15,6 +16,7 @@ type Status = 'idle' | 'loading' | 'saving' | 'saved' | 'error'
 const ORIENTATIONS = ['landscape', 'portrait', 'landscape_flipped', 'portrait_flipped']
 const VIDEO_SIZES = ['1920x1080', '1280x720', '854x480', '640x480', '320x240']
 const FPS_OPTIONS = [5, 10, 15, 20, 25, 30]
+const QUALITY_OPTIONS = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
 const MIRROR_FLIP = ['none', 'flip', 'mirror', 'both']
 const NIGHT_VISION = ['off', 'on', 'auto']
 
@@ -74,30 +76,34 @@ function NumberField({
   )
 }
 
-export function CameraSettingsPage({ cameras, onRenameCamera }: CameraSettingsPageProps) {
+export function CameraSettingsPage({ cameras, onRenameCamera, onDeleteCamera }: CameraSettingsPageProps) {
   const { token } = useAuth()
   const [selectedName, setSelectedName] = useState<string>(cameras[0]?.name ?? '')
   const [settings, setSettings] = useState<CameraSettingsPayload>({})
   const [alias, setAlias] = useState('')
   const [status, setStatus] = useState<Status>('idle')
   const [appliedFields, setAppliedFields] = useState<string[]>([])
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   const selectedCamera = cameras.find((c) => c.name === selectedName)
 
+  // Load settings only when selected camera or token changes — NOT when cameras prop
+  // updates (WebSocket health push every 5s), which would reset user's changes.
   useEffect(() => {
     if (!selectedName || !token) return
     setStatus('loading')
     setAppliedFields([])
     getCameraSettings(token, selectedName)
-      .then((s) => {
-        setSettings(s)
-        setStatus('idle')
-      })
+      .then((s) => { setSettings(s); setStatus('idle') })
       .catch(() => setStatus('error'))
+  }, [selectedName, token])
 
+  // Sync alias display when cameras list changes (display name may have been updated)
+  useEffect(() => {
     const cam = cameras.find((c) => c.name === selectedName)
-    setAlias(cam?.display_name ?? '')
-  }, [selectedName, token, cameras])
+    if (cam) setAlias(cam.display_name ?? '')
+  }, [selectedName, cameras])
 
   async function handleSaveSettings() {
     if (!token) return
@@ -120,6 +126,20 @@ export function CameraSettingsPage({ cameras, onRenameCamera }: CameraSettingsPa
       setAlias(result.display_name)
     } catch {
       // silently fail
+    }
+  }
+
+  async function handleDeleteCamera() {
+    if (!token) return
+    setDeleting(true)
+    try {
+      await deleteCamera(token, selectedName)
+      onDeleteCamera(selectedName)
+    } catch {
+      // silently fail
+    } finally {
+      setDeleting(false)
+      setConfirmDelete(false)
     }
   }
 
@@ -201,7 +221,7 @@ export function CameraSettingsPage({ cameras, onRenameCamera }: CameraSettingsPa
               <NumberField
                 label="Minőség (%)"
                 onChange={(v) => setSettings((s) => ({ ...s, quality: v }))}
-                options={[20, 40, 60, 80, 100]}
+                options={QUALITY_OPTIONS}
                 value={settings.quality}
               />
               <SelectField
@@ -238,7 +258,44 @@ export function CameraSettingsPage({ cameras, onRenameCamera }: CameraSettingsPa
             </>
           )}
         </div>
+
+        {/* Delete camera */}
+        <div className="rounded-sm border border-swarm-red/20 bg-card p-4">
+          <div className="mb-2 font-ui text-xs font-bold uppercase tracking-[0.14em] text-swarm-red/70">Veszélyes zóna</div>
+          <div className="flex items-center justify-between">
+            <p className="font-mono text-xs text-muted-foreground">
+              Eltávolítja a kamerát a Frigate konfigból és újraindítja a Frigate-t.
+            </p>
+            <Button
+              className="ml-4 shrink-0 border-swarm-red/40 text-swarm-red hover:border-swarm-red"
+              disabled={deleting}
+              onClick={() => setConfirmDelete(true)}
+              size="sm"
+              variant="outline"
+            >
+              Kamera törlése
+            </Button>
+          </div>
+        </div>
       </div>
+
+      {/* Confirm delete modal */}
+      {confirmDelete ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
+          <div className="rounded-sm border border-border bg-card p-6 text-center">
+            <p className="font-mono text-sm text-foreground">
+              Biztosan törlöd: <strong>{selectedCamera ? getCameraDisplayName(selectedCamera) : selectedName}</strong>?
+            </p>
+            <p className="mt-1 font-mono text-xs text-muted-foreground">Frigate újraindul, a felvételek megmaradnak.</p>
+            <div className="mt-4 flex justify-center gap-3">
+              <Button disabled={deleting} onClick={() => void handleDeleteCamera()} variant="destructive">
+                {deleting ? 'Törlés...' : 'Törlés'}
+              </Button>
+              <Button onClick={() => setConfirmDelete(false)} variant="outline">Mégse</Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }

@@ -49,6 +49,10 @@ export function saveCameraSettings(token: string, name: string, settings: Camera
   })
 }
 
+export function deleteCamera(token: string, name: string) {
+  return apiFetch<{ ok: boolean }>(`/api/cameras/${encodeURIComponent(name)}`, { method: 'DELETE', token })
+}
+
 export function setCameraAlias(token: string, name: string, alias: string) {
   return apiFetch<{ ok: boolean; display_name: string }>(`/api/cameras/${encodeURIComponent(name)}/alias`, {
     method: 'PATCH',

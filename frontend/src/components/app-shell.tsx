@@ -54,6 +54,13 @@ export function AppShell() {
     [setCameras],
   )
 
+  const handleDeleteCamera = useCallback(
+    (name: string) => {
+      setCameras((current) => current.filter((camera) => camera.name !== name))
+    },
+    [setCameras],
+  )
+
   const handleStatus = useCallback(
     (updates: Camera[]) => {
       setCameras((current) =>
@@ -129,7 +136,7 @@ export function AppShell() {
             ) : activeSection === 'discovery' ? (
               <DiscoveryPage onCamerasFound={setCameras} />
             ) : activeSection === 'camera-settings' ? (
-              <CameraSettingsPage cameras={cameras} onRenameCamera={handleRenameCamera} />
+              <CameraSettingsPage cameras={cameras} onDeleteCamera={handleDeleteCamera} onRenameCamera={handleRenameCamera} />
             ) : activeSection === 'events' ? (
               <EventsPage cameras={cameras} />
             ) : activeSection === 'recordings' ? (

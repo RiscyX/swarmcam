@@ -1,6 +1,5 @@
 auth:
   enabled: true
-
 mqtt:
   enabled: true
   host: mosquitto
@@ -50,37 +49,9 @@ cameras:
           make_zero
     detect:
       enabled: true
-      width: 1280
-      height: 720
-      fps: 15
-  cam_192_168_0_177:
-    ffmpeg:
-      inputs:
-      - path: rtsp://192.168.0.177:8080/h264_ulaw.sdp
-        roles:
-        - detect
-        - record
-        input_args: -rtsp_transport tcp -fflags +genpts+discardcorrupt -avoid_negative_ts
-          make_zero
-    detect:
-      enabled: true
-      width: 1280
-      height: 720
-      fps: 15
-  cam_192_168_0_212:
-    ffmpeg:
-      inputs:
-      - path: rtsp://192.168.0.212:8080/h264_ulaw.sdp
-        roles:
-        - detect
-        - record
-        input_args: -rtsp_transport tcp -fflags +genpts+discardcorrupt -avoid_negative_ts
-          make_zero
-    detect:
-      enabled: true
-      width: 1280
-      height: 720
-      fps: 15
+      width: 1920
+      height: 1080
+      fps: 5
 version: 0.17-0
 semantic_search:
   enabled: false

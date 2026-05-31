@@ -1,4 +1,5 @@
 import asyncio
+import shutil
 from typing import Optional
 
 import requests as http
@@ -6,7 +7,7 @@ from fastapi import APIRouter, HTTPException, UploadFile
 from fastapi.responses import Response
 
 from services.frigate_client import frigate_delete, frigate_get, frigate_post
-from settings import FRIGATE_URL
+from settings import FRIGATE_URL, MEDIA_DIR
 
 router = APIRouter()
 
@@ -71,10 +72,26 @@ async def register_face(name: str, file: UploadFile):
 
 @router.delete("/api/faces/{name}")
 async def delete_face(name: str):
+    # Frigate does not expose DELETE /api/faces/{name}.
+    # The correct flow: fetch all image IDs for the face, then POST /api/faces/{name}/delete.
     try:
-        r = await frigate_delete(f"/api/faces/{name}")
-        if r.status_code not in (200, 204):
-            raise HTTPException(r.status_code, r.text)
+        list_r = await frigate_get("/api/faces")
+        if list_r.status_code != 200:
+            raise HTTPException(503, "Frigate unavailable")
+        faces = list_r.json()
+        raw = faces.get(name)
+        if raw is None:
+            raise HTTPException(404, "Face not found")
+        ids: list[str] = raw if isinstance(raw, list) else list((raw or {}).get("files", []))
+        if ids:
+            r = await frigate_post(f"/api/faces/{name}/delete", json_body={"ids": ids})
+            if r.status_code not in (200, 204):
+                raise HTTPException(r.status_code, r.text)
+        # Frigate does not remove the face directory when all images are deleted.
+        # Remove it directly from the shared media volume.
+        face_dir = MEDIA_DIR / "clips" / "faces" / name
+        if face_dir.exists():
+            shutil.rmtree(face_dir, ignore_errors=True)
         return {"ok": True}
     except HTTPException:
         raise
