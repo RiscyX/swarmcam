@@ -12,6 +12,7 @@ import { setCameraTorch } from '@/lib/cameras'
 import { sectionLabels, type SectionId } from '@/lib/sections'
 import { CamerasPage } from '@/pages/cameras-page'
 import { DiscoveryPage } from '@/pages/discovery-page'
+import { HealthPage } from '@/pages/health-page'
 import { PlaceholderPage } from '@/pages/placeholder-page'
 import { SettingsPage } from '@/pages/settings-page'
 import type { Camera, CameraLayout } from '@/types/camera'
@@ -118,6 +119,8 @@ export function AppShell() {
                 paused={Boolean(fullscreenCamera)}
                 torchStates={torchStates}
               />
+            ) : activeSection === 'health' ? (
+              <HealthPage cameras={cameras} isLoading={isLoading} />
             ) : activeSection === 'discovery' ? (
               <DiscoveryPage onCamerasFound={setCameras} />
             ) : activeSection === 'settings' ? (
