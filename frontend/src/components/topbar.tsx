@@ -10,8 +10,10 @@ type TopbarProps = {
   cameraCount: number
   cameraLayout: CameraLayout
   liveEventCount: number
+  showEventFeed: boolean
   socketStatus: CameraSocketStatus
   onCameraLayoutChange: (layout: CameraLayout) => void
+  onToggleEventFeed: () => void
 }
 
 const cameraLayouts: Array<{ id: CameraLayout; label: string }> = [
@@ -20,7 +22,7 @@ const cameraLayouts: Array<{ id: CameraLayout; label: string }> = [
   { id: '1plus3', label: '3' },
 ]
 
-export function Topbar({ activeSection, cameraCount, cameraLayout, liveEventCount, onCameraLayoutChange, socketStatus }: TopbarProps) {
+export function Topbar({ activeSection, cameraCount, cameraLayout, liveEventCount, onCameraLayoutChange, onToggleEventFeed, showEventFeed, socketStatus }: TopbarProps) {
   const { logout, user } = useAuth()
 
   return (
@@ -49,10 +51,14 @@ export function Topbar({ activeSection, cameraCount, cameraLayout, liveEventCoun
       >
         ws {socketStatus}
       </Badge>
-      {liveEventCount > 0 ? (
-        <Badge className="border-swarm-amber/30 bg-swarm-amber/10 font-mono text-swarm-amber" variant="outline">
-          {liveEventCount} events
-        </Badge>
+      {activeSection === 'cameras' ? (
+        <Button
+          onClick={onToggleEventFeed}
+          size="sm"
+          variant={showEventFeed ? 'default' : 'outline'}
+        >
+          {liveEventCount > 0 ? `Events (${liveEventCount})` : 'Events'}
+        </Button>
       ) : null}
       {user ? (
         <Badge className="font-mono" variant="secondary">
