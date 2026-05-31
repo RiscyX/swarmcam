@@ -13,8 +13,10 @@ import { sectionLabels, type SectionId } from '@/lib/sections'
 import { CameraSettingsPage } from '@/pages/camera-settings-page'
 import { CamerasPage } from '@/pages/cameras-page'
 import { DiscoveryPage } from '@/pages/discovery-page'
+import { EventsPage } from '@/pages/events-page'
 import { HealthPage } from '@/pages/health-page'
 import { PlaceholderPage } from '@/pages/placeholder-page'
+import { RecordingsPage } from '@/pages/recordings-page'
 import { SettingsPage } from '@/pages/settings-page'
 import type { Camera, CameraLayout } from '@/types/camera'
 import type { FrigateLiveEvent } from '@/types/events'
@@ -126,6 +128,10 @@ export function AppShell() {
               <DiscoveryPage onCamerasFound={setCameras} />
             ) : activeSection === 'camera-settings' ? (
               <CameraSettingsPage cameras={cameras} onRenameCamera={handleRenameCamera} />
+            ) : activeSection === 'events' ? (
+              <EventsPage cameras={cameras} />
+            ) : activeSection === 'recordings' ? (
+              <RecordingsPage cameras={cameras} />
             ) : activeSection === 'settings' ? (
               <SettingsPage />
             ) : (
