@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react'
 
+import { EventFeedPanel } from '@/components/event-feed-panel'
 import { FullscreenView } from '@/components/fullscreen-view'
 import { LoginOverlay } from '@/components/login-overlay'
 import { Sidebar } from '@/components/sidebar'
@@ -23,6 +24,7 @@ export function AppShell() {
   const [fullscreenCamera, setFullscreenCamera] = useState<Camera | null>(null)
   const [lastEventCamera, setLastEventCamera] = useState<string | null>(null)
   const [liveEvents, setLiveEvents] = useState<FrigateLiveEvent[]>([])
+  const [showEventFeed, setShowEventFeed] = useState(false)
   const [alerts, setAlerts] = useState<string[]>([])
   const [torchStates, setTorchStates] = useState<Record<string, boolean>>({})
   const { cameras, error, isLoading, reload, setCameras } = useCameras()
@@ -36,6 +38,15 @@ export function AppShell() {
     setLastEventCamera(event.camera ?? null)
     window.setTimeout(() => setLastEventCamera((current) => (current === event.camera ? null : current)), 1000)
   }, [])
+
+  const handleRenameCamera = useCallback(
+    (name: string, displayName: string) => {
+      setCameras((current) =>
+        current.map((camera) => (camera.name === name ? { ...camera, display_name: displayName } : camera)),
+      )
+    },
+    [setCameras],
+  )
 
   const handleStatus = useCallback(
     (updates: Camera[]) => {
@@ -76,8 +87,10 @@ export function AppShell() {
           cameraCount={cameras.length}
           cameraLayout={cameraLayout}
           liveEventCount={liveEvents.length}
+          showEventFeed={showEventFeed}
           socketStatus={socketStatus}
           onCameraLayoutChange={setCameraLayout}
+          onToggleEventFeed={() => setShowEventFeed((v) => !v)}
         />
         {alerts.length ? (
           <div className="fixed right-5 top-16 z-30 grid gap-2">
@@ -88,28 +101,38 @@ export function AppShell() {
             ))}
           </div>
         ) : null}
-        <div className="flex-1 overflow-y-auto p-5">
-          {activeSection === 'cameras' ? (
-            <CamerasPage
+        <div className="flex min-h-0 flex-1">
+          <div className="flex-1 overflow-y-auto p-5">
+            {activeSection === 'cameras' ? (
+              <CamerasPage
+                cameras={cameras}
+                error={error}
+                eventCamera={lastEventCamera}
+                isLoading={isLoading}
+                layout={cameraLayout}
+                onLayoutChange={setCameraLayout}
+                onOpenFullscreen={setFullscreenCamera}
+                onRenameCamera={handleRenameCamera}
+                onReload={reload}
+                onToggleTorch={toggleTorch}
+                paused={Boolean(fullscreenCamera)}
+                torchStates={torchStates}
+              />
+            ) : activeSection === 'discovery' ? (
+              <DiscoveryPage onCamerasFound={setCameras} />
+            ) : activeSection === 'settings' ? (
+              <SettingsPage />
+            ) : (
+              <PlaceholderPage section={activeSection} title={sectionLabels[activeSection]} />
+            )}
+          </div>
+          {showEventFeed && activeSection === 'cameras' ? (
+            <EventFeedPanel
               cameras={cameras}
-              error={error}
-              eventCamera={lastEventCamera}
-              isLoading={isLoading}
-              layout={cameraLayout}
-              onLayoutChange={setCameraLayout}
-              onOpenFullscreen={setFullscreenCamera}
-              onReload={reload}
-              onToggleTorch={toggleTorch}
-              paused={Boolean(fullscreenCamera)}
-              torchStates={torchStates}
+              events={liveEvents}
+              onClear={() => setLiveEvents([])}
             />
-          ) : activeSection === 'discovery' ? (
-            <DiscoveryPage onCamerasFound={setCameras} />
-          ) : activeSection === 'settings' ? (
-            <SettingsPage />
-          ) : (
-            <PlaceholderPage section={activeSection} title={sectionLabels[activeSection]} />
-          )}
+          ) : null}
         </div>
       </main>
       <FullscreenView
