@@ -132,12 +132,12 @@ export function CameraCard({ camera, isFlashing, isPaused, onOpenFullscreen, onR
 
         <Badge
           className={`absolute left-2 top-2 border bg-background/80 font-mono ${
-            isOnline ? (isLive ? 'border-swarm-green/40 text-swarm-green' : 'border-white/10 text-muted-foreground') : 'border-swarm-red/40 text-swarm-red'
+            isOnline ? (isLive && mode === 'live' ? 'border-swarm-green/40 text-swarm-green' : 'border-white/10 text-muted-foreground') : 'border-swarm-red/40 text-swarm-red'
           }`}
           variant="outline"
         >
           <span className="mr-1.5 h-1.5 w-1.5 rounded-full bg-current" />
-          {isOnline ? (isLive ? 'LIVE' : 'IDLE') : 'OFFLINE'}
+          {isOnline ? (mode === 'snap' ? 'SNAP' : isLive ? 'LIVE' : 'IDLE') : 'OFFLINE'}
         </Badge>
 
         <Button

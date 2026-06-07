@@ -2,7 +2,7 @@ auth:
   enabled: true
 mqtt:
   enabled: true
-  host: mosquitto
+  host: localhost
   port: 1883
 detectors:
   cpu1:
@@ -16,9 +16,8 @@ objects:
   - dog
   filters:
     person:
-      min_area: 2000
-      min_score: 0.6
-      threshold: 0.7
+      min_score: 0.4
+      threshold: 0.5
 record:
   enabled: true
   alerts:
@@ -34,14 +33,14 @@ record:
 snapshots:
   enabled: true
   timestamp: true
-  bounding_box: true
+  bounding_box: false
   retain:
     default: 14
 cameras:
-  cam_192_168_0_100:
+  cam_10_42_0_172:
     ffmpeg:
       inputs:
-      - path: rtsp://192.168.0.100:8080/h264_ulaw.sdp
+      - path: rtsp://10.42.0.172:8080/h264_ulaw.sdp
         roles:
         - detect
         - record
