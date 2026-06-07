@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { useAuth } from '@/hooks/use-auth'
 
@@ -19,44 +19,30 @@ export function LoginOverlay() {
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-background/95 px-4 backdrop-blur-sm">
-      <Card className="w-full max-w-sm overflow-hidden border-border bg-[#0a0d13] shadow-[0_0_80px_rgba(0,0,0,0.45)]">
-        <div className="h-0.5 bg-swarm-amber" />
-        <CardHeader className="pb-4">
-          <CardTitle className="font-ui text-3xl font-black uppercase tracking-[0.18em] text-swarm-amber">
-            SwarmCam
-          </CardTitle>
-          <CardDescription className="font-mono text-[10px] uppercase tracking-[0.18em]">
-            distributed surveillance system
-          </CardDescription>
+      <Card className="w-full max-w-sm border-border bg-card">
+        <CardHeader className="pb-2">
+          <div className="text-lg font-semibold text-foreground">SwarmCam</div>
+          <div className="text-xs text-muted-foreground">distributed surveillance system</div>
         </CardHeader>
         <CardContent>
           <form className="space-y-3" onSubmit={handleSubmit}>
             <label className="block space-y-1.5">
-              <span className="font-ui text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
-                Felhasználónév
-              </span>
-              <Input autoComplete="username" onChange={(event) => setUser(event.target.value)} placeholder="admin" value={user} />
+              <span className="text-xs text-muted-foreground">Username</span>
+              <Input autoComplete="username" onChange={(e) => setUser(e.target.value)} placeholder="admin" value={user} />
             </label>
             <label className="block space-y-1.5">
-              <span className="font-ui text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
-                Jelszó
-              </span>
-              <Input
-                autoComplete="current-password"
-                onChange={(event) => setPassword(event.target.value)}
-                type="password"
-                value={password}
-              />
+              <span className="text-xs text-muted-foreground">Password</span>
+              <Input autoComplete="current-password" onChange={(e) => setPassword(e.target.value)} type="password" value={password} />
             </label>
             <Button className="w-full" disabled={isLoggingIn} type="submit">
-              {isLoggingIn ? 'Bejelentkezés...' : 'Bejelentkezés'}
+              {isLoggingIn ? 'Signing in...' : 'Sign in'}
             </Button>
-            <div className="min-h-4 font-mono text-[11px] text-swarm-red">{loginError}</div>
+            {loginError ? <div className="font-mono text-xs text-swarm-red">{loginError}</div> : null}
           </form>
 
-          <div className="mt-5 border-t border-border pt-4 font-mono text-[10px] leading-6 text-muted-foreground">
-            Hitelesítés a Frigate NVR rendszeren keresztül. Első bejelentkezés előtt hozz létre felhasználót:
-            <span className="ml-1 text-swarm-blue">http://localhost:5000</span>
+          <div className="mt-4 border-t border-border pt-3 text-xs text-muted-foreground">
+            Authentication via Frigate NVR. Create a user at{' '}
+            <span className="text-swarm-blue">http://localhost:5000</span> before first login.
           </div>
         </CardContent>
       </Card>

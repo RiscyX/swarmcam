@@ -35,7 +35,7 @@ function SelectField({
     <div className="flex items-center justify-between gap-4 border-b border-border py-3 last:border-0">
       <span className="font-mono text-xs text-muted-foreground">{label}</span>
       <select
-        className="rounded-sm border border-border bg-background px-2 py-1 font-mono text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-swarm-amber"
+        className="rounded-sm border border-border bg-background px-2 py-1 font-mono text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
         onChange={(e) => onChange(e.target.value)}
         value={value ?? ''}
       >
@@ -63,7 +63,7 @@ function NumberField({
     <div className="flex items-center justify-between gap-4 border-b border-border py-3 last:border-0">
       <span className="font-mono text-xs text-muted-foreground">{label}</span>
       <select
-        className="rounded-sm border border-border bg-background px-2 py-1 font-mono text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-swarm-amber"
+        className="rounded-sm border border-border bg-background px-2 py-1 font-mono text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
         onChange={(e) => onChange(Number(e.target.value))}
         value={value ?? ''}
       >
@@ -159,7 +159,7 @@ export function CameraSettingsPage({ cameras, onRenameCamera, onDeleteCamera }: 
           <button
             className={`rounded-sm border px-3 py-2.5 text-left font-mono text-xs transition ${
               cam.name === selectedName
-                ? 'border-swarm-amber/50 bg-swarm-amber/10 text-swarm-amber'
+                ? 'border-swarm-blue/50 bg-swarm-blue/10 text-swarm-blue'
                 : 'border-border text-muted-foreground hover:border-border/80 hover:text-foreground'
             }`}
             key={cam.name}
@@ -175,10 +175,10 @@ export function CameraSettingsPage({ cameras, onRenameCamera, onDeleteCamera }: 
       <div className="flex flex-col gap-4">
         {/* Alias */}
         <div className="rounded-sm border border-border bg-card p-4">
-          <div className="mb-3 font-ui text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">Megjelenítési név</div>
+          <div className="mb-3 mb-3 text-xs font-medium text-muted-foreground">Megjelenítési név</div>
           <div className="flex gap-2">
             <input
-              className="flex-1 rounded-sm border border-border bg-background px-3 py-1.5 font-mono text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-swarm-amber"
+              className="flex-1 rounded-sm border border-border bg-background px-3 py-1.5 font-mono text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
               onChange={(e) => setAlias(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') void handleSaveAlias() }}
               placeholder={selectedCamera ? getCameraDisplayName(selectedCamera) : ''}
@@ -192,7 +192,7 @@ export function CameraSettingsPage({ cameras, onRenameCamera, onDeleteCamera }: 
 
         {/* IP Webcam settings */}
         <div className="rounded-sm border border-border bg-card p-4">
-          <div className="mb-1 font-ui text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">IP Webcam beállítások</div>
+          <div className="mb-1 mb-3 text-xs font-medium text-muted-foreground">IP Webcam beállítások</div>
 
           {status === 'loading' ? (
             <div className="py-8 text-center font-mono text-xs text-muted-foreground">Betöltés...</div>
@@ -261,7 +261,7 @@ export function CameraSettingsPage({ cameras, onRenameCamera, onDeleteCamera }: 
 
         {/* Delete camera */}
         <div className="rounded-sm border border-swarm-red/20 bg-card p-4">
-          <div className="mb-2 font-ui text-xs font-bold uppercase tracking-[0.14em] text-swarm-red/70">Veszélyes zóna</div>
+          <div className="mb-2 text-xs font-medium text-swarm-red/70">Danger zone</div>
           <div className="flex items-center justify-between">
             <p className="font-mono text-xs text-muted-foreground">
               Eltávolítja a kamerát a Frigate konfigból és újraindítja a Frigate-t.
