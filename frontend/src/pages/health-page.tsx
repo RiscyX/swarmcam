@@ -1,6 +1,5 @@
-import { BatteryCharging, BatteryLow, Eye, EyeOff, Wifi, WifiOff } from 'lucide-react'
+import { BatteryCharging, BatteryLow, Eye, EyeOff } from 'lucide-react'
 
-import { Badge } from '@/components/ui/badge'
 import { getCameraDisplayName } from '@/lib/cameras'
 import type { Camera } from '@/types/camera'
 
@@ -19,72 +18,66 @@ function BatteryBar({ level }: { level: number | null | undefined }) {
   const color = pct <= 20 ? 'bg-swarm-red' : pct <= 50 ? 'bg-swarm-amber' : 'bg-swarm-green'
   return (
     <div className="flex items-center gap-2">
-      <div className="h-2 w-16 overflow-hidden rounded-full bg-border">
+      <div className="h-1.5 w-16 overflow-hidden rounded-full bg-border">
         <div className={`h-full ${color} transition-all`} style={{ width: `${pct}%` }} />
       </div>
-      <span className="tabular-nums">{pct}%</span>
+      <span className="tabular-nums text-foreground">{pct}%</span>
     </div>
   )
 }
 
 export function HealthPage({ cameras, isLoading }: HealthPageProps) {
   if (isLoading) {
-    return <div className="font-mono text-sm text-muted-foreground">Betöltés...</div>
+    return <div className="p-6 text-sm text-muted-foreground">Loading...</div>
   }
 
   if (!cameras.length) {
     return (
-      <div className="grid min-h-[360px] place-items-center rounded-sm border border-dashed border-border bg-card/70 p-8 text-center">
-        <p className="font-mono text-xs text-muted-foreground">Nincs kamera. Futtass discovery scan-t.</p>
+      <div className="flex min-h-[360px] items-center justify-center">
+        <p className="text-sm text-muted-foreground">No cameras. Run a discovery scan first.</p>
       </div>
     )
   }
 
   return (
-    <div className="overflow-hidden rounded-sm border border-border bg-card">
-      <table className="w-full font-mono text-xs">
+    <div className="overflow-hidden rounded border border-border">
+      <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-border bg-background/60 text-left text-muted-foreground">
-            <th className="px-4 py-3 font-bold uppercase tracking-[0.12em]">Kamera</th>
-            <th className="px-4 py-3 font-bold uppercase tracking-[0.12em]">Állapot</th>
-            <th className="px-4 py-3 font-bold uppercase tracking-[0.12em]">Akku</th>
-            <th className="px-4 py-3 font-bold uppercase tracking-[0.12em]">Hőfok</th>
-            <th className="px-4 py-3 font-bold uppercase tracking-[0.12em]">Szabad hely</th>
-            <th className="px-4 py-3 font-bold uppercase tracking-[0.12em]">Minőség</th>
-            <th className="px-4 py-3 font-bold uppercase tracking-[0.12em]">Éjjellátó</th>
-            <th className="px-4 py-3 font-bold uppercase tracking-[0.12em]">Stream</th>
+          <tr className="border-b border-border bg-card text-left text-xs text-muted-foreground">
+            <th className="px-4 py-2.5 font-medium">Camera</th>
+            <th className="px-4 py-2.5 font-medium">Status</th>
+            <th className="px-4 py-2.5 font-medium">Battery</th>
+            <th className="px-4 py-2.5 font-medium">Temp</th>
+            <th className="px-4 py-2.5 font-medium">Free space</th>
+            <th className="px-4 py-2.5 font-medium">Quality</th>
+            <th className="px-4 py-2.5 font-medium">Night vision</th>
+            <th className="px-4 py-2.5 font-medium">Connections</th>
           </tr>
         </thead>
         <tbody>
-          {cameras.map((cam, i) => {
+          {cameras.map((cam) => {
             const isOnline = cam.online !== false
             const isLive = (cam.video_connections ?? 0) > 0
             return (
               <tr
-                className={`border-b border-border last:border-0 transition-colors hover:bg-white/[0.02] ${!isOnline ? 'opacity-50' : ''} ${i % 2 === 0 ? '' : 'bg-white/[0.015]'}`}
+                className={`border-b border-border/50 last:border-0 transition-colors hover:bg-white/[0.02] ${!isOnline ? 'opacity-40' : ''}`}
                 key={cam.name}
               >
                 <td className="px-4 py-3">
-                  <div className="font-ui font-bold tracking-[0.06em] text-foreground">{getCameraDisplayName(cam)}</div>
-                  <div className="mt-0.5 text-muted-foreground">{cam.ip}:{cam.port}</div>
+                  <div className="font-medium text-foreground">{getCameraDisplayName(cam)}</div>
+                  <div className="mt-0.5 font-mono text-xs text-muted-foreground">{cam.ip}:{cam.port}</div>
                 </td>
                 <td className="px-4 py-3">
-                  <Badge
-                    className={
-                      isOnline
-                        ? isLive
-                          ? 'border-swarm-green/40 bg-swarm-green/10 text-swarm-green'
-                          : 'border-border bg-background text-muted-foreground'
-                        : 'border-swarm-red/40 bg-swarm-red/10 text-swarm-red'
-                    }
-                    variant="outline"
-                  >
+                  <div className="flex items-center gap-1.5">
+                    <span className={`h-1.5 w-1.5 rounded-full ${isOnline ? (isLive ? 'bg-swarm-green' : 'bg-muted-foreground') : 'bg-swarm-red'}`} />
                     {isOnline ? (
-                      <><Wifi className="mr-1 h-2.5 w-2.5" />{isLive ? 'LIVE' : 'IDLE'}</>
+                      <span className={`text-xs ${isLive ? 'text-swarm-green' : 'text-muted-foreground'}`}>
+                        {isLive ? 'Live' : 'Idle'}
+                      </span>
                     ) : (
-                      <><WifiOff className="mr-1 h-2.5 w-2.5" />OFFLINE</>
+                      <span className="text-xs text-swarm-red">Offline</span>
                     )}
-                  </Badge>
+                  </div>
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-1.5">
@@ -96,26 +89,20 @@ export function HealthPage({ cameras, isLoading }: HealthPageProps) {
                     ) : null}
                   </div>
                 </td>
-                <td className="px-4 py-3 text-muted-foreground">
-                  {fmt(cam.battery_temp_c, '°C')}
-                </td>
-                <td className="px-4 py-3 text-muted-foreground">
-                  {fmt(cam.free_space_gb, ' GB')}
-                </td>
-                <td className="px-4 py-3 text-muted-foreground">
-                  {fmt(cam.quality, '%')}
-                </td>
+                <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{fmt(cam.battery_temp_c, '°C')}</td>
+                <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{fmt(cam.free_space_gb, ' GB')}</td>
+                <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{fmt(cam.quality, '%')}</td>
                 <td className="px-4 py-3">
                   {cam.night_vision == null ? (
                     <span className="text-muted-foreground">—</span>
                   ) : cam.night_vision ? (
-                    <Eye className="h-3.5 w-3.5 text-swarm-amber" />
+                    <Eye className="h-3.5 w-3.5 text-foreground" />
                   ) : (
                     <EyeOff className="h-3.5 w-3.5 text-muted-foreground" />
                   )}
                 </td>
-                <td className="px-4 py-3 tabular-nums text-muted-foreground">
-                  {cam.video_connections != null ? `${cam.video_connections} conn` : '—'}
+                <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
+                  {cam.video_connections != null ? cam.video_connections : '—'}
                 </td>
               </tr>
             )

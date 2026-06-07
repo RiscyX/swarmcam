@@ -1,14 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { CameraOff, Flashlight, Pencil } from 'lucide-react'
 
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
 import { useAuth } from '@/hooks/use-auth'
-import { cameraSnapshotUrl, cameraStreamUrl, getCameraDisplayName, getCameraStats, setCameraAlias } from '@/lib/cameras'
+import { cameraStreamUrl, getCameraDisplayName, getCameraStats, setCameraAlias } from '@/lib/cameras'
 import type { Camera, CameraStats } from '@/types/camera'
-
-type StreamMode = 'snap' | 'live'
 
 type CameraCardProps = {
   camera: Camera
@@ -24,8 +19,6 @@ export function CameraCard({ camera, isFlashing, isPaused, onOpenFullscreen, onR
   const { token } = useAuth()
   const imageRef = useRef<HTMLImageElement | null>(null)
   const inputRef = useRef<HTMLInputElement | null>(null)
-  const [mode, setMode] = useState<StreamMode>('snap')
-  const [snapshotSrc, setSnapshotSrc] = useState('')
   const [hasSignal, setHasSignal] = useState(true)
   const [stats, setStats] = useState<CameraStats | null>(null)
   const [isEditing, setIsEditing] = useState(false)
@@ -34,53 +27,31 @@ export function CameraCard({ camera, isFlashing, isPaused, onOpenFullscreen, onR
   const isOnline = camera.online !== false
   const isLive = (camera.video_connections ?? 0) > 0
   const displayName = getCameraDisplayName(camera)
-  const src = isPaused ? '' : mode === 'live' ? cameraStreamUrl(camera.name) : snapshotSrc
+  const src = isPaused ? '' : cameraStreamUrl(camera.name)
 
   useEffect(() => {
-    if (isPaused || mode !== 'snap') return undefined
-
-    function refresh() {
-      setSnapshotSrc(cameraSnapshotUrl(camera.name))
-    }
-
-    refresh()
-    const id = window.setInterval(refresh, 3000)
-    return () => window.clearInterval(id)
-  }, [camera.name, isPaused, mode])
-
-  useEffect(() => {
-    if (isPaused || mode !== 'live') return undefined
     const image = imageRef.current
-    return () => {
-      if (image) image.src = ''
-    }
-  }, [isPaused, mode])
+    return () => { if (image) image.src = '' }
+  }, [camera.name])
 
   useEffect(() => {
     let cancelled = false
     if (!token) return undefined
     const authToken = token
-
     async function loadStats() {
       try {
-        const nextStats = await getCameraStats(authToken, camera.name)
-        if (!cancelled) setStats(nextStats)
+        const s = await getCameraStats(authToken, camera.name)
+        if (!cancelled) setStats(s)
       } catch {
         if (!cancelled) setStats(null)
       }
     }
-
     void loadStats()
-    return () => {
-      cancelled = true
-    }
+    return () => { cancelled = true }
   }, [camera.name, token])
 
-  function toggleMode() {
-    setMode((current) => (current === 'live' ? 'snap' : 'live'))
-  }
-
-  function startEdit() {
+  function startEdit(e: React.MouseEvent) {
+    e.stopPropagation()
     setEditValue(getCameraDisplayName(camera))
     setIsEditing(true)
     window.setTimeout(() => inputRef.current?.select(), 0)
@@ -94,9 +65,7 @@ export function CameraCard({ camera, isFlashing, isPaused, onOpenFullscreen, onR
     try {
       const result = await setCameraAlias(token, camera.name, trimmed)
       onRename(camera.name, result.display_name)
-    } catch {
-      // silently revert — the display name stays from props
-    }
+    } catch { /* silently revert */ }
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
@@ -105,98 +74,78 @@ export function CameraCard({ camera, isFlashing, isPaused, onOpenFullscreen, onR
   }
 
   return (
-    <Card
-      className={`overflow-hidden rounded-sm border-border bg-card transition ${isOnline ? '' : 'opacity-50'} ${
-        isFlashing ? 'ring-2 ring-swarm-amber shadow-[0_0_40px_rgba(232,165,0,0.35)]' : ''
+    <div
+      className={`group relative aspect-video cursor-pointer overflow-hidden bg-black ${isOnline ? '' : 'opacity-40'} ${
+        isFlashing ? 'ring-2 ring-inset ring-swarm-blue' : ''
       }`}
+      onClick={() => onOpenFullscreen(camera)}
     >
-      <div className="relative aspect-video cursor-pointer overflow-hidden bg-[#030507]" onClick={() => onOpenFullscreen(camera)}>
-        <img
-          alt={`${displayName} kamera képe`}
-          className="h-full w-full object-cover"
-          onError={() => setHasSignal(false)}
-          onLoad={() => setHasSignal(true)}
-          ref={imageRef}
-          src={src}
-        />
-        <div className="pointer-events-none absolute inset-0 bg-[repeating-linear-gradient(to_bottom,transparent_0,transparent_2px,rgba(0,0,0,0.055)_2px,rgba(0,0,0,0.055)_4px)]" />
+      <img
+        alt={`${displayName} stream`}
+        className="h-full w-full object-cover"
+        onError={() => setHasSignal(false)}
+        onLoad={() => setHasSignal(true)}
+        ref={imageRef}
+        src={src}
+      />
 
-        {!hasSignal ? (
-          <div className="absolute inset-0 grid place-items-center bg-[#030507] font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-            <div className="flex flex-col items-center gap-2">
-              <CameraOff className="h-6 w-6" />
-              No signal
-            </div>
+      {!hasSignal && (
+        <div className="absolute inset-0 grid place-items-center bg-zinc-950">
+          <div className="flex flex-col items-center gap-2 text-zinc-600">
+            <CameraOff className="h-6 w-6" />
+            <span className="text-xs">No signal</span>
           </div>
-        ) : null}
+        </div>
+      )}
 
-        <Badge
-          className={`absolute left-2 top-2 border bg-background/80 font-mono ${
-            isOnline ? (isLive && mode === 'live' ? 'border-swarm-green/40 text-swarm-green' : 'border-white/10 text-muted-foreground') : 'border-swarm-red/40 text-swarm-red'
-          }`}
-          variant="outline"
-        >
-          <span className="mr-1.5 h-1.5 w-1.5 rounded-full bg-current" />
-          {isOnline ? (mode === 'snap' ? 'SNAP' : isLive ? 'LIVE' : 'IDLE') : 'OFFLINE'}
-        </Badge>
+      {/* Torch button — top right, visible on hover */}
+      <button
+        className={`absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded bg-black/70 opacity-0 transition-all hover:bg-black/90 group-hover:opacity-100 ${torchEnabled ? 'text-swarm-amber opacity-100' : 'text-white/70'}`}
+        onClick={(e) => { e.stopPropagation(); onToggleTorch(camera) }}
+        title="Toggle torch"
+      >
+        <Flashlight className="h-3.5 w-3.5" />
+      </button>
 
-        <Button
-          className={mode === 'live' ? 'absolute bottom-2 right-2 border-swarm-green/40 text-swarm-green' : 'absolute bottom-2 right-2'}
-          onClick={(event) => {
-            event.stopPropagation()
-            toggleMode()
-          }}
-          size="sm"
-          variant="outline"
-        >
-          {mode === 'live' ? 'LIVE' : 'SNAP'}
-        </Button>
-        <Button
-          className={torchEnabled ? 'absolute bottom-2 left-2 border-swarm-amber/50 bg-swarm-amber/10 text-swarm-amber' : 'absolute bottom-2 left-2'}
-          onClick={(event) => {
-            event.stopPropagation()
-            onToggleTorch(camera)
-          }}
-          size="sm"
-          variant="outline"
-        >
-          <Flashlight className="mr-1.5 h-3.5 w-3.5" />
-          Vaku
-        </Button>
-      </div>
-
-      <div className="px-3 py-2 text-center">
-        {isEditing ? (
-          <input
-            autoFocus
-            className="w-full border-b border-swarm-amber bg-transparent text-center font-ui text-base font-bold tracking-[0.06em] text-foreground outline-none"
-            onBlur={() => void commitEdit()}
-            onChange={(e) => setEditValue(e.target.value)}
-            onKeyDown={handleKeyDown}
-            ref={inputRef}
-            value={editValue}
-          />
-        ) : (
-          <div
-            className="group relative inline-flex max-w-full cursor-text items-center gap-1 truncate font-ui text-base font-bold tracking-[0.06em] text-foreground"
-            onClick={startEdit}
-            title="Kattints az átnevezéshez"
-          >
-            <span className="truncate">{displayName}</span>
-            <Pencil className="h-3 w-3 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-60" />
+      {/* Bottom overlay: name + status */}
+      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent px-2.5 pb-2 pt-8">
+        <div className="flex items-end justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            {isEditing ? (
+              <input
+                autoFocus
+                className="w-full border-b border-white/40 bg-transparent text-xs font-medium text-white outline-none"
+                onBlur={() => void commitEdit()}
+                onChange={(e) => setEditValue(e.target.value)}
+                onKeyDown={handleKeyDown}
+                onClick={(e) => e.stopPropagation()}
+                ref={inputRef}
+                value={editValue}
+              />
+            ) : (
+              <div
+                className="group/name inline-flex max-w-full items-center gap-1 truncate"
+                onClick={startEdit}
+                title="Click to rename"
+              >
+                <span className="truncate text-xs font-medium text-white/90">{displayName}</span>
+                <Pencil className="h-2.5 w-2.5 shrink-0 text-white/40 opacity-0 transition-opacity group-hover/name:opacity-100" />
+              </div>
+            )}
+            {(stats?.camera_fps ?? 0) > 0 && (
+              <div className="mt-0.5 font-mono text-[10px] text-white/40">
+                {stats!.camera_fps} fps · det {stats!.detection_fps}
+              </div>
+            )}
           </div>
-        )}
-        <div className="mt-1 flex justify-center gap-4 font-mono text-[10px]">
-          <span>
-            <span className="text-muted-foreground">Cam</span>{' '}
-            <span className="text-swarm-amber">{stats && stats.camera_fps > 0 ? stats.camera_fps : '—'}</span>
-          </span>
-          <span>
-            <span className="text-muted-foreground">Det</span>{' '}
-            <span className="text-swarm-amber">{stats && stats.detection_fps > 0 ? stats.detection_fps : '—'}</span>
-          </span>
+          <div className="flex shrink-0 items-center gap-1.5">
+            <span className={`h-1.5 w-1.5 rounded-full ${isOnline ? (isLive ? 'bg-swarm-green' : 'bg-white/30') : 'bg-swarm-red'}`} />
+            <span className={`font-mono text-[10px] ${isOnline ? (isLive ? 'text-swarm-green' : 'text-white/40') : 'text-swarm-red'}`}>
+              {isOnline ? (isLive ? 'Live' : 'Idle') : 'Offline'}
+            </span>
+          </div>
         </div>
       </div>
-    </Card>
+    </div>
   )
 }

@@ -38,17 +38,18 @@ export function FullscreenView({ camera, onClose, onToggleTorch, torchEnabled }:
   return (
     <div className="fixed inset-0 z-40 flex flex-col bg-black">
       <div className="flex items-center gap-3 border-b border-border bg-background/90 px-4 py-2">
-        <div className="flex-1 font-ui text-sm font-bold uppercase tracking-[0.16em] text-swarm-amber">
+        <div className="flex-1 text-sm font-medium text-foreground">
           {getCameraDisplayName(camera)}
         </div>
-        <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">ESC = kilépés</div>
+        <div className="font-mono text-xs text-muted-foreground">ESC to close</div>
         <Button
           className={torchEnabled ? 'border-swarm-amber/50 bg-swarm-amber/10 text-swarm-amber' : ''}
           onClick={() => onToggleTorch(camera)}
+          size="sm"
           variant="outline"
         >
-          <Flashlight className="mr-2 h-4 w-4" />
-          {torchEnabled ? 'Vaku be' : 'Vaku'}
+          <Flashlight className="mr-1.5 h-3.5 w-3.5" />
+          Torch
         </Button>
         <Button onClick={onClose} size="icon" variant="ghost">
           <X className="h-5 w-5" />

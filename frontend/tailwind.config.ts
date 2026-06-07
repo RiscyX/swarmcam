@@ -37,12 +37,12 @@ const config = {
           foreground: 'hsl(var(--card-foreground))',
         },
         swarm: {
-          amber: '#e8a500',
-          green: '#25c068',
-          red: '#e04545',
-          blue: '#4a9eff',
-          panel: '#0a0d13',
-          surface: '#0e1219',
+          green: '#22c55e',
+          red: '#ef4444',
+          amber: '#f59e0b',
+          blue: '#3b82f6',
+          panel: '#141414',
+          surface: '#1a1a1a',
         },
       },
       borderRadius: {
@@ -51,7 +51,7 @@ const config = {
         sm: 'calc(var(--radius) - 4px)',
       },
       fontFamily: {
-        ui: ['Barlow Condensed', 'sans-serif'],
+        ui: ['Inter', 'system-ui', 'sans-serif'],
         mono: ['IBM Plex Mono', 'monospace'],
       },
     },

@@ -25,37 +25,37 @@ export function Sidebar({ activeSection, onSectionChange, socketStatus }: Sideba
   const time = useClock()
 
   return (
-    <aside className="hidden w-52 shrink-0 border-r border-border bg-[#0a0d13] md:flex md:flex-col">
-      <div className="border-b border-border px-5 py-5">
-        <div className="text-[22px] font-black uppercase leading-none tracking-[0.22em] text-swarm-amber">SwarmCam</div>
-        <div className="mt-1 font-mono text-[9px] uppercase tracking-[0.22em] text-muted-foreground">surveillance system</div>
+    <aside className="hidden w-48 shrink-0 border-r border-border bg-swarm-panel md:flex md:flex-col">
+      <div className="border-b border-border px-4 py-4">
+        <div className="text-base font-semibold text-foreground">SwarmCam</div>
+        <div className="mt-0.5 text-xs text-muted-foreground">surveillance system</div>
       </div>
 
-      <nav className="flex flex-1 flex-col gap-1 py-3">
+      <nav className="flex flex-1 flex-col gap-0.5 py-2">
         {navItems.map((item) => (
           <button
-            className={`flex items-center gap-3 px-5 py-2.5 text-left text-[13px] font-bold uppercase tracking-[0.12em] transition ${
+            className={`flex items-center gap-2.5 px-4 py-2 text-left text-sm transition-colors ${
               activeSection === item.id
-                ? 'border-l-2 border-swarm-amber bg-swarm-amber/10 text-swarm-amber'
-                : 'border-l-2 border-transparent text-muted-foreground hover:bg-white/[0.03] hover:text-foreground'
+                ? 'border-l-2 border-swarm-blue bg-swarm-blue/10 text-swarm-blue'
+                : 'border-l-2 border-transparent text-muted-foreground hover:bg-white/[0.04] hover:text-foreground'
             }`}
             key={item.id}
             onClick={() => onSectionChange(item.id)}
             type="button"
           >
-            <item.icon className="h-4 w-4" />
+            <item.icon className="h-4 w-4 shrink-0" />
             {item.label}
           </button>
         ))}
       </nav>
 
-      <div className="space-y-2 border-t border-border px-5 py-4 font-mono text-[10px] text-muted-foreground">
+      <div className="space-y-1.5 border-t border-border px-4 py-3 font-mono text-[11px] text-muted-foreground">
         <div className={`flex items-center gap-2 ${socketStatus === 'connected' ? 'text-swarm-green' : ''}`}>
           <span className={`h-1.5 w-1.5 rounded-full ${socketStatus === 'connected' ? 'bg-swarm-green' : 'bg-swarm-red'}`} />
           ws {socketStatus}
         </div>
-        <div className="flex items-center gap-2 text-swarm-amber">
-          <span className="h-1.5 w-1.5 rounded-full bg-swarm-amber" />
+        <div className="flex items-center gap-2">
+          <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground" />
           {time}
         </div>
       </div>

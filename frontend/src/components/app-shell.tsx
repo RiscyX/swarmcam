@@ -108,14 +108,14 @@ export function AppShell() {
         {alerts.length ? (
           <div className="fixed right-5 top-16 z-30 grid gap-2">
             {alerts.map((message, index) => (
-              <div className="rounded-sm border border-swarm-amber bg-card px-4 py-3 font-mono text-xs text-swarm-amber shadow-lg" key={`${message}-${index}`}>
+              <div className="rounded border border-swarm-red/40 bg-card px-4 py-3 font-mono text-xs text-swarm-red shadow-lg" key={`${message}-${index}`}>
                 {message}
               </div>
             ))}
           </div>
         ) : null}
         <div className="flex min-h-0 flex-1">
-          <div className="flex-1 overflow-y-auto p-5">
+          <div className={`flex-1 overflow-y-auto ${activeSection === 'cameras' ? '' : 'p-5'}`}>
             {activeSection === 'cameras' ? (
               <CamerasPage
                 cameras={cameras}

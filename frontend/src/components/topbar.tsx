@@ -26,19 +26,20 @@ export function Topbar({ activeSection, cameraCount, cameraLayout, liveEventCoun
   const { logout, user } = useAuth()
 
   return (
-    <header className="flex h-14 items-center gap-4 border-b border-border bg-[#0a0d13] px-5">
-      <div className="flex-1 text-sm font-bold uppercase tracking-[0.18em]">{sectionLabels[activeSection]}</div>
-      <Badge className="border-swarm-amber/30 bg-swarm-amber/10 font-mono text-swarm-amber" variant="outline">
-        {cameraCount} camera{cameraCount === 1 ? '' : 's'}
+    <header className="flex h-12 items-center gap-3 border-b border-border bg-swarm-panel px-4">
+      <div className="flex-1 text-sm font-medium text-foreground">{sectionLabels[activeSection]}</div>
+      <Badge className="font-mono text-xs" variant="secondary">
+        {cameraCount} cam{cameraCount === 1 ? '' : 's'}
       </Badge>
       {activeSection === 'cameras' ? (
-        <div className="flex items-center gap-1 rounded-sm border border-border bg-background p-1">
+        <div className="flex items-center gap-0.5 rounded border border-border bg-background p-0.5">
           {cameraLayouts.map((layout) => (
             <Button
               key={layout.id}
               onClick={() => onCameraLayoutChange(layout.id)}
               size="sm"
               variant={cameraLayout === layout.id ? 'default' : 'ghost'}
+              className="h-6 w-6 p-0 text-xs"
             >
               {layout.label}
             </Button>
@@ -46,7 +47,7 @@ export function Topbar({ activeSection, cameraCount, cameraLayout, liveEventCoun
         </div>
       ) : null}
       <Badge
-        className={socketStatus === 'connected' ? 'border-swarm-green/30 bg-swarm-green/10 font-mono text-swarm-green' : 'font-mono'}
+        className={`font-mono text-xs ${socketStatus === 'connected' ? 'border-swarm-green/30 bg-swarm-green/10 text-swarm-green' : ''}`}
         variant="outline"
       >
         ws {socketStatus}
@@ -56,17 +57,16 @@ export function Topbar({ activeSection, cameraCount, cameraLayout, liveEventCoun
           onClick={onToggleEventFeed}
           size="sm"
           variant={showEventFeed ? 'default' : 'outline'}
+          className="h-7 text-xs"
         >
           {liveEventCount > 0 ? `Events (${liveEventCount})` : 'Events'}
         </Button>
       ) : null}
       {user ? (
-        <Badge className="font-mono" variant="secondary">
-          {user.username}:{user.role}
-        </Badge>
+        <span className="font-mono text-xs text-muted-foreground">{user.username}</span>
       ) : null}
-      <Button onClick={logout} variant="outline">
-        Kijelentkezés
+      <Button onClick={logout} variant="outline" size="sm" className="h-7 text-xs">
+        Logout
       </Button>
     </header>
   )

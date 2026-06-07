@@ -1,7 +1,6 @@
 import { useEffect, useState, type Dispatch, type FormEvent, type SetStateAction } from 'react'
 
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { useAuth } from '@/hooks/use-auth'
 import { startDiscoveryStream } from '@/hooks/use-discovery-stream'
@@ -34,7 +33,6 @@ export function DiscoveryPage({ onCamerasFound }: DiscoveryPageProps) {
   async function handleScan(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!token) return
-
     setIsScanning(true)
     setStatus('')
     setLogLines([])
@@ -54,108 +52,102 @@ export function DiscoveryPage({ onCamerasFound }: DiscoveryPageProps) {
           }
           if (streamEvent.type === 'result') {
             onCamerasFound(streamEvent.cameras)
-            setStatus(`${streamEvent.cameras.length} kamera találva`)
+            setStatus(`${streamEvent.cameras.length} camera${streamEvent.cameras.length === 1 ? '' : 's'} found`)
           }
           if (streamEvent.type === 'done') setIsScanning(false)
         },
       })
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : 'Discovery hiba')
+      setStatus(error instanceof Error ? error.message : 'Discovery error')
       setIsScanning(false)
     }
   }
 
   async function handleReset() {
-    if (!token || !window.confirm('Biztosan törlöd a kamera konfigurációt?')) return
+    if (!token || !window.confirm('Delete camera configuration?')) return
     await resetCameras(token)
     onCamerasFound([])
-    setStatus('Kamerák resetelve')
+    setStatus('Cameras reset')
   }
 
   async function handleClearRecordings() {
-    if (!token || !window.confirm('Biztosan törlöd az összes Frigate felvételt és klipet?')) return
+    if (!token || !window.confirm('Delete all Frigate recordings and clips?')) return
     const result = await clearRecordings(token)
-    setStatus(`Felvételek törölve: ${result.cleared_mb} MB`)
+    setStatus(`Recordings deleted: ${result.cleared_mb} MB`)
   }
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(320px,420px)_1fr]">
-      <div className="grid gap-4">
-        <Card className="border-border bg-card/90">
-          <CardHeader>
-            <CardTitle className="font-ui uppercase tracking-[0.14em]">Scan Configuration</CardTitle>
-            <CardDescription>IP Webcam eszközök keresése a lokális hálózaton</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form className="space-y-4" onSubmit={handleScan}>
-              <label className="grid gap-1.5">
-                <span className="font-ui text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">Hálózat</span>
-                <div className="flex gap-2">
-                  <Input
-                    className="font-mono"
-                    list="network-suggestions"
-                    onChange={(e) => setSubnet(e.target.value)}
-                    placeholder="auto-detect  (pl. 192.168.0.0/24)"
-                    value={subnet}
-                  />
-                  <datalist id="network-suggestions">
-                    {networks.map((n) => (
-                      <option key={n.subnet} value={n.subnet}>{n.iface} – {n.ip}</option>
-                    ))}
-                  </datalist>
-                </div>
-              </label>
-              <div className="grid grid-cols-2 gap-3">
-                <label className="grid gap-1.5">
-                  <span className="font-ui text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">Port</span>
-                  <Input min={1} onChange={(event) => setPort(Number(event.target.value))} type="number" value={port} />
-                </label>
-                <label className="grid gap-1.5">
-                  <span className="font-ui text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">Timeout</span>
-                  <Input min={0.5} onChange={(event) => setTimeoutValue(Number(event.target.value))} step={0.5} type="number" value={timeout} />
-                </label>
+    <div className="grid gap-4 lg:grid-cols-[340px_1fr]">
+      {/* Config panel */}
+      <div className="flex flex-col gap-3">
+        <div className="rounded border border-border bg-card p-4">
+          <div className="mb-4 text-sm font-medium text-foreground">Scan Configuration</div>
+          <form className="space-y-3" onSubmit={handleScan}>
+            <label className="block space-y-1.5">
+              <span className="text-xs text-muted-foreground">Network</span>
+              <div className="flex gap-2">
+                <Input
+                  className="font-mono text-xs"
+                  list="network-suggestions"
+                  onChange={(e) => setSubnet(e.target.value)}
+                  placeholder="auto-detect (e.g. 192.168.0.0/24)"
+                  value={subnet}
+                />
+                <datalist id="network-suggestions">
+                  {networks.map((n) => (
+                    <option key={n.subnet} value={n.subnet}>{n.iface} – {n.ip}</option>
+                  ))}
+                </datalist>
               </div>
-              <label className="flex items-center gap-2 font-mono text-xs text-muted-foreground">
-                <input checked={updateFrigate} onChange={(event) => setUpdateFrigate(event.target.checked)} type="checkbox" />
-                Frigate config frissítése
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="block space-y-1.5">
+                <span className="text-xs text-muted-foreground">Port</span>
+                <Input min={1} onChange={(e) => setPort(Number(e.target.value))} type="number" value={port} />
               </label>
-              <Button className="w-full" disabled={isScanning} type="submit">
-                {isScanning ? 'Scanning...' : 'Scan Network'}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+              <label className="block space-y-1.5">
+                <span className="text-xs text-muted-foreground">Timeout (s)</span>
+                <Input min={0.5} onChange={(e) => setTimeoutValue(Number(e.target.value))} step={0.5} type="number" value={timeout} />
+              </label>
+            </div>
+            <label className="flex items-center gap-2 text-xs text-muted-foreground">
+              <input checked={updateFrigate} onChange={(e) => setUpdateFrigate(e.target.checked)} type="checkbox" />
+              Update Frigate config
+            </label>
+            <Button className="w-full" disabled={isScanning} type="submit">
+              {isScanning ? 'Scanning...' : 'Scan Network'}
+            </Button>
+          </form>
+        </div>
 
-        <Card className="border-border bg-card/90">
-          <CardHeader>
-            <CardTitle className="font-ui uppercase tracking-[0.14em]">Camera Management</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-2">
-            <Button onClick={handleReset} variant="outline">Reset Cameras</Button>
-            <Button onClick={handleClearRecordings} variant="destructive">Delete Recordings</Button>
-            {status ? <div className="font-mono text-xs text-swarm-amber">{status}</div> : null}
-          </CardContent>
-        </Card>
+        <div className="rounded border border-border bg-card p-4">
+          <div className="mb-3 text-sm font-medium text-foreground">Management</div>
+          <div className="flex flex-col gap-2">
+            <Button onClick={handleReset} variant="outline" size="sm">Reset Cameras</Button>
+            <Button onClick={handleClearRecordings} variant="destructive" size="sm">Delete Recordings</Button>
+            {status ? <div className="text-xs text-muted-foreground">{status}</div> : null}
+          </div>
+        </div>
       </div>
 
-      <Card className="border-border bg-card/90">
-        <CardHeader>
-          <CardTitle className="font-ui uppercase tracking-[0.14em]">Discovery Log</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="min-h-[420px] overflow-y-auto rounded-sm border border-border bg-background p-3 font-mono text-xs leading-6 text-muted-foreground">
-            {logLines.length ? (
-              logLines.map((line, index) => (
-                <div className={line.kind === 'found' ? 'text-swarm-green' : line.kind === 'warn' ? 'text-swarm-amber' : ''} key={`${line.message}-${index}`}>
-                  {line.message}
-                </div>
-              ))
-            ) : (
-              <div className="text-center">Nincs aktív scan</div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+      {/* Log panel */}
+      <div className="rounded border border-border bg-card p-4">
+        <div className="mb-3 text-sm font-medium text-foreground">Discovery Log</div>
+        <div className="min-h-[360px] overflow-y-auto rounded border border-border bg-background p-3 font-mono text-xs leading-6 text-muted-foreground">
+          {logLines.length ? (
+            logLines.map((line, index) => (
+              <div
+                className={line.kind === 'found' ? 'text-swarm-green' : line.kind === 'warn' ? 'text-swarm-red' : ''}
+                key={`${line.message}-${index}`}
+              >
+                {line.message}
+              </div>
+            ))
+          ) : (
+            <div className="text-center text-muted-foreground">No active scan</div>
+          )}
+        </div>
+      </div>
     </div>
   )
 }
