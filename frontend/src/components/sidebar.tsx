@@ -1,13 +1,13 @@
-import { Activity, Camera, Clapperboard, Radar, Settings, SlidersHorizontal, Smile, Users } from 'lucide-react'
+import { Activity, Camera, Clapperboard, Radar, SlidersHorizontal, Smile, Users } from 'lucide-react'
 
 import { useClock } from '@/hooks/use-clock'
+import type { CameraSocketStatus } from '@/types/events'
 import type { SectionId } from '@/lib/sections'
 
 const navItems: Array<{ id: SectionId; label: string; icon: typeof Camera }> = [
   { id: 'cameras', label: 'Cameras', icon: Camera },
   { id: 'health', label: 'Health', icon: Activity },
   { id: 'discovery', label: 'Discovery', icon: Radar },
-  { id: 'settings', label: 'Settings', icon: Settings },
   { id: 'camera-settings', label: 'Cam Settings', icon: SlidersHorizontal },
   { id: 'events', label: 'Events', icon: Activity },
   { id: 'recordings', label: 'Recordings', icon: Clapperboard },
@@ -18,9 +18,10 @@ const navItems: Array<{ id: SectionId; label: string; icon: typeof Camera }> = [
 type SidebarProps = {
   activeSection: SectionId
   onSectionChange: (section: SectionId) => void
+  socketStatus: CameraSocketStatus
 }
 
-export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
+export function Sidebar({ activeSection, onSectionChange, socketStatus }: SidebarProps) {
   const time = useClock()
 
   return (
@@ -49,9 +50,9 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
       </nav>
 
       <div className="space-y-2 border-t border-border px-5 py-4 font-mono text-[10px] text-muted-foreground">
-        <div className="flex items-center gap-2">
-          <span className="h-1.5 w-1.5 rounded-full bg-swarm-red" />
-          ws pending
+        <div className={`flex items-center gap-2 ${socketStatus === 'connected' ? 'text-swarm-green' : ''}`}>
+          <span className={`h-1.5 w-1.5 rounded-full ${socketStatus === 'connected' ? 'bg-swarm-green' : 'bg-swarm-red'}`} />
+          ws {socketStatus}
         </div>
         <div className="flex items-center gap-2 text-swarm-amber">
           <span className="h-1.5 w-1.5 rounded-full bg-swarm-amber" />

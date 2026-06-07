@@ -93,7 +93,7 @@ export function AppShell() {
 
   return (
     <div className="flex min-h-screen bg-background text-foreground">
-      <Sidebar activeSection={activeSection} onSectionChange={setActiveSection} />
+      <Sidebar activeSection={activeSection} onSectionChange={setActiveSection} socketStatus={socketStatus} />
       <main className="flex min-w-0 flex-1 flex-col">
         <Topbar
           activeSection={activeSection}

@@ -9,20 +9,13 @@ services:
     - frigate_db:/config
     - ./media:/media/frigate
     - /etc/localtime:/etc/localtime:ro
-    ports:
-    - 5000:5000
-    - 1984:1984
-    - 8554:8554
-    - 8555:8555/tcp
-    - 8555:8555/udp
+    network_mode: host
     environment:
       FRIGATE_RTSP_PASSWORD: ''
       NVIDIA_VISIBLE_DEVICES: all
       NVIDIA_DRIVER_CAPABILITIES: all
     depends_on:
     - mosquitto
-    networks:
-    - swarmcam
     runtime: nvidia
   mosquitto:
     container_name: mosquitto
@@ -43,8 +36,7 @@ services:
       context: ..
       dockerfile: backend/Dockerfile
     restart: unless-stopped
-    ports:
-    - 8000:8000
+    network_mode: host
     volumes:
     - /var/run/docker.sock:/var/run/docker.sock
     - ./frigate/config.yml:/swarmcam/docker/frigate/config.yml
@@ -52,23 +44,18 @@ services:
     - ./media:/swarmcam/docker/media
     - ../backend/aliases.json:/swarmcam/backend/aliases.json
     environment:
-      FRIGATE_URL: http://frigate:5000
-      MQTT_HOST: mosquitto
+      FRIGATE_URL: http://localhost:5000
+      MQTT_HOST: localhost
     depends_on:
     - mosquitto
-    networks:
-    - swarmcam
   dashboard:
     container_name: swarmcam-dashboard
     build:
       context: ../frontend
     restart: unless-stopped
-    ports:
-    - 80:80
+    network_mode: host
     depends_on:
     - backend
-    networks:
-    - swarmcam
 volumes:
   frigate_db: null
 networks:
