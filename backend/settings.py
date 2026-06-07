@@ -1,7 +1,8 @@
 import os
 from pathlib import Path
 
-DISCOVERY_SCRIPT = Path(__file__).parent.parent / "discovery" / "discovery.py"
+DISCOVERY_SCRIPT    = Path(__file__).parent.parent / "discovery" / "discovery.py"
+XM_DISCOVERY_SCRIPT = Path(__file__).parent.parent / "discovery" / "xm_discovery.py"
 FRIGATE_CONFIG   = Path(__file__).parent.parent / "docker" / "frigate" / "config.yml"
 COMPOSE_FILE     = Path(__file__).parent.parent / "docker" / "docker-compose.yml"
 MEDIA_DIR        = Path(__file__).parent.parent / "docker" / "media"
