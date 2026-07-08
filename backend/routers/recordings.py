@@ -4,7 +4,7 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import Response, StreamingResponse
 
-from services.frigate_client import frigate_get, frigate_get_stream
+from services.frigate_client import frigate_delete, frigate_get, frigate_get_stream
 
 router = APIRouter()
 
@@ -78,3 +78,19 @@ async def get_recording_thumbnail(event_id: str):
     except Exception:
         pass
     return Response(content=_PLACEHOLDER_GIF, media_type="image/gif", status_code=200)
+
+
+@router.delete("/api/recordings/{event_id}")
+async def delete_recording(event_id: str):
+    try:
+        r = await frigate_delete(f"/api/events/{event_id}")
+        if r.status_code == 200:
+            return {"success": True}
+        elif r.status_code == 404:
+            raise HTTPException(404, "Recording not found")
+        else:
+            raise HTTPException(503, "Frigate unavailable")
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(503, "Frigate unavailable")
