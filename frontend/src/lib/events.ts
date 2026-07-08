@@ -60,6 +60,13 @@ export function getRecordingEvents(token: string, filters: EventFilters = {}) {
   return apiFetch<FrigateEvent[]>(`/api/recordings/events${qs ? `?${qs}` : ''}`, { token })
 }
 
+export function deleteRecordingEvent(token: string, eventId: string) {
+  return apiFetch<{ success: boolean }>(`/api/recordings/${encodeURIComponent(eventId)}`, {
+    method: 'DELETE',
+    token,
+  })
+}
+
 export function eventThumbnailUrl(eventId: string) {
   return apiUrl(`/api/events/${encodeURIComponent(eventId)}/thumbnail`)
 }

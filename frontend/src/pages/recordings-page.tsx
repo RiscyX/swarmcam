@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/hooks/use-auth'
 import { getCameraDisplayName } from '@/lib/cameras'
-import { type EventFilters, type FrigateEvent, eventThumbnailUrl, formatDuration, formatEventTime, getRecordingEvents, recordingClipUrl } from '@/lib/events'
+import { type EventFilters, type FrigateEvent, deleteRecordingEvent, eventThumbnailUrl, formatDuration, formatEventTime, getRecordingEvents, recordingClipUrl } from '@/lib/events'
 import type { Camera } from '@/types/camera'
 
 const LABELS = ['person', 'car', 'dog', 'cat', 'bird', 'motorcycle', 'bicycle']
@@ -65,6 +65,20 @@ export function RecordingsPage({ cameras }: RecordingsPageProps) {
     try { setEvents(await getRecordingEvents(token, f)) }
     catch { setEvents([]) }
     finally { setLoading(false) }
+  }
+
+  async function handleDelete(ev: FrigateEvent, e: React.MouseEvent) {
+    e.stopPropagation()
+    if (!token) return
+    if (!window.confirm('Are you sure you want to delete this recording?')) return
+    
+    try {
+      await deleteRecordingEvent(token, ev.id)
+      setEvents((prev) => prev.filter((item) => item.id !== ev.id))
+      if (selected?.id === ev.id) setSelected(null)
+    } catch (err) {
+      window.alert('Failed to delete recording. Please try again later.')
+    }
   }
 
   useEffect(() => {
@@ -150,7 +164,16 @@ export function RecordingsPage({ cameras }: RecordingsPageProps) {
                   <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{formatEventTime(ev.start_time)}</td>
                   <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{formatDuration(ev.start_time, ev.end_time)}</td>
                   <td className="px-3 py-2 text-right">
-                    <span className="text-xs text-muted-foreground">▶</span>
+                    <div className="flex items-center justify-end gap-2">
+                      <button
+                        className="rounded px-2 py-1 text-xs text-red-500 hover:bg-red-500/10"
+                        onClick={(e) => void handleDelete(ev, e)}
+                        title="Delete recording"
+                      >
+                        Delete
+                      </button>
+                      <span className="text-xs text-muted-foreground">▶</span>
+                    </div>
                   </td>
                 </tr>
               ))}
