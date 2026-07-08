@@ -11,6 +11,15 @@ export type FrigateEvent = {
   has_clip: boolean
 }
 
+export type FireEvent = {
+  id: string
+  camera: string
+  label: string
+  score: number
+  timestamp: number
+}
+
+
 export type EventFilters = {
   camera?: string
   label?: string
@@ -29,6 +38,16 @@ export function getEvents(token: string, filters: EventFilters = {}) {
   const qs = params.toString()
   return apiFetch<FrigateEvent[]>(`/api/events${qs ? `?${qs}` : ''}`, { token })
 }
+
+export function getFireEvents(token: string, filters: EventFilters = {}) {
+  const params = new URLSearchParams()
+  if (filters.camera) params.set('camera', filters.camera)
+  if (filters.label) params.set('label', filters.label)
+  if (filters.limit) params.set('limit', String(filters.limit))
+  const qs = params.toString()
+  return apiFetch<FireEvent[]>(`/api/fire-events${qs ? `?${qs}` : ''}`, { token })
+}
+
 
 export function getRecordingEvents(token: string, filters: EventFilters = {}) {
   const params = new URLSearchParams()

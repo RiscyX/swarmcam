@@ -3,16 +3,18 @@ import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/hooks/use-auth'
 import { getCameraDisplayName } from '@/lib/cameras'
-import { type EventFilters, type FrigateEvent, eventThumbnailUrl, formatEventTime, getEvents } from '@/lib/events'
+import { type EventFilters, type FrigateEvent, eventThumbnailUrl, formatEventTime, getEvents, getFireEvents } from '@/lib/events'
 import type { Camera } from '@/types/camera'
 
 const LABELS = ['person', 'car', 'dog', 'cat', 'bird', 'motorcycle', 'bicycle', 'fire', 'smoke']
+
+type UIEvent = FrigateEvent & { is_fire?: boolean }
 
 type EventsPageProps = {
   cameras: Camera[]
 }
 
-function EventDialog({ event, onClose }: { event: FrigateEvent; onClose: () => void }) {
+function EventDialog({ event, onClose }: { event: UIEvent; onClose: () => void }) {
   useEffect(() => {
     function onKey(e: KeyboardEvent) { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', onKey)
@@ -22,7 +24,13 @@ function EventDialog({ event, onClose }: { event: FrigateEvent; onClose: () => v
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85" onClick={onClose}>
       <div className="relative max-h-[90vh] max-w-4xl overflow-hidden rounded border border-border" onClick={(e) => e.stopPropagation()}>
-        <img alt={event.label} className="block max-h-[85vh] w-auto" src={eventThumbnailUrl(event.id)} />
+        {event.is_fire ? (
+          <div className="flex h-[400px] w-full items-center justify-center bg-muted text-muted-foreground">
+            No image available
+          </div>
+        ) : (
+          <img alt={event.label} className="block max-h-[85vh] w-auto" src={eventThumbnailUrl(event.id)} />
+        )}
         <div className="absolute bottom-0 left-0 right-0 flex items-center justify-between bg-black/80 px-4 py-2">
           <span className="font-mono text-xs text-muted-foreground">
             {event.label} · {event.camera} · {formatEventTime(event.start_time)}
@@ -38,15 +46,33 @@ function EventDialog({ event, onClose }: { event: FrigateEvent; onClose: () => v
 export function EventsPage({ cameras }: EventsPageProps) {
   const { token } = useAuth()
   const [filters, setFilters] = useState<EventFilters>({ limit: 50 })
-  const [events, setEvents] = useState<FrigateEvent[]>([])
+  const [events, setEvents] = useState<UIEvent[]>([])
   const [loading, setLoading] = useState(false)
-  const [selected, setSelected] = useState<FrigateEvent | null>(null)
+  const [selected, setSelected] = useState<UIEvent | null>(null)
   const didLoad = useRef(false)
 
   async function load(f: EventFilters = filters) {
     if (!token) return
     setLoading(true)
-    try { setEvents(await getEvents(token, f)) }
+    try {
+      const [fEvents, fireRes] = await Promise.all([
+        getEvents(token, f),
+        getFireEvents(token, f).catch(() => [])
+      ])
+      const mappedFire: UIEvent[] = fireRes.map(fe => ({
+        id: fe.id,
+        camera: fe.camera,
+        label: fe.label,
+        score: fe.score,
+        start_time: fe.timestamp,
+        end_time: fe.timestamp,
+        has_snapshot: false,
+        has_clip: false,
+        is_fire: true
+      }))
+      const all = [...fEvents, ...mappedFire].sort((a, b) => b.start_time - a.start_time)
+      setEvents(all.slice(0, f.limit || 50))
+    }
     catch { setEvents([]) }
     finally { setLoading(false) }
   }
@@ -122,7 +148,11 @@ export function EventsPage({ cameras }: EventsPageProps) {
                 >
                   <td className="px-3 py-2">
                     <div className="h-12 w-[85px] overflow-hidden rounded bg-black">
-                      <img alt={ev.label} className="h-full w-full object-cover" src={eventThumbnailUrl(ev.id)} />
+                      {ev.is_fire ? (
+                        <div className="flex h-full w-full items-center justify-center bg-muted text-[10px] text-muted-foreground">No image</div>
+                      ) : (
+                        <img alt={ev.label} className="h-full w-full object-cover" src={eventThumbnailUrl(ev.id)} />
+                      )}
                     </div>
                   </td>
                   <td className="px-3 py-2 text-sm text-foreground">{getCamDisplay(ev.camera)}</td>
