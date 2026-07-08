@@ -1,9 +1,14 @@
 from typing import Optional
+import os
+import sqlite3
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import Response
 
 from services.frigate_client import frigate_get
+
+DB_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "fire_events.db")
+
 
 router = APIRouter()
 
@@ -42,6 +47,32 @@ async def get_events(
     except Exception:
         raise HTTPException(503, "Frigate unavailable")
 
+
+@router.get("/api/fire-events")
+async def get_fire_events(
+    camera: Optional[str] = None,
+    label: Optional[str] = None,
+    limit: int = 100,
+):
+    query = "SELECT id, camera, label, score, timestamp FROM fire_events WHERE 1=1"
+    params = []
+    if camera:
+        query += " AND camera = ?"
+        params.append(camera)
+    if label:
+        query += " AND label = ?"
+        params.append(label)
+    query += " ORDER BY timestamp DESC LIMIT ?"
+    params.append(limit)
+
+    try:
+        with sqlite3.connect(DB_PATH) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.execute(query, params)
+            rows = cursor.fetchall()
+            return [dict(r) for r in rows]
+    except Exception as e:
+        raise HTTPException(500, f"Database error: {e}")
 
 @router.get("/api/events/stats")
 async def get_event_stats(camera: Optional[str] = None, days: int = 7):
