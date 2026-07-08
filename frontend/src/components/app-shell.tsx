@@ -23,6 +23,11 @@ import { UsersPage } from '@/pages/users-page'
 import type { Camera, CameraLayout } from '@/types/camera'
 import type { FrigateLiveEvent } from '@/types/events'
 
+type Alert = {
+  id: string
+  message: string
+}
+
 export function AppShell() {
   const { isAuthenticated, token } = useAuth()
   const [activeSection, setActiveSection] = useState<SectionId>('cameras')
@@ -31,12 +36,20 @@ export function AppShell() {
   const [lastEventCamera, setLastEventCamera] = useState<string | null>(null)
   const [liveEvents, setLiveEvents] = useState<FrigateLiveEvent[]>([])
   const [showEventFeed, setShowEventFeed] = useState(false)
-  const [alerts, setAlerts] = useState<string[]>([])
+  const [alerts, setAlerts] = useState<Alert[]>([])
   const [torchStates, setTorchStates] = useState<Record<string, boolean>>({})
   const { cameras, error, isLoading, reload, setCameras } = useCameras()
 
   const handleAlert = useCallback((message: string) => {
-    setAlerts((current) => [message, ...current].slice(0, 3))
+    const id = Math.random().toString(36).substring(2, 9)
+    setAlerts((current) => [{ id, message }, ...current].slice(0, 3))
+    window.setTimeout(() => {
+      setAlerts((current) => current.filter((a) => a.id !== id))
+    }, 8000)
+  }, [])
+
+  const dismissAlert = useCallback((id: string) => {
+    setAlerts((current) => current.filter((a) => a.id !== id))
   }, [])
 
   const handleEvent = useCallback((event: FrigateLiveEvent) => {
@@ -87,7 +100,7 @@ export function AppShell() {
       await setCameraTorch(token, camera.name, nextEnabled)
       setTorchStates((current) => ({ ...current, [camera.name]: nextEnabled }))
     } catch {
-      setAlerts((current) => [`Vaku kapcsolása sikertelen: ${camera.name}`, ...current].slice(0, 3))
+      handleAlert(`Vaku kapcsolása sikertelen: ${camera.name}`)
     }
   }
 
@@ -107,9 +120,13 @@ export function AppShell() {
         />
         {alerts.length ? (
           <div className="fixed right-5 top-16 z-30 grid gap-2">
-            {alerts.map((message, index) => (
-              <div className="rounded border border-swarm-red/40 bg-card px-4 py-3 font-mono text-xs text-swarm-red shadow-lg" key={`${message}-${index}`}>
-                {message}
+            {alerts.map((alert) => (
+              <div
+                className="cursor-pointer rounded border border-swarm-red/40 bg-card px-4 py-3 font-mono text-xs text-swarm-red shadow-lg transition-opacity hover:opacity-80"
+                key={alert.id}
+                onClick={() => dismissAlert(alert.id)}
+              >
+                {alert.message}
               </div>
             ))}
           </div>
