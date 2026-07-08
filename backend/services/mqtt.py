@@ -25,18 +25,43 @@ async def mqtt_loop() -> None:
             async with aiomqtt.Client(hostname=MQTT_HOST, port=MQTT_PORT) as client:
                 print(f"[MQTT] Connected to {MQTT_HOST}:{MQTT_PORT}", file=sys.stderr)
                 await client.subscribe("frigate/events")
+                await client.subscribe("swarmcam/fire/#")
                 async for message in client.messages:
                     try:
                         payload = json.loads(message.payload)
-                        after = payload.get("after", {})
-                        event = json.dumps({
-                            "type":   "frigate_event",
-                            "camera": after.get("camera"),
-                            "label":  after.get("label"),
-                            "score":  round(after.get("score") or 0.0, 2),
-                            "id":     after.get("id"),
-                        })
-                        await broadcast(event)
+                        topic = str(message.topic)
+                        if topic == "frigate/events":
+                            after = payload.get("after", {})
+                            event = json.dumps({
+                                "type":   "frigate_event",
+                                "camera": after.get("camera"),
+                                "label":  after.get("label"),
+                                "score":  round(after.get("score") or 0.0, 2),
+                                "id":     after.get("id"),
+                            })
+                            await broadcast(event)
+                        elif topic.startswith("swarmcam/fire/"):
+                            camera = payload.get("camera", "unknown")
+                            label = payload.get("label", "unknown")
+                            try:
+                                score = float(payload.get("score", 0.0))
+                            except (TypeError, ValueError):
+                                score = 0.0
+                            
+                            alert_msg = json.dumps({
+                                "type": "alert",
+                                "message": f"🔥 Tűz/füst érzékelve: {camera} ({score:.0%})"
+                            })
+                            await broadcast(alert_msg)
+                            
+                            event_msg = json.dumps({
+                                "type": "frigate_event",
+                                "camera": camera,
+                                "label": label,
+                                "score": score,
+                                "id": None
+                            })
+                            await broadcast(event_msg)
                     except Exception:
                         pass
         except aiomqtt.MqttError as e:
