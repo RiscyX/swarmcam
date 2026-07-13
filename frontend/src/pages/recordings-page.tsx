@@ -14,6 +14,7 @@ type RecordingsPageProps = {
 
 function ClipDialog({ event, onClose }: { event: FrigateEvent; onClose: () => void }) {
   const videoRef = useRef<HTMLVideoElement | null>(null)
+  const [videoError, setVideoError] = useState(false)
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) { if (e.key === 'Escape') onClose() }
@@ -29,7 +30,13 @@ function ClipDialog({ event, onClose }: { event: FrigateEvent; onClose: () => vo
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85" onClick={handleClose}>
       <div className="relative max-h-[90vh] max-w-5xl overflow-hidden rounded border border-border" onClick={(e) => e.stopPropagation()}>
-        <video autoPlay className="block max-h-[80vh] w-auto" controls ref={videoRef} src={recordingClipUrl(event.id)} />
+        {videoError ? (
+          <div className="flex h-[300px] w-[480px] items-center justify-center text-sm text-muted-foreground">
+            No recording available for this event.
+          </div>
+        ) : (
+          <video autoPlay className="block max-h-[80vh] w-auto" controls onError={() => setVideoError(true)} ref={videoRef} src={recordingClipUrl(event.id)} />
+        )}
         <div className="flex items-center justify-between bg-zinc-900 px-4 py-2">
           <span className="font-mono text-xs text-muted-foreground">
             {event.label} · {event.camera} · {formatEventTime(event.start_time)} · {formatDuration(event.start_time, event.end_time)}
