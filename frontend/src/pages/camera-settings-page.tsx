@@ -15,10 +15,7 @@ type Status = 'idle' | 'loading' | 'saving' | 'saved' | 'error'
 
 const ORIENTATIONS = ['landscape', 'portrait', 'landscape_flipped', 'portrait_flipped']
 const VIDEO_SIZES = ['1920x1080', '1280x720', '854x480', '640x480', '320x240']
-const FPS_OPTIONS = [5, 10, 15, 20, 25, 30]
-const QUALITY_OPTIONS = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
 const MIRROR_FLIP = ['none', 'flip', 'mirror', 'both']
-const NIGHT_VISION = ['off', 'on', 'auto']
 
 function SelectField({
   label,
@@ -48,33 +45,7 @@ function SelectField({
   )
 }
 
-function NumberField({
-  label,
-  options,
-  value,
-  onChange,
-}: {
-  label: string
-  options: number[]
-  value: number | null | undefined
-  onChange: (v: number) => void
-}) {
-  return (
-    <div className="flex items-center justify-between gap-4 border-b border-border py-3 last:border-0">
-      <span className="font-mono text-xs text-muted-foreground">{label}</span>
-      <select
-        className="rounded-sm border border-border bg-background px-2 py-1 font-mono text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-        onChange={(e) => onChange(Number(e.target.value))}
-        value={value ?? ''}
-      >
-        <option value="">—</option>
-        {options.map((o) => (
-          <option key={o} value={o}>{o}</option>
-        ))}
-      </select>
-    </div>
-  )
-}
+
 
 export function CameraSettingsPage({ cameras, onRenameCamera, onDeleteCamera }: CameraSettingsPageProps) {
   const { token } = useAuth()
@@ -212,29 +183,11 @@ export function CameraSettingsPage({ cameras, onRenameCamera, onDeleteCamera }: 
                 options={VIDEO_SIZES}
                 value={settings.video_size}
               />
-              <NumberField
-                label="FPS"
-                onChange={(v) => setSettings((s) => ({ ...s, video_fps: v }))}
-                options={FPS_OPTIONS}
-                value={settings.video_fps}
-              />
-              <NumberField
-                label="Minőség (%)"
-                onChange={(v) => setSettings((s) => ({ ...s, quality: v }))}
-                options={QUALITY_OPTIONS}
-                value={settings.quality}
-              />
               <SelectField
                 label="Tükrözés"
                 onChange={(v) => setSettings((s) => ({ ...s, mirror_flip: v || null }))}
                 options={MIRROR_FLIP}
                 value={settings.mirror_flip}
-              />
-              <SelectField
-                label="Éjjellátó"
-                onChange={(v) => setSettings((s) => ({ ...s, night_vision: v || null }))}
-                options={NIGHT_VISION}
-                value={settings.night_vision}
               />
               <SelectField
                 label="Előlapi kamera (FFC)"
