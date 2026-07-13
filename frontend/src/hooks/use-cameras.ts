@@ -22,7 +22,7 @@ export function useCameras() {
     try {
       setCameras(await listCameras(token))
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Kamerák betöltése sikertelen')
+      setError(err instanceof Error ? err.message : 'Failed to load cameras')
     } finally {
       setIsLoading(false)
     }

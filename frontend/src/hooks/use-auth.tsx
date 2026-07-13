@@ -73,7 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const currentUser = await fetchCurrentUser(response.token).catch(() => null)
       setUser(currentUser)
     } catch (error) {
-      setLoginError(error instanceof Error ? error.message : 'Hibás felhasználónév vagy jelszó')
+      setLoginError(error instanceof Error ? error.message : 'Invalid username or password')
       throw error
     } finally {
       setIsLoggingIn(false)

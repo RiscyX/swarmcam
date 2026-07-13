@@ -50,11 +50,11 @@ export function SettingsPage() {
     setStatus('')
     try {
       const result = await saveConfig(token, config)
-      if (result.decoder_changed) setStatus('Mentve - stack újraindítva')
-      else if (result.frigate_restarted) setStatus('Mentve - Frigate újraindítva')
-      else setStatus('Mentve - Frigate nem fut, konfig alkalmazva indításkor')
+      if (result.decoder_changed) setStatus('Saved - stack restarted')
+      else if (result.frigate_restarted) setStatus('Saved - Frigate restarted')
+      else setStatus('Saved - Frigate not running, config applied on startup')
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : 'Mentés sikertelen')
+      setStatus(error instanceof Error ? error.message : 'Failed to save')
     } finally {
       setIsSaving(false)
     }
@@ -75,8 +75,8 @@ export function SettingsPage() {
     <form className="grid max-w-5xl gap-4 lg:grid-cols-2" onSubmit={handleSubmit}>
       <Card className="border-border bg-card/90">
         <CardHeader>
-          <CardTitle className="font-ui uppercase tracking-[0.14em]">Hardware dekóder</CardTitle>
-          <CardDescription>NVIDIA/Intel opciók automatikusan tiltva, ha nem elérhetők</CardDescription>
+          <CardTitle className="font-ui uppercase tracking-[0.14em]">Hardware decoder</CardTitle>
+          <CardDescription>NVIDIA/Intel options automatically disabled if not available</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-2">
           {decoderOptions.map((decoder) => (
@@ -96,7 +96,7 @@ export function SettingsPage() {
 
       <Card className="border-border bg-card/90">
         <CardHeader>
-          <CardTitle className="font-ui uppercase tracking-[0.14em]">Detekció</CardTitle>
+          <CardTitle className="font-ui uppercase tracking-[0.14em]">Detection</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-3">
           <label className="grid gap-1.5">
@@ -104,7 +104,7 @@ export function SettingsPage() {
             <Input onChange={(event) => updateConfig({ detection_fps: Number(event.target.value) })} type="number" value={config.detection_fps} />
           </label>
           <label className="grid gap-1.5">
-            <span className="font-ui text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">Felbontás</span>
+            <span className="font-ui text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">Resolution</span>
             <select
               className="h-9 rounded-sm border border-input bg-background px-3 font-mono text-sm"
               onChange={(event) => {
@@ -137,7 +137,7 @@ export function SettingsPage() {
 
       <Card className="border-border bg-card/90">
         <CardHeader>
-          <CardTitle className="font-ui uppercase tracking-[0.14em]">Követett objektumok</CardTitle>
+          <CardTitle className="font-ui uppercase tracking-[0.14em]">Tracked objects</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-2">
           {objectOptions.map((object) => (
@@ -151,22 +151,22 @@ export function SettingsPage() {
 
       <Card className="border-border bg-card/90 lg:col-span-2">
         <CardHeader>
-          <CardTitle className="font-ui uppercase tracking-[0.14em]">Felvétel megőrzés</CardTitle>
+          <CardTitle className="font-ui uppercase tracking-[0.14em]">Recording retention</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-2">
           <label className="grid gap-1.5">
-            <span className="font-ui text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">Mozgás (nap)</span>
+            <span className="font-ui text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">Motion (days)</span>
             <Input onChange={(event) => updateConfig({ record_motion_days: Number(event.target.value) })} type="number" value={config.record_motion_days} />
           </label>
           <label className="grid gap-1.5">
-            <span className="font-ui text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">Esemény (nap)</span>
+            <span className="font-ui text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">Event (days)</span>
             <Input onChange={(event) => updateConfig({ record_event_days: Number(event.target.value) })} type="number" value={config.record_event_days} />
           </label>
         </CardContent>
       </Card>
 
       <div className="flex items-center gap-4 lg:col-span-2">
-        <Button disabled={isSaving} type="submit">{isSaving ? 'Mentés...' : 'Mentés & Alkalmazás'}</Button>
+        <Button disabled={isSaving} type="submit">{isSaving ? 'Saving...' : 'Save & Apply'}</Button>
         {status ? <span className="font-mono text-xs text-swarm-amber">{status}</span> : null}
       </div>
     </form>

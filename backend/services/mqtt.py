@@ -88,7 +88,7 @@ async def mqtt_loop() -> None:
 
                             alert_msg = json.dumps({
                                 "type": "alert",
-                                "message": f"🔥 Tűz/füst érzékelve: {camera} ({score:.0%})"
+                                "message": f"🔥 Fire/smoke detected: {camera} ({score:.0%})"
                             })
                             await broadcast(alert_msg)
 

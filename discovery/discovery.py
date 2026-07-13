@@ -1,13 +1,13 @@
 """
-SwarmCam – automatikus IP Webcam kamera discovery
+SwarmCam – automatic IP Webcam camera discovery
 
-Scanneli a lokális hálózatot, megkeresi az IP Webcam APK-t futtató
-Android eszközöket (default port: 8080), majd opcionálisan frissíti
-a Frigate konfigurációt.
+Scans the local network, finds Android devices running
+the IP Webcam APK (default port: 8080), and optionally updates
+the Frigate configuration.
 
-Használat:
+Usage:
     python discovery.py                        # scan + print JSON
-    python discovery.py --update-frigate       # + Frigate config frissítés
+    python discovery.py --update-frigate       # + Frigate config update
     python discovery.py --subnet 192.168.0.0/24
     python discovery.py --port 8080 --timeout 1.5
 """
@@ -60,18 +60,18 @@ class Camera:
 
     def to_frigate_camera(self, config: dict | None = None) -> dict:
         """
-        Frigate config camera entry dict-ként.
-        Ha config át van adva, a meglévő detect/ffmpeg beállításokat olvassa ki belőle
-        (detection fps, resolution, hwaccel, rtsp transport) ahelyett hogy hardcode-olna.
+        As a Frigate config camera entry dict.
+        If config is passed, it reads the existing detect/ffmpeg settings from it
+        (detection fps, resolution, hwaccel, rtsp transport) instead of hardcoding.
         """
-        # Detect beállítások: config-ból, különben telefon felbontása, különben 1080p
+        # Detect settings: from config, otherwise phone resolution, otherwise 1080p
         detect_fps = 5
         detect_w, detect_h = self.resolution or (1920, 1080)
         hwaccel_args = None
         rtsp_transport = "-rtsp_transport tcp -fflags +genpts+discardcorrupt -avoid_negative_ts make_zero"
 
         if config:
-            # Meglévő kamera bejegyzésből olvasunk mintát, vagy első kamerából
+            # Read sample from existing camera entry, or from the first camera
             sample = next(iter((config.get("cameras") or {}).values()), None)
             if sample:
                 d = sample.get("detect", {})
@@ -108,7 +108,7 @@ class Camera:
 # ---------------------------------------------------------------------------
 
 def get_local_subnet() -> str:
-    """Auto-detektálja a lokális subnet-et (pl. '192.168.1.0/24')."""
+    """Auto-detects the local subnet (e.g., '192.168.1.0/24')."""
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
         s.connect(("8.8.8.8", 80))
         local_ip = s.getsockname()[0]
@@ -128,8 +128,8 @@ def _port_open(ip: str, port: int, timeout: float) -> bool:
 
 def _fetch_status(ip: str, port: int) -> dict | None:
     """
-    IP Webcam /status.json lekérése.
-    Visszaad None-t ha az eszköz nem IP Webcam.
+    Fetch IP Webcam /status.json.
+    Returns None if the device is not IP Webcam.
     """
     try:
         resp = requests.get(
@@ -138,7 +138,7 @@ def _fetch_status(ip: str, port: int) -> dict | None:
         )
         if resp.status_code == 200:
             data = resp.json()
-            # IP Webcam mindig tartalmaz "curvals" vagy "id" mezőt
+            # IP Webcam always contains "curvals" or "id" field
             if "curvals" in data or "id" in data:
                 return data
     except Exception:
@@ -148,7 +148,7 @@ def _fetch_status(ip: str, port: int) -> dict | None:
 
 def _parse_resolution(status: dict) -> tuple[int, int] | None:
     try:
-        res_str = status["curvals"]["video_size"]   # pl. "1280x720"
+        res_str = status["curvals"]["video_size"]   # e.g. "1280x720"
         w, h = res_str.split("x")
         return int(w), int(h)
     except Exception:
@@ -170,7 +170,7 @@ def _parse_battery(status: dict) -> tuple[int | None, bool | None, float | None,
     try:
         info = status.get("deviceInfo", {})
         level    = int(info["batteryPercent"])
-        charging = bool(info.get("batteryCharging", ""))   # üres string = nem tölt
+        charging = bool(info.get("batteryCharging", ""))   # empty string = not charging
         temp     = round(float(info.get("batteryTemperatureC", 0)), 1) or None
         voltage  = float(info.get("batteryVoltage", 0)) or None
         return level, charging, temp, voltage
@@ -187,8 +187,8 @@ def _parse_free_space(status: dict) -> float | None:
 
 def probe_ipcam(ip: str, port: int) -> Camera | None:
     """
-    Ellenőrzi, hogy az ip:port IP Webcam-e.
-    Ha igen, visszaad egy Camera objektumot.
+    Checks if the ip:port is an IP Webcam.
+    If yes, returns a Camera object.
     """
     if not _port_open(ip, port, SCAN_TIMEOUT):
         return None
@@ -234,7 +234,7 @@ def probe_ipcam(ip: str, port: int) -> Camera | None:
 # ---------------------------------------------------------------------------
 
 def scan_network(subnet: str, port: int, workers: int = MAX_WORKERS) -> list[Camera]:
-    """Párhuzamosan végigscanneli a subnettet, visszaadja a talált kamerákat."""
+    """Scans the subnet in parallel, returns the found cameras."""
     network = ipaddress.IPv4Network(subnet, strict=False)
     hosts = list(network.hosts())
     cameras: list[Camera] = []
@@ -259,8 +259,8 @@ def scan_network(subnet: str, port: int, workers: int = MAX_WORKERS) -> list[Cam
 
 def update_frigate_config(cameras: list[Camera], config_path: Path = FRIGATE_CONFIG_PATH) -> None:
     """
-    Betölti a meglévő Frigate config.yml-t, frissíti a cameras szekciót,
-    majd visszaírja. Meglévő kamera entryket megtartja, újakat hozzáad.
+    Loads the existing Frigate config.yml, updates the cameras section,
+    then writes it back. Keeps existing camera entries, adds new ones.
     """
     if not config_path.exists():
         print(f"[!] Frigate config not found: {config_path}", file=sys.stderr)
@@ -289,12 +289,12 @@ def update_frigate_config(cameras: list[Camera], config_path: Path = FRIGATE_CON
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="SwarmCam – IP Webcam kamera discovery"
+        description="SwarmCam – IP Webcam camera discovery"
     )
     parser.add_argument(
         "--subnet",
         default=None,
-        help="Scan subnet (pl. 192.168.1.0/24). Default: auto-detect.",
+        help="Scan subnet (e.g. 192.168.1.0/24). Default: auto-detect.",
     )
     parser.add_argument(
         "--port",
@@ -306,18 +306,18 @@ def parse_args() -> argparse.Namespace:
         "--timeout",
         type=float,
         default=SCAN_TIMEOUT,
-        help=f"Socket timeout másodpercben (default: {SCAN_TIMEOUT})",
+        help=f"Socket timeout in seconds (default: {SCAN_TIMEOUT})",
     )
     parser.add_argument(
         "--update-frigate",
         action="store_true",
-        help="Frissíti a Frigate config.yml-t a talált kamerákkal",
+        help="Updates Frigate config.yml with the found cameras",
     )
     parser.add_argument(
         "--workers",
         type=int,
         default=MAX_WORKERS,
-        help=f"Párhuzamos szálak száma (default: {MAX_WORKERS})",
+        help=f"Number of parallel threads (default: {MAX_WORKERS})",
     )
     return parser.parse_args()
 
@@ -341,7 +341,7 @@ def main() -> None:
     if args.update_frigate:
         update_frigate_config(cameras)
 
-    # JSON output stdout-ra (backend/pipeline tovább tudja feldolgozni)
+    # JSON output to stdout (backend/pipeline can process it further)
     result = [asdict(cam) for cam in cameras]
     print(json.dumps(result, indent=2, ensure_ascii=False))
 
