@@ -2,12 +2,14 @@ from typing import Optional
 import os
 import sqlite3
 
+import asyncio
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import Response
+from fastapi.responses import Response, FileResponse, StreamingResponse
 
-from services.frigate_client import frigate_get
+from services.frigate_client import frigate_get, frigate_get_stream
 
 DB_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "fire_events.db")
+SNAPSHOT_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "fire_snapshots")
 
 
 router = APIRouter()
@@ -70,7 +72,13 @@ async def get_fire_events(
             conn.row_factory = sqlite3.Row
             cursor = conn.execute(query, params)
             rows = cursor.fetchall()
-            return [dict(r) for r in rows]
+            results = []
+            for r in rows:
+                row_dict = dict(r)
+                has_snapshot = os.path.exists(os.path.join(SNAPSHOT_DIR, f"{row_dict['id']}.jpg"))
+                row_dict["has_snapshot"] = has_snapshot
+                results.append(row_dict)
+            return results
     except Exception as e:
         raise HTTPException(500, f"Database error: {e}")
 
@@ -99,3 +107,51 @@ async def get_event_thumbnail(event_id: str):
     except Exception:
         pass
     return Response(content=_PLACEHOLDER_GIF, media_type="image/gif", status_code=200)
+
+@router.get("/api/fire-events/{event_id}/snapshot")
+async def get_fire_event_snapshot(event_id: str):
+    file_path = os.path.join(SNAPSHOT_DIR, f"{event_id}.jpg")
+    if os.path.exists(file_path):
+        return FileResponse(file_path, media_type="image/jpeg")
+    return Response(content=_PLACEHOLDER_GIF, media_type="image/gif", status_code=200)
+
+@router.get("/api/fire-events/{event_id}/clip")
+async def get_fire_event_clip(event_id: str):
+    try:
+        with sqlite3.connect(DB_PATH) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.execute("SELECT camera, timestamp FROM fire_events WHERE id = ?", (event_id,))
+            row = cursor.fetchone()
+            if not row:
+                raise HTTPException(404, "Fire event not found")
+            camera = row["camera"]
+            ts = row["timestamp"]
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(500, f"Database error: {e}")
+
+    start_ts = ts - 10
+    end_ts = ts + 30
+    
+    loop = asyncio.get_event_loop()
+    try:
+        r = await frigate_get_stream(f"/api/{camera}/start/{start_ts}/end/{end_ts}/clip.mp4")
+        if r.status_code != 200:
+            raise HTTPException(404, "Clip not found")
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(503, "Frigate unavailable")
+
+    async def generate():
+        try:
+            while True:
+                chunk = await loop.run_in_executor(None, r.raw.read, 65536)
+                if not chunk:
+                    break
+                yield chunk
+        finally:
+            r.close()
+
+    return StreamingResponse(generate(), media_type="video/mp4")
