@@ -15,6 +15,7 @@ type RecordingsPageProps = {
 function ClipDialog({ event, onClose }: { event: FrigateEvent; onClose: () => void }) {
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const [videoError, setVideoError] = useState(false)
+  const [realDuration, setRealDuration] = useState<number | null>(null)
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) { if (e.key === 'Escape') onClose() }
@@ -27,6 +28,12 @@ function ClipDialog({ event, onClose }: { event: FrigateEvent; onClose: () => vo
     onClose()
   }
 
+  function handleLoadedMetadata() {
+    if (videoRef.current && Number.isFinite(videoRef.current.duration)) {
+      setRealDuration(videoRef.current.duration)
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85" onClick={handleClose}>
       <div className="relative max-h-[90vh] max-w-5xl overflow-hidden rounded border border-border" onClick={(e) => e.stopPropagation()}>
@@ -35,11 +42,19 @@ function ClipDialog({ event, onClose }: { event: FrigateEvent; onClose: () => vo
             No recording available for this event.
           </div>
         ) : (
-          <video autoPlay className="block max-h-[80vh] w-auto" controls onError={() => setVideoError(true)} ref={videoRef} src={recordingClipUrl(event.id)} />
+          <video 
+            autoPlay 
+            className="block max-h-[80vh] w-auto" 
+            controls 
+            onError={() => setVideoError(true)} 
+            onLoadedMetadata={handleLoadedMetadata}
+            ref={videoRef} 
+            src={recordingClipUrl(event.id)} 
+          />
         )}
         <div className="flex items-center justify-between bg-zinc-900 px-4 py-2">
           <span className="font-mono text-xs text-muted-foreground">
-            {event.label} · {event.camera} · {formatEventTime(event.start_time)} · {formatDuration(event.start_time, event.end_time)}
+            {event.label} · {event.camera} · {formatEventTime(event.start_time)} · {realDuration !== null ? formatDuration(0, realDuration) : formatDuration(event.start_time, event.end_time)}
           </span>
           <div className="flex gap-2">
             <a
