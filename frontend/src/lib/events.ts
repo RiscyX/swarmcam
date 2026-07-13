@@ -80,10 +80,6 @@ export function fireEventSnapshotUrl(eventId: string) {
   return apiUrl(`/api/fire-events/${encodeURIComponent(eventId)}/snapshot`)
 }
 
-export function fireEventClipUrl(eventId: string) {
-  return apiUrl(`/api/fire-events/${encodeURIComponent(eventId)}/clip`)
-}
-
 export function formatEventTime(ts: number): string {
   return new Date(ts * 1000).toLocaleString('hu-HU', {
     month: 'short', day: 'numeric',

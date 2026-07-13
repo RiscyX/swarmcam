@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/hooks/use-auth'
 import { getCameraDisplayName } from '@/lib/cameras'
-import { type EventFilters, type FrigateEvent, eventThumbnailUrl, fireEventClipUrl, fireEventSnapshotUrl, formatEventTime, getEvents, getFireEvents } from '@/lib/events'
+import { type EventFilters, type FrigateEvent, eventThumbnailUrl, fireEventSnapshotUrl, formatEventTime, getEvents, getFireEvents } from '@/lib/events'
 import type { Camera } from '@/types/camera'
 
 const LABELS = ['person', 'car', 'dog', 'cat', 'bird', 'motorcycle', 'bicycle', 'fire', 'smoke']
@@ -15,60 +15,28 @@ type EventsPageProps = {
 }
 
 function EventDialog({ event, onClose }: { event: UIEvent; onClose: () => void }) {
-  const [videoError, setVideoError] = useState(false)
-  const videoRef = useRef<HTMLVideoElement | null>(null)
-
   useEffect(() => {
     function onKey(e: KeyboardEvent) { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
 
-  function handleClose() {
-    if (videoRef.current) { videoRef.current.pause(); videoRef.current.src = '' }
-    onClose()
-  }
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85" onClick={handleClose}>
-      <div className={`relative max-h-[90vh] overflow-hidden rounded border border-border ${event.is_fire ? 'w-full max-w-5xl bg-black' : 'max-w-4xl'}`} onClick={(e) => e.stopPropagation()}>
-        {event.is_fire ? (
-          <div className="flex max-h-[85vh] flex-col overflow-y-auto pb-12 sm:flex-row">
-            <div className="flex flex-1 items-center justify-center p-2">
-              {event.has_snapshot ? (
-                <img alt={event.label} className="block max-h-[40vh] w-auto sm:max-h-[80vh]" src={fireEventSnapshotUrl(event.id)} />
-              ) : (
-                <div className="flex h-[300px] w-full items-center justify-center text-muted-foreground">
-                  No image available
-                </div>
-              )}
-            </div>
-            <div className="flex flex-1 items-center justify-center bg-zinc-950 p-2 sm:border-l sm:border-border">
-              {videoError ? (
-                <div className="flex h-[300px] w-full items-center justify-center text-sm text-muted-foreground">
-                  No recording available
-                </div>
-              ) : (
-                <video
-                  autoPlay
-                  className="block max-h-[40vh] w-auto sm:max-h-[80vh]"
-                  controls
-                  onError={() => setVideoError(true)}
-                  ref={videoRef}
-                  src={fireEventClipUrl(event.id)}
-                />
-              )}
-            </div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85" onClick={onClose}>
+      <div className="relative max-h-[90vh] max-w-4xl overflow-hidden rounded border border-border bg-black" onClick={(e) => e.stopPropagation()}>
+        {event.is_fire && !event.has_snapshot ? (
+          <div className="flex h-[300px] w-[400px] items-center justify-center pb-12 text-muted-foreground">
+            No image available
           </div>
         ) : (
-          <img alt={event.label} className="block max-h-[85vh] w-auto" src={eventThumbnailUrl(event.id)} />
+          <img alt={event.label} className="block max-h-[85vh] w-auto" src={event.is_fire ? fireEventSnapshotUrl(event.id) : eventThumbnailUrl(event.id)} />
         )}
         <div className="absolute bottom-0 left-0 right-0 flex items-center justify-between bg-black/80 px-4 py-2">
           <span className="font-mono text-xs text-muted-foreground">
             {event.label} · {event.camera} · {formatEventTime(event.start_time)}
             {event.score != null ? ` · ${Math.round(event.score * 100)}%` : ''}
           </span>
-          <Button onClick={handleClose} size="sm" variant="outline">Close</Button>
+          <Button onClick={onClose} size="sm" variant="outline">Close</Button>
         </div>
       </div>
     </div>
