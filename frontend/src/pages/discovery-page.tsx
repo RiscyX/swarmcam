@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useAuth } from '@/hooks/use-auth'
 import { startDiscoveryStream } from '@/hooks/use-discovery-stream'
-import { clearRecordings, discoverXmStreamUrl, getNetworks, resetCameras, type NetworkInfo, type XMDiscoverRequest } from '@/lib/discovery'
+import { clearRecordings, getNetworks, resetCameras, type NetworkInfo } from '@/lib/discovery'
 import type { Camera } from '@/types/camera'
 
 type LogLine = { message: string; kind: 'found' | 'warn' | 'normal' }
@@ -19,37 +19,6 @@ function classifyLine(msg: string): LogLine['kind'] {
   return 'normal'
 }
 
-// Generic SSE stream reader for the XM endpoint (same format as IP Webcam stream)
-async function startXmStream(token: string, body: XMDiscoverRequest, onEvent: (e: { type: string; message?: string; cameras?: Camera[] }) => void) {
-  const res = await fetch(discoverXmStreamUrl(), {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  })
-  if (!res.ok || !res.body) throw new Error(`XM stream failed: ${res.status}`)
-
-  const reader = res.body.getReader()
-  const dec = new TextDecoder()
-  let buf = ''
-
-  while (true) {
-    const { done, value } = await reader.read()
-    if (done) break
-    buf += dec.decode(value, { stream: true })
-    const chunks = buf.split('\n\n')
-    buf = chunks.pop() ?? ''
-    for (const chunk of chunks) {
-      const type = chunk.match(/^event: (.+)$/m)?.[1]
-      const data = chunk.match(/^data: (.+)$/m)?.[1]
-      if (!type) continue
-      if (type === 'done') { onEvent({ type: 'done' }); continue }
-      if (!data) continue
-      if (type === 'progress') onEvent({ type: 'progress', message: JSON.parse(data) as string })
-      if (type === 'result')   onEvent({ type: 'result',   cameras: JSON.parse(data) as Camera[] })
-    }
-  }
-}
-
 export function DiscoveryPage({ onCamerasFound }: DiscoveryPageProps) {
   const { token } = useAuth()
   const [networks, setNetworks]       = useState<NetworkInfo[]>([])
@@ -61,19 +30,12 @@ export function DiscoveryPage({ onCamerasFound }: DiscoveryPageProps) {
   const [isScanning, setIsScanning]   = useState(false)
   const [status, setStatus]           = useState('')
 
-  // XM scan state
-  const [xmSubnet, setXmSubnet]               = useState('')
-  const [xmTimeout, setXmTimeout]             = useState(1)
-  const [xmUpdateFrigate, setXmUpdateFrigate] = useState(false)
-  const [isXmScanning, setIsXmScanning]       = useState(false)
-
   useEffect(() => {
     if (!token) return
     void getNetworks(token).then((items) => {
       setNetworks(items)
       if (items.length === 1) {
         setSubnet(items[0].subnet)
-        setXmSubnet(items[0].subnet)
       }
     })
   }, [token])
@@ -101,35 +63,6 @@ export function DiscoveryPage({ onCamerasFound }: DiscoveryPageProps) {
     } catch (err) {
       setStatus(err instanceof Error ? err.message : 'Discovery error')
       setIsScanning(false)
-    }
-  }
-
-  async function handleXmScan(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    if (!token) return
-    setIsXmScanning(true)
-    setStatus('')
-    setLogLines([])
-    try {
-      await startXmStream(
-        token,
-        { timeout: xmTimeout, update_frigate: xmUpdateFrigate, ...(xmSubnet ? { subnet: xmSubnet } : {}) },
-        (e) => {
-          if (e.type === 'progress' && e.message) appendLog(e.message)
-          if (e.type === 'result' && e.cameras) {
-            // Merge XM cameras into existing list
-            onCamerasFound((cur) => {
-              const names = new Set(e.cameras!.map((c) => c.name))
-              return [...cur.filter((c) => !names.has(c.name)), ...e.cameras!]
-            })
-            setStatus(`${e.cameras.length} XM camera${e.cameras.length === 1 ? '' : 's'} found`)
-          }
-          if (e.type === 'done') setIsXmScanning(false)
-        },
-      )
-    } catch (err) {
-      setStatus(err instanceof Error ? err.message : 'XM scan error')
-      setIsXmScanning(false)
     }
   }
 
@@ -185,37 +118,8 @@ export function DiscoveryPage({ onCamerasFound }: DiscoveryPageProps) {
               <input checked={updateFrigate} onChange={(e) => setUpdateFrigate(e.target.checked)} type="checkbox" />
               Update Frigate config
             </label>
-            <Button className="w-full" disabled={isScanning || isXmScanning} type="submit">
+            <Button className="w-full" disabled={isScanning} type="submit">
               {isScanning ? 'Scanning...' : 'Scan Network'}
-            </Button>
-          </form>
-        </div>
-
-        {/* XM camera scan */}
-        <div className="rounded border border-border bg-card p-4">
-          <div className="mb-1 text-sm font-medium text-foreground">XM Camera Scan</div>
-          <div className="mb-3 text-xs text-muted-foreground">WiFi cameras using XMEye / Sofia chipset (port 34567)</div>
-          <form className="space-y-3" onSubmit={handleXmScan}>
-            <label className="block space-y-1.5">
-              <span className="text-xs text-muted-foreground">Network</span>
-              <Input
-                className="font-mono text-xs"
-                list="network-suggestions"
-                onChange={(e) => setXmSubnet(e.target.value)}
-                placeholder="auto-detect (e.g. 192.168.0.0/24)"
-                value={xmSubnet}
-              />
-            </label>
-            <label className="block space-y-1.5">
-              <span className="text-xs text-muted-foreground">Timeout (s)</span>
-              <Input min={0.5} onChange={(e) => setXmTimeout(Number(e.target.value))} step={0.5} type="number" value={xmTimeout} />
-            </label>
-            <label className="flex items-center gap-2 text-xs text-muted-foreground">
-              <input checked={xmUpdateFrigate} onChange={(e) => setXmUpdateFrigate(e.target.checked)} type="checkbox" />
-              Update Frigate config
-            </label>
-            <Button className="w-full" disabled={isScanning || isXmScanning} type="submit" variant="outline">
-              {isXmScanning ? 'Scanning...' : 'Scan XM Cameras'}
             </Button>
           </form>
         </div>
@@ -224,8 +128,8 @@ export function DiscoveryPage({ onCamerasFound }: DiscoveryPageProps) {
         <div className="rounded border border-border bg-card p-4">
           <div className="mb-3 text-sm font-medium text-foreground">Management</div>
           <div className="flex flex-col gap-2">
-            <Button disabled={isScanning || isXmScanning} onClick={handleReset} size="sm" variant="outline">Reset Cameras</Button>
-            <Button disabled={isScanning || isXmScanning} onClick={handleClearRecordings} size="sm" variant="destructive">Delete Recordings</Button>
+            <Button disabled={isScanning} onClick={handleReset} size="sm" variant="outline">Reset Cameras</Button>
+            <Button disabled={isScanning} onClick={handleClearRecordings} size="sm" variant="destructive">Delete Recordings</Button>
             {status ? <div className="text-xs text-muted-foreground">{status}</div> : null}
           </div>
         </div>
@@ -235,7 +139,7 @@ export function DiscoveryPage({ onCamerasFound }: DiscoveryPageProps) {
       <div className="rounded border border-border bg-card p-4">
         <div className="mb-3 flex items-center justify-between">
           <span className="text-sm font-medium text-foreground">Discovery Log</span>
-          {(isScanning || isXmScanning) && (
+          {isScanning && (
             <span className="font-mono text-xs text-swarm-blue">scanning...</span>
           )}
         </div>
