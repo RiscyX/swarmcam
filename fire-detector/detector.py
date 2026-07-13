@@ -4,6 +4,8 @@ import json
 import logging
 import io
 import requests
+import base64
+import cv2
 from PIL import Image
 from paho.mqtt import client as mqtt_client
 from ultralytics import YOLO
@@ -106,9 +108,28 @@ def main():
                                     "label": label.lower(),
                                     "score": round(conf, 3)
                                 }
+                                
+                                try:
+                                    frame = r.plot()
+                                    h, w = frame.shape[:2]
+                                    if w > 1280:
+                                        new_w = 1280
+                                        new_h = int(h * (1280 / w))
+                                        frame = cv2.resize(frame, (new_w, new_h))
+                                        
+                                    success, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
+                                    if success:
+                                        payload["image"] = base64.b64encode(buffer).decode('utf-8')
+                                except Exception as e:
+                                    logger.error(f"Failed to generate annotated snapshot for {cam_name}: {e}")
+                                
                                 topic = f"swarmcam/fire/{cam_name}"
                                 mqtt_c.publish(topic, json.dumps(payload))
-                                logger.info(f"Published detection on {topic}: {payload}")
+                                
+                                log_payload = payload.copy()
+                                if "image" in log_payload:
+                                    log_payload["image"] = "<base64 JPEG>"
+                                logger.info(f"Published detection on {topic}: {log_payload}")
                                 
             except Exception as e:
                 logger.error(f"Error processing camera {cam_name}: {e}")
