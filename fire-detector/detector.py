@@ -30,7 +30,7 @@ def connect_mqtt():
         else:
             logger.error(f"Failed to connect to MQTT broker, return code {rc}")
             
-    client = mqtt_client.Client(client_id)
+    client = mqtt_client.Client(mqtt_client.CallbackAPIVersion.VERSION1, client_id)
     client.on_connect = on_connect
     
     while True:
@@ -74,7 +74,7 @@ def main():
             
         for cam in cameras:
             cam_name = cam.get("name")
-            cam_host = cam.get("host")
+            cam_host = cam.get("ip")
             cam_port = cam.get("port")
             
             if not cam_name or not cam_host or not cam_port:
