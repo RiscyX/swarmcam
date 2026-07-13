@@ -6,7 +6,7 @@ import { getCameraDisplayName } from '@/lib/cameras'
 import { type EventFilters, type FrigateEvent, deleteRecordingEvent, eventThumbnailUrl, formatDuration, formatEventTime, getRecordingEvents, recordingClipUrl } from '@/lib/events'
 import type { Camera } from '@/types/camera'
 
-const LABELS = ['person', 'car', 'dog', 'cat', 'bird', 'motorcycle', 'bicycle']
+const LABELS = ['person', 'car', 'dog', 'cat', 'bird', 'motorcycle', 'bicycle', 'fire', 'smoke']
 
 type RecordingsPageProps = {
   cameras: Camera[]
