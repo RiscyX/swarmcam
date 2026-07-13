@@ -43,6 +43,8 @@ services:
     - ./docker-compose.yml:/swarmcam/docker/docker-compose.yml:ro
     - ./media:/swarmcam/docker/media
     - ../backend/aliases.json:/swarmcam/backend/aliases.json
+    - ../backend/fire_events.db:/swarmcam/backend/fire_events.db
+    - ../backend/fire_snapshots:/swarmcam/backend/fire_snapshots
     environment:
       FRIGATE_URL: http://localhost:5000
       MQTT_HOST: localhost
