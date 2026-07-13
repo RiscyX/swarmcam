@@ -29,17 +29,6 @@ export function clearRecordings(token: string) {
 export function discoverStreamUrl() {
   return apiUrl('/api/discover/stream')
 }
-
-export function discoverXmStreamUrl() {
-  return apiUrl('/api/discover/xm/stream')
-}
-
-export type XMDiscoverRequest = {
-  subnet?: string
-  timeout: number
-  update_frigate: boolean
-}
-
 export type DiscoveryStreamEvent =
   | { type: 'progress'; message: string }
   | { type: 'result'; cameras: Camera[] }
