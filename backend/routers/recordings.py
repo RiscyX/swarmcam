@@ -48,17 +48,59 @@ async def get_recording_events(
     except Exception:
         fire_events_raw = []
 
+    camera_windows = {}
+    for row in fire_events_raw:
+        cam = row["camera"]
+        ts = row["timestamp"]
+        if cam not in camera_windows:
+            camera_windows[cam] = {"min": ts - 10, "max": ts + 30}
+        else:
+            camera_windows[cam]["min"] = min(camera_windows[cam]["min"], ts - 10)
+            camera_windows[cam]["max"] = max(camera_windows[cam]["max"], ts + 30)
+
+    camera_segments = {}
+    for cam, window in camera_windows.items():
+        try:
+            r = await frigate_get(f"/api/{cam}/recordings", params={"after": window["min"], "before": window["max"]})
+            if r.status_code == 200:
+                camera_segments[cam] = r.json()
+        except Exception:
+            pass
+
     fire_events = []
     for row in fire_events_raw:
         ts = row["timestamp"]
+        cam = row["camera"]
+        w_start = ts - 10
+        w_end = ts + 30
+        
+        actual_start = w_start
+        actual_end = w_end
+        has_clip = True
+
+        if cam in camera_segments:
+            overlaps = []
+            for seg in camera_segments[cam]:
+                seg_s = seg.get("start_time")
+                seg_e = seg.get("end_time")
+                if seg_s is not None and seg_e is not None:
+                    if seg_s < w_end and seg_e > w_start:
+                        overlaps.append((max(w_start, seg_s), min(w_end, seg_e)))
+            
+            if overlaps:
+                actual_start = min(o[0] for o in overlaps)
+                actual_end = max(o[1] for o in overlaps)
+            else:
+                has_clip = False
+
         fire_events.append({
             "id": row["id"],
-            "camera": row["camera"],
+            "camera": cam,
             "label": row["label"],
             "score": row["score"],
-            "start_time": ts - 10,
-            "end_time": ts + 30,
-            "has_clip": True,
+            "start_time": actual_start,
+            "end_time": actual_end,
+            "has_clip": has_clip,
             "has_snapshot": row.get("has_snapshot", False),
         })
 
