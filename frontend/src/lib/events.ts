@@ -17,6 +17,7 @@ export type FireEvent = {
   label: string
   score: number
   timestamp: number
+  has_snapshot: boolean
 }
 
 
@@ -73,6 +74,14 @@ export function eventThumbnailUrl(eventId: string) {
 
 export function recordingClipUrl(eventId: string) {
   return apiUrl(`/api/recordings/${encodeURIComponent(eventId)}/clip`)
+}
+
+export function fireEventSnapshotUrl(eventId: string) {
+  return apiUrl(`/api/fire-events/${encodeURIComponent(eventId)}/snapshot`)
+}
+
+export function fireEventClipUrl(eventId: string) {
+  return apiUrl(`/api/fire-events/${encodeURIComponent(eventId)}/clip`)
 }
 
 export function formatEventTime(ts: number): string {
