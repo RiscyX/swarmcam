@@ -5,6 +5,7 @@ import sqlite3
 import time
 import uuid
 import os
+import base64
 
 import aiomqtt
 from fastapi import WebSocket
@@ -13,6 +14,8 @@ import state
 from settings import MQTT_HOST, MQTT_PORT
 
 DB_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "fire_events.db")
+SNAPSHOT_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "fire_snapshots")
+os.makedirs(SNAPSHOT_DIR, exist_ok=True)
 
 def init_db():
     with sqlite3.connect(DB_PATH) as conn:
@@ -84,7 +87,17 @@ async def mqtt_loop() -> None:
                             except (TypeError, ValueError):
                                 score = 0.0
 
-                            save_fire_event(camera, label, score)
+                            event = save_fire_event(camera, label, score)
+                            event_id = event["id"]
+
+                            image_b64 = payload.get("image")
+                            if image_b64:
+                                try:
+                                    image_data = base64.b64decode(image_b64)
+                                    with open(os.path.join(SNAPSHOT_DIR, f"{event_id}.jpg"), "wb") as f:
+                                        f.write(image_data)
+                                except Exception as e:
+                                    print(f"[MQTT] Failed to save fire snapshot for {event_id}: {e}", file=sys.stderr)
 
                             alert_msg = json.dumps({
                                 "type": "alert",

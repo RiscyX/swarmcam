@@ -1,5 +1,7 @@
 # Runtime data
 backend/aliases.json
+backend/fire_snapshots/
+backend/fire_events.db
 
 # Docker volumes (runtime data, ne kerüljön gitbe)
 docker/media/
