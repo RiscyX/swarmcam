@@ -100,7 +100,7 @@ export function AppShell() {
       await setCameraTorch(token, camera.name, nextEnabled)
       setTorchStates((current) => ({ ...current, [camera.name]: nextEnabled }))
     } catch {
-      handleAlert(`Vaku kapcsolása sikertelen: ${camera.name}`)
+      handleAlert(`Failed to toggle torch: ${camera.name}`)
     }
   }
 

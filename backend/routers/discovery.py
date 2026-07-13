@@ -109,9 +109,9 @@ async def discover_stream(req: DiscoverRequest):
         if req.update_frigate and cameras:
             try:
                 http.post(f"{FRIGATE_URL}/api/restart", timeout=5)
-                yield f"event: progress\ndata: {json.dumps('[*] Frigate újraindítása...')}\n\n"
+                yield f"event: progress\ndata: {json.dumps('[*] Restarting Frigate...')}\n\n"
             except Exception as e:
-                yield f"event: progress\ndata: {json.dumps(f'[!] Frigate restart hiba: {e}')}\n\n"
+                yield f"event: progress\ndata: {json.dumps(f'[!] Frigate restart error: {e}')}\n\n"
 
         yield f"event: result\ndata: {json.dumps(cameras)}\n\n"
         yield "event: done\ndata: {}\n\n"

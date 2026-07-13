@@ -117,7 +117,7 @@ export function CameraSettingsPage({ cameras, onRenameCamera, onDeleteCamera }: 
   if (!cameras.length) {
     return (
       <div className="grid min-h-[360px] place-items-center rounded-sm border border-dashed border-border bg-card/70 p-8 text-center">
-        <p className="font-mono text-xs text-muted-foreground">Nincs kamera. Futtass discovery scan-t.</p>
+        <p className="font-mono text-xs text-muted-foreground">No camera. Run a discovery scan.</p>
       </div>
     )
   }
@@ -146,7 +146,7 @@ export function CameraSettingsPage({ cameras, onRenameCamera, onDeleteCamera }: 
       <div className="flex flex-col gap-4">
         {/* Alias */}
         <div className="rounded-sm border border-border bg-card p-4">
-          <div className="mb-3 mb-3 text-xs font-medium text-muted-foreground">Megjelenítési név</div>
+          <div className="mb-3 mb-3 text-xs font-medium text-muted-foreground">Display name</div>
           <div className="flex gap-2">
             <input
               className="flex-1 rounded-sm border border-border bg-background px-3 py-1.5 font-mono text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
@@ -156,41 +156,41 @@ export function CameraSettingsPage({ cameras, onRenameCamera, onDeleteCamera }: 
               value={alias}
             />
             <Button onClick={() => void handleSaveAlias()} size="sm" variant="outline">
-              Mentés
+              Save
             </Button>
           </div>
         </div>
 
         {/* IP Webcam settings */}
         <div className="rounded-sm border border-border bg-card p-4">
-          <div className="mb-1 mb-3 text-xs font-medium text-muted-foreground">IP Webcam beállítások</div>
+          <div className="mb-1 mb-3 text-xs font-medium text-muted-foreground">IP Webcam settings</div>
 
           {status === 'loading' ? (
-            <div className="py-8 text-center font-mono text-xs text-muted-foreground">Betöltés...</div>
+            <div className="py-8 text-center font-mono text-xs text-muted-foreground">Loading...</div>
           ) : status === 'error' ? (
-            <div className="py-8 text-center font-mono text-xs text-swarm-red">A kamera nem elérhető.</div>
+            <div className="py-8 text-center font-mono text-xs text-swarm-red">Camera is not available.</div>
           ) : (
             <>
               <SelectField
-                label="Orientáció"
+                label="Orientation"
                 onChange={(v) => setSettings((s) => ({ ...s, orientation: v || null }))}
                 options={ORIENTATIONS}
                 value={settings.orientation}
               />
               <SelectField
-                label="Felbontás"
+                label="Resolution"
                 onChange={(v) => setSettings((s) => ({ ...s, video_size: v || null }))}
                 options={VIDEO_SIZES}
                 value={settings.video_size}
               />
               <SelectField
-                label="Tükrözés"
+                label="Mirror"
                 onChange={(v) => setSettings((s) => ({ ...s, mirror_flip: v || null }))}
                 options={MIRROR_FLIP}
                 value={settings.mirror_flip}
               />
               <SelectField
-                label="Előlapi kamera (FFC)"
+                label="Front camera (FFC)"
                 onChange={(v) => setSettings((s) => ({ ...s, ffc: v || null }))}
                 options={['off', 'on']}
                 value={settings.ffc}
@@ -198,14 +198,14 @@ export function CameraSettingsPage({ cameras, onRenameCamera, onDeleteCamera }: 
 
               <div className="mt-4 flex items-center gap-3">
                 <Button disabled={status === 'saving'} onClick={() => void handleSaveSettings()} variant="default">
-                  {status === 'saving' ? 'Mentés...' : 'Beállítások mentése'}
+                  {status === 'saving' ? 'Saving...' : 'Save settings'}
                 </Button>
                 {status === 'saved' && appliedFields.length > 0 ? (
                   <span className="font-mono text-xs text-swarm-green">
-                    ✓ Alkalmazva: {appliedFields.join(', ')}
+                    ✓ Applied: {appliedFields.join(', ')}
                   </span>
                 ) : status === 'saved' ? (
-                  <span className="font-mono text-xs text-muted-foreground">Nincs változás.</span>
+                  <span className="font-mono text-xs text-muted-foreground">No changes.</span>
                 ) : null}
               </div>
             </>
@@ -217,7 +217,7 @@ export function CameraSettingsPage({ cameras, onRenameCamera, onDeleteCamera }: 
           <div className="mb-2 text-xs font-medium text-swarm-red/70">Danger zone</div>
           <div className="flex items-center justify-between">
             <p className="font-mono text-xs text-muted-foreground">
-              Eltávolítja a kamerát a Frigate konfigból és újraindítja a Frigate-t.
+              Removes the camera from Frigate config and restarts Frigate.
             </p>
             <Button
               className="ml-4 shrink-0 border-swarm-red/40 text-swarm-red hover:border-swarm-red"
@@ -226,7 +226,7 @@ export function CameraSettingsPage({ cameras, onRenameCamera, onDeleteCamera }: 
               size="sm"
               variant="outline"
             >
-              Kamera törlése
+              Delete camera
             </Button>
           </div>
         </div>
@@ -237,14 +237,14 @@ export function CameraSettingsPage({ cameras, onRenameCamera, onDeleteCamera }: 
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
           <div className="rounded-sm border border-border bg-card p-6 text-center">
             <p className="font-mono text-sm text-foreground">
-              Biztosan törlöd: <strong>{selectedCamera ? getCameraDisplayName(selectedCamera) : selectedName}</strong>?
+              Are you sure you want to delete: <strong>{selectedCamera ? getCameraDisplayName(selectedCamera) : selectedName}</strong>?
             </p>
-            <p className="mt-1 font-mono text-xs text-muted-foreground">Frigate újraindul, a felvételek megmaradnak.</p>
+            <p className="mt-1 font-mono text-xs text-muted-foreground">Frigate will restart, recordings will be kept.</p>
             <div className="mt-4 flex justify-center gap-3">
               <Button disabled={deleting} onClick={() => void handleDeleteCamera()} variant="destructive">
-                {deleting ? 'Törlés...' : 'Törlés'}
+                {deleting ? 'Deleting...' : 'Delete'}
               </Button>
-              <Button onClick={() => setConfirmDelete(false)} variant="outline">Mégse</Button>
+              <Button onClick={() => setConfirmDelete(false)} variant="outline">Cancel</Button>
             </div>
           </div>
         </div>
