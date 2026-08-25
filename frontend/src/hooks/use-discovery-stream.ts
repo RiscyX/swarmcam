@@ -3,6 +3,7 @@ import { discoverStreamUrl, type DiscoverRequest, type DiscoveryStreamEvent } fr
 type StartDiscoveryOptions = {
   token: string
   body: DiscoverRequest
+  signal?: AbortSignal
   onEvent: (event: DiscoveryStreamEvent) => void
 }
 
@@ -19,7 +20,7 @@ function parseEventChunk(chunk: string): DiscoveryStreamEvent | null {
   return null
 }
 
-export async function startDiscoveryStream({ body, onEvent, token }: StartDiscoveryOptions) {
+export async function startDiscoveryStream({ body, onEvent, signal, token }: StartDiscoveryOptions) {
   const response = await fetch(discoverStreamUrl(), {
     method: 'POST',
     headers: {
@@ -27,6 +28,7 @@ export async function startDiscoveryStream({ body, onEvent, token }: StartDiscov
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(body),
+    signal,
   })
 
   if (!response.ok || !response.body) throw new Error(`Discovery stream failed: ${response.status}`)
