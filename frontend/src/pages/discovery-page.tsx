@@ -43,6 +43,14 @@ export function DiscoveryPage({ onCamerasFound }: DiscoveryPageProps) {
   const logRef = useRef<HTMLDivElement>(null)
   const lineCountRef = useRef(0)
   const abortRef = useRef<AbortController | null>(null)
+  const unmountedRef = useRef(false)
+
+  useEffect(() => {
+    return () => {
+      unmountedRef.current = true
+      abortRef.current?.abort()
+    }
+  }, [])
 
   useEffect(() => {
     const el = logRef.current
@@ -91,6 +99,7 @@ export function DiscoveryPage({ onCamerasFound }: DiscoveryPageProps) {
         },
       })
     } catch (err) {
+      if (unmountedRef.current) return
       if (err instanceof DOMException && err.name === 'AbortError') {
         setStatus('Scan stopped')
       } else {
