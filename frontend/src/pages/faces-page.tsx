@@ -1,20 +1,39 @@
 import { useEffect, useRef, useState } from 'react'
 
+import { Plus, Trash2 } from 'lucide-react'
+
 import { Button } from '@/components/ui/button'
+import { Dialog } from '@/components/ui/dialog'
+import { EmptyState } from '@/components/ui/empty-state'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Skeleton } from '@/components/ui/skeleton'
 import { useAuth } from '@/hooks/use-auth'
 import { ApiError } from '@/lib/api'
 import { createFace, deleteFace, faceThumbnailUrl, getFaces, registerFace, type FaceEntry } from '@/lib/faces'
+import { cn } from '@/lib/utils'
 
 export function FacesPage() {
   const { token } = useAuth()
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const dragDepth = useRef(0)
   const [faces, setFaces] = useState<FaceEntry[]>([])
   const [disabled, setDisabled] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [newName, setNewName] = useState('')
-  const [uploadTarget, setUploadTarget] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+
+  // New face dialog
+  const [createOpen, setCreateOpen] = useState(false)
+  const [newName, setNewName] = useState('')
+  const [pendingFiles, setPendingFiles] = useState<File[]>([])
+  const [createError, setCreateError] = useState<string | null>(null)
+
+  // Upload / delete
+  const [uploadTarget, setUploadTarget] = useState<string | null>(null)
+  const [uploadError, setUploadError] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [dragActive, setDragActive] = useState(false)
 
   async function load() {
     if (!token) return
@@ -36,12 +55,20 @@ export function FacesPage() {
   useEffect(() => { void load() }, [token])
 
   async function handleCreate() {
-    if (!token || !newName.trim()) return
+    if (!token || !newName.trim() || busy) return
     setBusy(true)
+    setCreateError(null)
     try {
       await createFace(token, newName.trim())
+      for (const file of pendingFiles) {
+        await registerFace(token, newName.trim(), file)
+      }
+      setCreateOpen(false)
       setNewName('')
+      setPendingFiles([])
       await load()
+    } catch {
+      setCreateError('Could not create the face or register the images — check the connection and try again.')
     } finally {
       setBusy(false)
     }
@@ -50,9 +77,12 @@ export function FacesPage() {
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     if (!token || !uploadTarget || !e.target.files?.[0]) return
     setBusy(true)
+    setUploadError(null)
     try {
       await registerFace(token, uploadTarget, e.target.files[0])
       await load()
+    } catch {
+      setUploadError(`Image registration failed for ${uploadTarget} — check the connection and try again.`)
     } finally {
       setBusy(false)
       setUploadTarget(null)
@@ -60,98 +90,239 @@ export function FacesPage() {
     }
   }
 
-  async function handleDelete(name: string) {
-    if (!token) return
+  async function handleDelete() {
+    if (!token || !confirmDelete || busy) return
     setBusy(true)
+    setDeleteError(null)
     try {
-      await deleteFace(token, name)
+      await deleteFace(token, confirmDelete)
       setConfirmDelete(null)
       await load()
+    } catch {
+      setDeleteError(`Delete failed for ${confirmDelete} — check the connection and try again.`)
     } finally {
       setBusy(false)
     }
   }
 
-  if (loading) return <div className="font-mono text-xs text-muted-foreground">Loading...</div>
+  function openCreate() {
+    setPendingFiles([])
+    setCreateError(null)
+    setCreateOpen(true)
+  }
 
-  if (disabled) return (
-    <div className="grid min-h-[300px] place-items-center rounded-sm border border-dashed border-border bg-card/70 p-8 text-center">
-      <div>
-        <div className="font-ui text-lg font-bold uppercase tracking-[0.14em] text-muted-foreground">Face recognition is not available</div>
-        <p className="mt-2 font-mono text-xs text-muted-foreground">Frigate does not support it, or it is not enabled.</p>
-      </div>
+  function closeCreate() {
+    setCreateOpen(false)
+    setCreateError(null)
+    setPendingFiles([])
+  }
+
+  function closeDelete() {
+    setConfirmDelete(null)
+    setDeleteError(null)
+  }
+
+  function handleDragEnter(e: React.DragEvent<HTMLButtonElement>) {
+    e.preventDefault()
+    dragDepth.current += 1
+    setDragActive(true)
+  }
+
+  function handleDragOver(e: React.DragEvent<HTMLButtonElement>) {
+    e.preventDefault()
+  }
+
+  function handleDragLeave(e: React.DragEvent<HTMLButtonElement>) {
+    e.preventDefault()
+    dragDepth.current -= 1
+    if (dragDepth.current <= 0) {
+      dragDepth.current = 0
+      setDragActive(false)
+    }
+  }
+
+  function handleDrop(e: React.DragEvent<HTMLButtonElement>) {
+    e.preventDefault()
+    dragDepth.current = 0
+    setDragActive(false)
+    const files = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith('image/'))
+    if (!files.length) return
+    setPendingFiles(files)
+    setCreateError(null)
+    setCreateOpen(true)
+  }
+
+  if (loading) return (
+    <div className="grid grid-cols-[repeat(auto-fill,minmax(132px,1fr))] gap-[2px] rounded-sm border border-[var(--border)] bg-[var(--border)] p-[2px]">
+      {[0, 1, 2, 3].map((i) => <Skeleton className="aspect-square w-full" key={i} />)}
     </div>
   )
 
+  if (disabled) return (
+    <EmptyState
+      description="Frigate does not support it, or it is not enabled."
+      title="Face recognition is not available"
+      variant="error"
+    />
+  )
+
   return (
-    <div className="flex flex-col gap-4">
-      {/* Add face */}
-      <div className="flex gap-2 rounded-sm border border-border bg-card p-3">
-        <input
-          className="flex-1 rounded-sm border border-border bg-background px-3 py-1.5 font-mono text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-swarm-amber"
-          onChange={(e) => setNewName(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter') void handleCreate() }}
-          placeholder="New face name..."
-          value={newName}
-        />
-        <Button disabled={busy || !newName.trim()} onClick={() => void handleCreate()} size="sm" variant="default">
-          Create
+    <div className="flex flex-col gap-3">
+      {/* Header action */}
+      <div className="flex items-center justify-end">
+        <Button className="h-9 px-4" onClick={openCreate}>
+          New face
         </Button>
       </div>
 
-      {/* Face list */}
+      {/* Hidden upload input */}
       <input accept="image/*" onChange={handleUpload} ref={fileInputRef} style={{ display: 'none' }} type="file" />
 
+      {/* Upload error */}
+      {uploadError ? (
+        <p className="rounded-sm border border-[var(--danger-border)] bg-[var(--danger-bg)] px-3 py-2 font-mono text-xs text-[var(--status-error)]" role="alert">
+          {uploadError}
+        </p>
+      ) : null}
+
       {faces.length === 0 ? (
-        <div className="grid min-h-[200px] place-items-center rounded-sm border border-dashed border-border bg-card/70">
-          <p className="font-mono text-xs text-muted-foreground">No registered faces. Create one above.</p>
-        </div>
+        <EmptyState
+          action={<Button className="h-9" onClick={openCreate}>New face</Button>}
+          description="Register a face and add 5–15 cropped images so Frigate can build a usable embedding."
+          icon={<Plus className="h-6 w-6" />}
+          title="No registered faces"
+        />
       ) : (
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-3">
-          {faces.map((face) => (
-            <div className="overflow-hidden rounded-sm border border-border bg-card" key={face.name}>
-              <img alt={face.name} className="aspect-square w-full object-cover" src={faceThumbnailUrl(face.name)} />
-              <div className="p-2">
-                <div className="truncate font-ui font-bold tracking-[0.06em] text-foreground">{face.name}</div>
-                <div className="font-mono text-[10px] text-muted-foreground">{face.files.length} image{face.files.length !== 1 ? 's' : ''}</div>
-                <div className="mt-2 flex gap-1.5">
-                  <Button
-                    className="flex-1 text-[10px]"
-                    disabled={busy}
-                    onClick={() => { setUploadTarget(face.name); fileInputRef.current?.click() }}
-                    size="sm"
-                    variant="outline"
-                  >
-                    + Image
-                  </Button>
-                  <Button
-                    className="text-[10px] text-swarm-red hover:border-swarm-red/40"
-                    disabled={busy}
-                    onClick={() => setConfirmDelete(face.name)}
-                    size="sm"
-                    variant="outline"
-                  >
-                    Delete
-                  </Button>
+        <div className="overflow-hidden rounded-sm border border-[var(--border)] bg-[var(--border)]">
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(132px,1fr))] gap-[2px] p-[2px]">
+            {faces.map((face) => (
+              <div className="flex min-w-0 flex-col bg-[var(--bg-surface)]" key={face.name}>
+                <div className="aspect-square w-full overflow-hidden bg-[var(--bg-tile)]">
+                  {face.files.length > 0 ? (
+                    <img
+                      alt={face.name}
+                      className="h-full w-full object-cover [filter:grayscale(1)_contrast(1.08)]"
+                      src={faceThumbnailUrl(face.name)}
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center font-mono text-5xl font-bold text-[var(--fg-dim)]">
+                      {face.name.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                </div>
+                <div className="p-2">
+                  <div className="truncate text-[13px] font-extrabold tracking-[0.04em] text-[var(--fg)]">{face.name}</div>
+                  <div className="mt-0.5 font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--fg-muted)]">
+                    {face.files.length} IMAGES
+                  </div>
+                  <div className="mt-2 flex items-center gap-1.5">
+                    <Button
+                      className="h-9 flex-1 px-2"
+                      disabled={busy}
+                      onClick={() => { setUploadError(null); setUploadTarget(face.name); fileInputRef.current?.click() }}
+                      size="sm"
+                      variant="outline"
+                    >
+                      Add
+                    </Button>
+                    <Button
+                      aria-label={`Delete ${face.name}`}
+                      className="h-9 w-9 shrink-0 p-0"
+                      disabled={busy}
+                      onClick={() => { setConfirmDelete(face.name); setDeleteError(null) }}
+                      size="icon"
+                      variant="destructive"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
+
+            {/* New face tile */}
+            <button
+              aria-label="New face"
+              className={cn(
+                'flex min-h-[120px] flex-col items-center justify-center gap-1 border-l-2 border-dashed p-3 transition-colors',
+                dragActive
+                  ? 'border-[var(--accent)] bg-[color-mix(in_srgb,var(--accent)_12%,transparent)]'
+                  : 'border-[var(--border-raised)] bg-[var(--bg-surface)] hover:border-[var(--accent)]',
+              )}
+              onClick={openCreate}
+              onDragEnter={handleDragEnter}
+              onDragLeave={handleDragLeave}
+              onDragOver={handleDragOver}
+              onDrop={handleDrop}
+              type="button"
+            >
+              <Plus className="pointer-events-none h-5 w-5 text-[var(--fg-muted)]" />
+              <span className="pointer-events-none font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--fg-secondary)]">
+                New face
+              </span>
+              <span className="pointer-events-none font-mono text-[10px] text-[var(--fg-dim)]">drop images here</span>
+            </button>
+          </div>
         </div>
       )}
 
-      {/* Delete confirm */}
-      {confirmDelete ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
-          <div className="rounded-sm border border-border bg-card p-6 text-center">
-            <p className="font-mono text-sm text-foreground">Are you sure you want to delete: <strong>{confirmDelete}</strong>?</p>
-            <div className="mt-4 flex justify-center gap-3">
-              <Button disabled={busy} onClick={() => void handleDelete(confirmDelete)} variant="destructive">Delete</Button>
-              <Button onClick={() => setConfirmDelete(null)} variant="outline">Cancel</Button>
-            </div>
-          </div>
+      {/* New face dialog */}
+      <Dialog
+        confirmLabel={busy ? 'Creating…' : 'Create'}
+        description="Give the face a name. 5–15 cropped images are needed for a usable embedding."
+        onClose={closeCreate}
+        onConfirm={() => void handleCreate()}
+        open={createOpen}
+        title="New face"
+      >
+        <div className="-mx-5 -mt-4">
+          <Label htmlFor="new-face-name">Name</Label>
+          <Input
+            autoComplete="off"
+            id="new-face-name"
+            onChange={(e) => setNewName(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') void handleCreate() }}
+            placeholder="e.g. Richard"
+            value={newName}
+          />
+          {pendingFiles.length > 0 ? (
+            <p className="mt-2 font-mono text-xs text-[var(--fg-muted)]">
+              {pendingFiles.length} dropped image{pendingFiles.length !== 1 ? 's' : ''} will be registered after creating the face.
+            </p>
+          ) : null}
+          {createError ? (
+            <p className="mt-3 font-mono text-xs text-[var(--status-error)]" role="alert">
+              {createError}
+            </p>
+          ) : null}
         </div>
-      ) : null}
+      </Dialog>
+
+      {/* Delete confirm dialog */}
+      <Dialog
+        cancelLabel="Cancel"
+        confirmLabel={busy ? 'Deleting…' : 'Delete'}
+        description="The face and all its registered images are removed from Frigate. This cannot be undone."
+        onClose={closeDelete}
+        onConfirm={() => void handleDelete()}
+        open={Boolean(confirmDelete)}
+        title="Delete face"
+        variant="destructive"
+      >
+        {confirmDelete ? (
+          <>
+            <p className="text-sm text-[var(--fg-secondary)]">
+              Are you sure you want to delete{' '}
+              <span className="font-mono font-bold text-[var(--fg)]">{confirmDelete}</span>?
+            </p>
+            {deleteError ? (
+              <p className="mt-3 font-mono text-xs text-[var(--status-error)]" role="alert">
+                {deleteError}
+              </p>
+            ) : null}
+          </>
+        ) : null}
+      </Dialog>
     </div>
   )
 }
