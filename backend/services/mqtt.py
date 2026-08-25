@@ -58,6 +58,54 @@ async def broadcast(msg: str) -> None:
     state._ws_clients -= dead
 
 
+async def _handle_frigate_event(raw: bytes | str) -> None:
+    payload = json.loads(raw)
+    after = payload.get("after", {})
+    event = json.dumps({
+        "type":   "frigate_event",
+        "camera": after.get("camera"),
+        "label":  after.get("label"),
+        "score":  round(after.get("score") or 0.0, 2),
+        "id":     after.get("id"),
+    })
+    await broadcast(event)
+
+
+async def _handle_fire_event(raw: bytes | str) -> None:
+    payload = json.loads(raw)
+    if not isinstance(payload, dict):
+        return
+    camera = payload.get("camera", "unknown")
+    label = payload.get("label", "unknown")
+    try:
+        score = float(payload.get("score") or 0.0)
+    except (TypeError, ValueError):
+        score = 0.0
+
+    event_id = save_fire_event(camera, label, score)["id"]
+
+    image_b64 = payload.get("image")
+    if image_b64:
+        try:
+            image_data = base64.b64decode(image_b64)
+            with open(os.path.join(SNAPSHOT_DIR, f"{event_id}.jpg"), "wb") as f:
+                f.write(image_data)
+        except Exception as e:
+            print(f"[MQTT] Failed to save fire snapshot for {event_id}: {e}", file=sys.stderr)
+
+    await broadcast(json.dumps({
+        "type":    "alert",
+        "message": f"🔥 Tűz/füst érzékelve: {camera} ({score:.0%})",
+    }))
+    await broadcast(json.dumps({
+        "type":   "frigate_event",
+        "camera": camera,
+        "label":  label,
+        "score":  round(score, 2),
+        "id":     None,
+    }))
+
+
 async def mqtt_loop() -> None:
     while True:
         try:
@@ -67,52 +115,10 @@ async def mqtt_loop() -> None:
                 await client.subscribe("swarmcam/fire/#")
                 async for message in client.messages:
                     try:
-                        payload = json.loads(message.payload)
-                        topic = str(message.topic)
-                        if topic == "frigate/events":
-                            after = payload.get("after", {})
-                            event = json.dumps({
-                                "type":   "frigate_event",
-                                "camera": after.get("camera"),
-                                "label":  after.get("label"),
-                                "score":  round(after.get("score") or 0.0, 2),
-                                "id":     after.get("id"),
-                            })
-                            await broadcast(event)
-                        elif topic.startswith("swarmcam/fire/"):
-                            camera = payload.get("camera", "unknown")
-                            label = payload.get("label", "unknown")
-                            try:
-                                score = float(payload.get("score", 0.0))
-                            except (TypeError, ValueError):
-                                score = 0.0
-
-                            event = save_fire_event(camera, label, score)
-                            event_id = event["id"]
-
-                            image_b64 = payload.get("image")
-                            if image_b64:
-                                try:
-                                    image_data = base64.b64decode(image_b64)
-                                    with open(os.path.join(SNAPSHOT_DIR, f"{event_id}.jpg"), "wb") as f:
-                                        f.write(image_data)
-                                except Exception as e:
-                                    print(f"[MQTT] Failed to save fire snapshot for {event_id}: {e}", file=sys.stderr)
-
-                            alert_msg = json.dumps({
-                                "type": "alert",
-                                "message": f"🔥 Fire/smoke detected: {camera} ({score:.0%})"
-                            })
-                            await broadcast(alert_msg)
-
-                            event_msg = json.dumps({
-                                "type": "frigate_event",
-                                "camera": camera,
-                                "label": label,
-                                "score": score,
-                                "id": None
-                            })
-                            await broadcast(event_msg)
+                        if message.topic.matches("swarmcam/fire/#"):
+                            await _handle_fire_event(message.payload)
+                        else:
+                            await _handle_frigate_event(message.payload)
                     except Exception:
                         pass
         except aiomqtt.MqttError as e:
