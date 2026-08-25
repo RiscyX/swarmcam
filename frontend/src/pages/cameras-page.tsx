@@ -1,8 +1,10 @@
 import { CameraOff } from 'lucide-react'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 
 import { CameraCard } from '@/components/camera-card'
+import { LayoutPicker } from '@/components/layout-picker'
 import { Button } from '@/components/ui/button'
+import { useBreakpoint } from '@/hooks/use-breakpoint'
 import { useKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts'
 import type { Camera, CameraLayout } from '@/types/camera'
 
@@ -21,13 +23,6 @@ type CamerasPageProps = {
   torchStates: Record<string, boolean>
 }
 
-const layoutClasses: Record<CameraLayout, string> = {
-  auto: 'grid-cols-[repeat(auto-fill,minmax(380px,1fr))]',
-  '1x1': 'mx-auto max-w-5xl grid-cols-1',
-  '2x2': 'grid-cols-1 lg:grid-cols-2',
-  '1plus3': 'grid-cols-1 lg:grid-cols-[2fr_1fr] lg:[&>*:first-child]:row-span-2',
-}
-
 export function CamerasPage({
   cameras,
   error,
@@ -42,13 +37,27 @@ export function CamerasPage({
   paused,
   torchStates,
 }: CamerasPageProps) {
+  const breakpoint = useBreakpoint()
+  const isMobile = breakpoint === 'mobile'
+
   const [shortcuts] = useState(() => ({
-    '1': () => onLayoutChange('1x1'),
+    '1': () => onLayoutChange('auto'),
     '2': () => onLayoutChange('2x2'),
-    '3': () => onLayoutChange('1plus3'),
+    '3': () => onLayoutChange('3x3'),
   }))
 
   useKeyboardShortcuts(shortcuts)
+
+  const visibleCameras = useMemo(() => {
+    if (layout === '2x2') return cameras.slice(0, 4)
+    if (layout === '3x3') return cameras.slice(0, 9)
+    return cameras
+  }, [cameras, layout])
+
+  const count = Math.max(visibleCameras.length, 1)
+  const autoCols = isMobile ? (count <= 1 ? 1 : Math.min(Math.ceil(Math.sqrt(count)), 3)) : Math.ceil(Math.sqrt(count))
+  const cols = layout === '2x2' ? 2 : layout === '3x3' ? (breakpoint === 'tablet' || isMobile ? 2 : 3) : autoCols
+  const rows = Math.max(1, Math.ceil(visibleCameras.length / cols))
 
   if (isLoading) {
     return <div className="p-6 text-sm text-muted-foreground">Loading cameras...</div>
@@ -75,21 +84,36 @@ export function CamerasPage({
     )
   }
 
+  const gridStyle: React.CSSProperties = {
+    display: 'grid',
+    gap: '2px',
+    backgroundColor: 'var(--border)',
+    gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
+    gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))`,
+  }
+
   return (
-    <div className={`grid gap-px bg-border ${layoutClasses[layout]}`}>
-      {cameras.map((camera) => (
-        <div className="bg-background" key={camera.name}>
-          <CameraCard
-            camera={camera}
-            isFlashing={eventCamera === camera.name}
-            isPaused={paused}
-            onOpenFullscreen={onOpenFullscreen}
-            onRename={onRenameCamera}
-            onToggleTorch={onToggleTorch}
-            torchEnabled={Boolean(torchStates[camera.name])}
-          />
+    <div className="flex h-full min-h-0 flex-col">
+      {isMobile ? (
+        <div className="shrink-0 border-b border-[var(--border-row)] bg-[var(--bg-chrome)]">
+          <LayoutPicker layout={layout} onChange={onLayoutChange} variant="chips" />
         </div>
-      ))}
+      ) : null}
+      <div className="min-h-0 min-w-0 flex-1" style={gridStyle}>
+        {visibleCameras.map((camera) => (
+          <div className="bg-[var(--bg-tile)] [&>*]:h-full" key={camera.name}>
+            <CameraCard
+              camera={camera}
+              isFlashing={eventCamera === camera.name}
+              isPaused={paused}
+              onOpenFullscreen={onOpenFullscreen}
+              onRename={onRenameCamera}
+              onToggleTorch={onToggleTorch}
+              torchEnabled={Boolean(torchStates[camera.name])}
+            />
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
