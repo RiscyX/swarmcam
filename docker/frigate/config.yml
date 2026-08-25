@@ -37,10 +37,10 @@ snapshots:
   retain:
     default: 14
 cameras:
-  cam_10_42_0_172:
+  cam_192_168_1_15:
     ffmpeg:
       inputs:
-      - path: rtsp://10.42.0.172:8080/h264_ulaw.sdp
+      - path: rtsp://192.168.1.15:8080/h264_ulaw.sdp
         roles:
         - detect
         - record
