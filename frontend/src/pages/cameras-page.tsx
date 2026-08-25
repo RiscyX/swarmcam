@@ -41,39 +41,22 @@ export function CamerasPage({
   const isMobile = breakpoint === 'mobile'
 
   const [shortcuts] = useState(() => ({
-    '1': () => onLayoutChange('single'),
+    '1': () => onLayoutChange('auto'),
     '2': () => onLayoutChange('2x2'),
     '3': () => onLayoutChange('3x3'),
   }))
 
   useKeyboardShortcuts(shortcuts)
 
-  // A spotlight (FOCUS) megjelenítése a #46 feladata; addig auto-ként viselkedik.
-  const effectiveLayout: CameraLayout = layout === 'spotlight' ? 'auto' : layout
-
   const visibleCameras = useMemo(() => {
-    if (isMobile) return cameras
-    if (effectiveLayout === '2x2') return cameras.slice(0, 4)
-    if (effectiveLayout === '3x3') return cameras.slice(0, 9)
-    if (effectiveLayout === 'single') {
-      const focused = cameras.find((camera) => camera.name === eventCamera) ?? cameras[0]
-      return focused ? [focused] : []
-    }
+    if (layout === '2x2') return cameras.slice(0, 4)
+    if (layout === '3x3') return cameras.slice(0, 9)
     return cameras
-  }, [cameras, effectiveLayout, eventCamera, isMobile])
+  }, [cameras, layout])
 
-  const cols =
-    effectiveLayout === 'single'
-      ? 1
-      : effectiveLayout === '2x2'
-        ? 2
-        : effectiveLayout === '3x3'
-          ? breakpoint === 'tablet'
-            ? 2
-            : 3
-          : breakpoint === 'tablet'
-            ? 2
-            : Math.ceil(Math.sqrt(Math.max(visibleCameras.length, 1)))
+  const count = Math.max(visibleCameras.length, 1)
+  const autoCols = isMobile ? (count <= 1 ? 1 : Math.min(Math.ceil(Math.sqrt(count)), 3)) : Math.ceil(Math.sqrt(count))
+  const cols = layout === '2x2' ? 2 : layout === '3x3' ? (breakpoint === 'tablet' || isMobile ? 2 : 3) : autoCols
   const rows = Math.max(1, Math.ceil(visibleCameras.length / cols))
 
   if (isLoading) {
@@ -101,52 +84,33 @@ export function CamerasPage({
     )
   }
 
-  const renderCard = (camera: Camera) => (
-    <CameraCard
-      camera={camera}
-      isFlashing={eventCamera === camera.name}
-      isPaused={paused}
-      onOpenFullscreen={onOpenFullscreen}
-      onRename={onRenameCamera}
-      onToggleTorch={onToggleTorch}
-      torchEnabled={Boolean(torchStates[camera.name])}
-    />
-  )
-
-  if (isMobile) {
-    return (
-      <div>
-        <div className="sticky top-0 z-10 shrink-0 border-b border-[var(--border-row)] bg-[var(--bg-chrome)]">
-          <LayoutPicker layout={layout} onChange={onLayoutChange} variant="chips" />
-        </div>
-        <div className="flex flex-col gap-px bg-[var(--border)]">
-          {visibleCameras.map((camera) => (
-            <div className="aspect-video bg-[var(--bg-tile)] [&>*]:h-full" key={camera.name}>
-              {renderCard(camera)}
-            </div>
-          ))}
-        </div>
-      </div>
-    )
+  const gridStyle: React.CSSProperties = {
+    display: 'grid',
+    gap: '2px',
+    backgroundColor: 'var(--border)',
+    gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
+    gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))`,
   }
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div
-        className="min-h-0 min-w-0"
-        style={{
-          display: 'grid',
-          flex: 1,
-          minHeight: 0,
-          gap: '2px',
-          backgroundColor: 'var(--border)',
-          gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
-          gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))`,
-        }}
-      >
+      {isMobile ? (
+        <div className="shrink-0 border-b border-[var(--border-row)] bg-[var(--bg-chrome)]">
+          <LayoutPicker layout={layout} onChange={onLayoutChange} variant="chips" />
+        </div>
+      ) : null}
+      <div className="min-h-0 min-w-0 flex-1" style={gridStyle}>
         {visibleCameras.map((camera) => (
           <div className="bg-[var(--bg-tile)] [&>*]:h-full" key={camera.name}>
-            {renderCard(camera)}
+            <CameraCard
+              camera={camera}
+              isFlashing={eventCamera === camera.name}
+              isPaused={paused}
+              onOpenFullscreen={onOpenFullscreen}
+              onRename={onRenameCamera}
+              onToggleTorch={onToggleTorch}
+              torchEnabled={Boolean(torchStates[camera.name])}
+            />
           </div>
         ))}
       </div>

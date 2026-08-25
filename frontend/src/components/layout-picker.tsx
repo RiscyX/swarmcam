@@ -1,4 +1,4 @@
-import { Focus, Grid2X2, Grid3X3, LayoutGrid, Square } from 'lucide-react'
+import { Grid2X2, Grid3X3, LayoutGrid } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
 import type { CameraLayout } from '@/types/camera'
@@ -11,10 +11,8 @@ type LayoutPickerProps = {
 
 const LAYOUTS: Array<{ id: CameraLayout; label: string; icon: LucideIcon; title: string }> = [
   { icon: LayoutGrid, id: 'auto', label: 'AUTO', title: 'Auto – minden kamera belefér a viewportba' },
-  { icon: Focus, id: 'spotlight', label: 'FOCUS', title: 'Focus – hero + filmsáv' },
   { icon: Grid2X2, id: '2x2', label: '2×2', title: '2×2 – első 4 kamera' },
   { icon: Grid3X3, id: '3x3', label: '3×3', title: '3×3 – első 9 kamera' },
-  { icon: Square, id: 'single', label: 'SOLO', title: 'Solo – csak a fókuszált kamera' },
 ]
 
 const baseButton =

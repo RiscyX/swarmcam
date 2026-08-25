@@ -32,7 +32,7 @@ type Alert = {
 }
 
 const LAYOUT_STORAGE_KEY = 'swarmcam.layout'
-const VALID_LAYOUTS: CameraLayout[] = ['auto', 'spotlight', '2x2', '3x3', 'single']
+const VALID_LAYOUTS: CameraLayout[] = ['auto', '2x2', '3x3']
 
 function readStoredLayout(): CameraLayout {
   try {
@@ -223,8 +223,8 @@ export function AppShell() {
         <div className="flex min-h-0 flex-1">
           <div
             className={`min-w-0 flex-1 ${
-              activeSection === 'cameras' && !isMobile ? 'overflow-hidden' : 'overflow-y-auto'
-            } ${activeSection === 'cameras' ? '' : 'p-5'}`}
+              activeSection === 'cameras' ? 'overflow-hidden' : 'overflow-y-auto p-5'
+            }`}
           >
             {pageSection}
           </div>
