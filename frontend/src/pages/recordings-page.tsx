@@ -3,10 +3,10 @@ import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/hooks/use-auth'
 import { getCameraDisplayName } from '@/lib/cameras'
-import { type EventFilters, type FrigateEvent, eventThumbnailUrl, formatDuration, formatEventTime, getRecordingEvents, recordingClipUrl } from '@/lib/events'
+import { type EventFilters, type FrigateEvent, deleteRecordingEvent, eventThumbnailUrl, formatDuration, formatEventTime, getRecordingEvents, recordingClipUrl } from '@/lib/events'
 import type { Camera } from '@/types/camera'
 
-const LABELS = ['person', 'car', 'dog', 'cat', 'bird', 'motorcycle', 'bicycle']
+const LABELS = ['person', 'car', 'dog', 'cat', 'bird', 'motorcycle', 'bicycle', 'fire', 'smoke']
 
 type RecordingsPageProps = {
   cameras: Camera[]
@@ -14,6 +14,8 @@ type RecordingsPageProps = {
 
 function ClipDialog({ event, onClose }: { event: FrigateEvent; onClose: () => void }) {
   const videoRef = useRef<HTMLVideoElement | null>(null)
+  const [videoError, setVideoError] = useState(false)
+  const [realDuration, setRealDuration] = useState<number | null>(null)
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) { if (e.key === 'Escape') onClose() }
@@ -26,13 +28,33 @@ function ClipDialog({ event, onClose }: { event: FrigateEvent; onClose: () => vo
     onClose()
   }
 
+  function handleLoadedMetadata() {
+    if (videoRef.current && Number.isFinite(videoRef.current.duration)) {
+      setRealDuration(videoRef.current.duration)
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85" onClick={handleClose}>
       <div className="relative max-h-[90vh] max-w-5xl overflow-hidden rounded border border-border" onClick={(e) => e.stopPropagation()}>
-        <video autoPlay className="block max-h-[80vh] w-auto" controls ref={videoRef} src={recordingClipUrl(event.id)} />
+        {videoError ? (
+          <div className="flex h-[300px] w-[480px] items-center justify-center text-sm text-muted-foreground">
+            No recording available for this event.
+          </div>
+        ) : (
+          <video 
+            autoPlay 
+            className="block max-h-[80vh] w-auto" 
+            controls 
+            onError={() => setVideoError(true)} 
+            onLoadedMetadata={handleLoadedMetadata}
+            ref={videoRef} 
+            src={recordingClipUrl(event.id)} 
+          />
+        )}
         <div className="flex items-center justify-between bg-zinc-900 px-4 py-2">
           <span className="font-mono text-xs text-muted-foreground">
-            {event.label} · {event.camera} · {formatEventTime(event.start_time)} · {formatDuration(event.start_time, event.end_time)}
+            {event.label} · {event.camera} · {formatEventTime(event.start_time)} · {realDuration !== null ? formatDuration(0, realDuration) : formatDuration(event.start_time, event.end_time)}
           </span>
           <div className="flex gap-2">
             <a
@@ -65,6 +87,20 @@ export function RecordingsPage({ cameras }: RecordingsPageProps) {
     try { setEvents(await getRecordingEvents(token, f)) }
     catch { setEvents([]) }
     finally { setLoading(false) }
+  }
+
+  async function handleDelete(ev: FrigateEvent, e: React.MouseEvent) {
+    e.stopPropagation()
+    if (!token) return
+    if (!window.confirm('Are you sure you want to delete this recording?')) return
+    
+    try {
+      await deleteRecordingEvent(token, ev.id)
+      setEvents((prev) => prev.filter((item) => item.id !== ev.id))
+      if (selected?.id === ev.id) setSelected(null)
+    } catch (err) {
+      window.alert('Failed to delete recording. Please try again later.')
+    }
   }
 
   useEffect(() => {
@@ -150,7 +186,16 @@ export function RecordingsPage({ cameras }: RecordingsPageProps) {
                   <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{formatEventTime(ev.start_time)}</td>
                   <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{formatDuration(ev.start_time, ev.end_time)}</td>
                   <td className="px-3 py-2 text-right">
-                    <span className="text-xs text-muted-foreground">▶</span>
+                    <div className="flex items-center justify-end gap-2">
+                      <button
+                        className="rounded px-2 py-1 text-xs text-red-500 hover:bg-red-500/10"
+                        onClick={(e) => void handleDelete(ev, e)}
+                        title="Delete recording"
+                      >
+                        Delete
+                      </button>
+                      <span className="text-xs text-muted-foreground">▶</span>
+                    </div>
                   </td>
                 </tr>
               ))}

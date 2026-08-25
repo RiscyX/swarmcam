@@ -9,7 +9,7 @@ from pydantic import BaseModel
 
 import state
 from services.frigate_config import read_yaml, write_yaml
-from settings import DISCOVERY_SCRIPT, FRIGATE_CONFIG, FRIGATE_URL, MEDIA_DIR, XM_DISCOVERY_SCRIPT
+from settings import DISCOVERY_SCRIPT, FRIGATE_CONFIG, FRIGATE_URL, MEDIA_DIR
 
 router = APIRouter()
 
@@ -110,66 +110,7 @@ async def discover_stream(req: DiscoverRequest):
         if req.update_frigate and cameras:
             try:
                 http.post(f"{FRIGATE_URL}/api/restart", timeout=5)
-                yield f"event: progress\ndata: {json.dumps('[*] Frigate újraindítása...')}\n\n"
-            except Exception as e:
-                yield f"event: progress\ndata: {json.dumps(f'[!] Frigate restart hiba: {e}')}\n\n"
-
-        yield f"event: result\ndata: {json.dumps(cameras)}\n\n"
-        yield "event: done\ndata: {}\n\n"
-
-    return StreamingResponse(event_gen(), media_type="text/event-stream")
-
-
-class XMDiscoverRequest(BaseModel):
-    subnet: str | None = None
-    timeout: float = 1.0
-    update_frigate: bool = False
-
-
-@router.post("/api/discover/xm/stream")
-async def discover_xm_stream(req: XMDiscoverRequest):
-    async def event_gen():
-        cmd = [sys.executable, str(XM_DISCOVERY_SCRIPT)]
-        if req.subnet:
-            cmd += ["--subnet", req.subnet]
-        cmd += ["--timeout", str(req.timeout)]
-        if req.update_frigate:
-            cmd.append("--update-frigate")
-
-        proc = await asyncio.create_subprocess_exec(
-            *cmd,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
-
-        async for line in proc.stderr:
-            text = line.decode().strip()
-            if text:
-                yield f"event: progress\ndata: {json.dumps(text)}\n\n"
-
-        stdout, _ = await proc.communicate()
-
-        try:
-            cameras = json.loads(stdout.decode())
-        except Exception:
-            cameras = []
-
-        # Merge XM cameras into state (don't clear existing IP Webcam cameras)
-        existing_names = {c.get("name") for c in state._last_cameras}
-        for cam in cameras:
-            if cam.get("name") not in existing_names:
-                state._last_cameras.append(cam)
-            else:
-                # Update in place
-                for i, existing in enumerate(state._last_cameras):
-                    if existing.get("name") == cam.get("name"):
-                        state._last_cameras[i] = cam
-                        break
-
-        if req.update_frigate and cameras:
-            try:
-                http.post(f"{FRIGATE_URL}/api/restart", timeout=5)
-                yield f"event: progress\ndata: {json.dumps('[*] Frigate restarting...')}\n\n"
+                yield f"event: progress\ndata: {json.dumps('[*] Restarting Frigate...')}\n\n"
             except Exception as e:
                 yield f"event: progress\ndata: {json.dumps(f'[!] Frigate restart error: {e}')}\n\n"
 

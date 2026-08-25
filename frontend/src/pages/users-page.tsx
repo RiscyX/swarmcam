@@ -74,13 +74,13 @@ export function UsersPage() {
     }
   }
 
-  if (loading) return <div className="font-mono text-xs text-muted-foreground">Betöltés...</div>
+  if (loading) return <div className="font-mono text-xs text-muted-foreground">Loading...</div>
 
   if (forbidden) return (
     <div className="grid min-h-[300px] place-items-center rounded-sm border border-dashed border-border bg-card/70 p-8 text-center">
       <div>
-        <div className="font-ui text-lg font-bold uppercase tracking-[0.14em] text-muted-foreground">Nincs jogosultság</div>
-        <p className="mt-2 font-mono text-xs text-muted-foreground">Felhasználókezelés csak adminoknak érhető el.</p>
+        <div className="font-ui text-lg font-bold uppercase tracking-[0.14em] text-muted-foreground">Access denied</div>
+        <p className="mt-2 font-mono text-xs text-muted-foreground">User management is only available to admins.</p>
       </div>
     </div>
   )
@@ -92,9 +92,9 @@ export function UsersPage() {
         <table className="w-full font-mono text-xs">
           <thead>
             <tr className="border-b border-border bg-background/60 text-left text-muted-foreground">
-              <th className="px-4 py-3 font-bold uppercase tracking-[0.12em]">Felhasználó</th>
-              <th className="px-4 py-3 font-bold uppercase tracking-[0.12em]">Szerepkör</th>
-              <th className="px-4 py-3 font-bold uppercase tracking-[0.12em]">Műveletek</th>
+              <th className="px-4 py-3 font-bold uppercase tracking-[0.12em]">User</th>
+              <th className="px-4 py-3 font-bold uppercase tracking-[0.12em]">Role</th>
+              <th className="px-4 py-3 font-bold uppercase tracking-[0.12em]">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -103,7 +103,7 @@ export function UsersPage() {
                 <td className="px-4 py-3 font-bold text-foreground">
                   {u.username}
                   {u.username === currentUser?.username ? (
-                    <span className="ml-2 text-muted-foreground">(te)</span>
+                    <span className="ml-2 text-muted-foreground">(you)</span>
                   ) : null}
                 </td>
                 <td className="px-4 py-3">
@@ -114,7 +114,7 @@ export function UsersPage() {
                 <td className="px-4 py-3">
                   <div className="flex gap-2">
                     <Button onClick={() => { setPwTarget(u.username); setNewPw('') }} size="sm" variant="outline">
-                      Jelszó
+                      Password
                     </Button>
                     <Button
                       className="text-swarm-red hover:border-swarm-red/40"
@@ -123,7 +123,7 @@ export function UsersPage() {
                       size="sm"
                       variant="outline"
                     >
-                      Törlés
+                      Delete
                     </Button>
                   </div>
                 </td>
@@ -135,18 +135,18 @@ export function UsersPage() {
 
       {/* Create user */}
       <div className="rounded-sm border border-border bg-card p-4">
-        <div className="mb-3 font-ui text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">Új felhasználó</div>
+        <div className="mb-3 font-ui text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">New user</div>
         <div className="flex flex-wrap gap-2">
           <input
             className="rounded-sm border border-border bg-background px-3 py-1.5 font-mono text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-swarm-amber"
             onChange={(e) => setNewUsername(e.target.value)}
-            placeholder="Felhasználónév"
+            placeholder="Username"
             value={newUsername}
           />
           <input
             className="rounded-sm border border-border bg-background px-3 py-1.5 font-mono text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-swarm-amber"
             onChange={(e) => setNewPassword(e.target.value)}
-            placeholder="Jelszó"
+            placeholder="Password"
             type="password"
             value={newPassword}
           />
@@ -159,7 +159,7 @@ export function UsersPage() {
             <option value="admin">admin</option>
           </select>
           <Button disabled={busy || !newUsername.trim() || !newPassword} onClick={() => void handleCreate()} size="sm" variant="default">
-            Létrehozás
+            Create
           </Button>
         </div>
       </div>
@@ -168,19 +168,19 @@ export function UsersPage() {
       {pwTarget ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
           <div className="rounded-sm border border-border bg-card p-6">
-            <div className="mb-3 font-ui font-bold uppercase tracking-[0.12em]">Jelszó módosítása: {pwTarget}</div>
+            <div className="mb-3 font-ui font-bold uppercase tracking-[0.12em]">Change password: {pwTarget}</div>
             <input
               autoFocus
               className="w-full rounded-sm border border-border bg-background px-3 py-2 font-mono text-sm focus:outline-none focus:ring-1 focus:ring-swarm-amber"
               onChange={(e) => setNewPw(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') void handleChangePw() }}
-              placeholder="Új jelszó"
+              placeholder="New password"
               type="password"
               value={newPw}
             />
             <div className="mt-3 flex justify-end gap-2">
-              <Button disabled={busy || !newPw} onClick={() => void handleChangePw()} size="sm" variant="default">Mentés</Button>
-              <Button onClick={() => setPwTarget(null)} size="sm" variant="outline">Mégse</Button>
+              <Button disabled={busy || !newPw} onClick={() => void handleChangePw()} size="sm" variant="default">Save</Button>
+              <Button onClick={() => setPwTarget(null)} size="sm" variant="outline">Cancel</Button>
             </div>
           </div>
         </div>
@@ -190,10 +190,10 @@ export function UsersPage() {
       {confirmDelete ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
           <div className="rounded-sm border border-border bg-card p-6 text-center">
-            <p className="font-mono text-sm text-foreground">Biztosan törlöd: <strong>{confirmDelete}</strong>?</p>
+            <p className="font-mono text-sm text-foreground">Are you sure you want to delete: <strong>{confirmDelete}</strong>?</p>
             <div className="mt-4 flex justify-center gap-3">
-              <Button disabled={busy} onClick={() => void handleDelete(confirmDelete)} variant="destructive">Törlés</Button>
-              <Button onClick={() => setConfirmDelete(null)} variant="outline">Mégse</Button>
+              <Button disabled={busy} onClick={() => void handleDelete(confirmDelete)} variant="destructive">Delete</Button>
+              <Button onClick={() => setConfirmDelete(null)} variant="outline">Cancel</Button>
             </div>
           </div>
         </div>

@@ -28,10 +28,7 @@ export function cameraStreamUrl(name: string) {
 
 export type CameraSettingsPayload = {
   orientation?: string | null
-  quality?: number | null
   video_size?: string | null
-  night_vision?: string | null
-  video_fps?: number | null
   mirror_flip?: string | null
   ffc?: string | null
 }

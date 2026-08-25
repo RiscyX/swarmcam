@@ -14,6 +14,8 @@ const labelColors: Record<string, string> = {
   car: 'text-swarm-amber border-swarm-amber/40',
   dog: 'text-swarm-amber border-swarm-amber/40',
   cat: 'text-swarm-amber border-swarm-amber/40',
+  fire: 'text-red-400 border-red-400/40',
+  smoke: 'text-slate-400 border-slate-400/40',
 }
 
 function relativeTime(ts: number): string {
@@ -47,7 +49,7 @@ export function EventFeedPanel({ cameras, events, onClear }: EventFeedPanelProps
       <div className="flex-1 overflow-y-auto">
         {events.length === 0 ? (
           <div className="grid h-full place-items-center px-4 text-center">
-            <p className="font-mono text-[10px] text-muted-foreground">Várakozás Frigate eseményekre...</p>
+            <p className="font-mono text-[10px] text-muted-foreground">Waiting for Frigate events...</p>
           </div>
         ) : (
           <ul className="divide-y divide-border">
