@@ -33,20 +33,18 @@ function PulseDot({
   size = 6,
   speed = 2.4,
   animated = true,
+  style,
   ...props
 }: PulseDotProps) {
   return (
     <span
       className={cn(pulseDotVariants({ tone }), className)}
-      style={
-        animated
-          ? {
-              width: size,
-              height: size,
-              animation: `swarmPulse ${speed}s ease-in-out infinite`,
-            }
-          : { width: size, height: size }
-      }
+      style={{
+        width: size,
+        height: size,
+        ...(animated ? { animation: `swarmPulse ${speed}s ease-in-out infinite` } : null),
+        ...style,
+      }}
       {...props}
     />
   )
