@@ -12,7 +12,8 @@
     --bg-tile: #0c0c0c;
     --bg-input: #0e0e0e;
 
-    /* a shadcn --border (lentebb, HSL) viseli a #2b2b2b strukturális színt */
+    /* az issue szerinti strukturális elválasztó */
+    --border: #2b2b2b;
     --border-row: #232323;
     --border-raised: #3a3a3a;
 
@@ -21,8 +22,7 @@
     --fg-muted: #8a8785;
     --fg-dim: #5f5c5a;
 
-    /* az issue --accent nevét a shadcn --accent (lentebb, HSL) viseli (#ec3013) */
-    --palette-accent: #ec3013;
+    --accent: #ec3013;
     --accent-hover: #ff563c;
     --accent-soft: #ff8a75;
     --danger-bg: #170d0b;
@@ -38,7 +38,9 @@
     --status-admin: #ff8a75;
     --status-admin-bg: #22100c;
 
-    /* ── shadcn tokenek — az új paletta HSL-hármasai ── */
+    /* ── shadcn tokenek — az új paletta HSL-hármasai ──
+       (a tailwind.config.ts hivatkozik rájuk; a neveket --ui-* előtaggal
+        választottuk el az issue #41 nyers hex tokenjeitől) */
     --background: 0 0% 5%;        /* #0e0e0e */
     --foreground: 0 0% 95%;       /* #f3f2f2 */
     --card: 0 0% 9%;              /* #161616 */
@@ -49,11 +51,11 @@
     --secondary-foreground: 0 0% 79%; /* #c9c6c4 */
     --muted: 0 0% 11%;            /* #1d1d1d */
     --muted-foreground: 0 0% 54%; /* #8a8785 */
-    --accent: 9 85% 50%;          /* #ec3013 */
-    --accent-foreground: 0 0% 100%;
+    --ui-accent: 9 85% 50%;       /* #ec3013 */
+    --ui-accent-foreground: 0 0% 100%;
     --destructive: 0 84% 60%;     /* #ef4444 */
     --destructive-foreground: 0 0% 100%;
-    --border: 0 0% 17%;           /* #2b2b2b */
+    --ui-border: 0 0% 17%;        /* #2b2b2b */
     --input: 0 0% 17%;            /* #2b2b2b */
     --ring: 9 85% 50%;            /* #ec3013 */
     --radius: 0;
