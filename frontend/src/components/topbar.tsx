@@ -1,5 +1,6 @@
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { LayoutPicker } from '@/components/layout-picker'
 import { useAuth } from '@/hooks/use-auth'
 import { sectionLabels, type SectionId } from '@/lib/sections'
 import type { CameraLayout } from '@/types/camera'
@@ -16,12 +17,6 @@ type TopbarProps = {
   onCameraLayoutChange: (layout: CameraLayout) => void
   onToggleEventFeed: () => void
 }
-
-const cameraLayouts: Array<{ id: CameraLayout; label: string }> = [
-  { id: '1x1', label: '1' },
-  { id: '2x2', label: '2' },
-  { id: '1plus3', label: '3' },
-]
 
 export function Topbar({
   activeSection,
@@ -48,18 +43,8 @@ export function Topbar({
 
       <div className="flex flex-1 items-center justify-end gap-2">
         {activeSection === 'cameras' ? (
-          <div className="hidden items-center gap-0.5 rounded-sm border border-[var(--border)] bg-[var(--bg-app)] p-0.5 sm:flex">
-            {cameraLayouts.map((layout) => (
-              <Button
-                key={layout.id}
-                onClick={() => onCameraLayoutChange(layout.id)}
-                size="sm"
-                variant={cameraLayout === layout.id ? 'default' : 'ghost'}
-                className="h-6 w-6 p-0 text-xs"
-              >
-                {layout.label}
-              </Button>
-            ))}
+          <div className="hidden sm:block">
+            <LayoutPicker layout={cameraLayout} onChange={onCameraLayoutChange} />
           </div>
         ) : null}
         <Badge className="hidden font-mono text-xs sm:inline-flex" variant="secondary">

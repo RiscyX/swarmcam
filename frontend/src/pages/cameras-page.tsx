@@ -1,8 +1,10 @@
 import { CameraOff } from 'lucide-react'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 
 import { CameraCard } from '@/components/camera-card'
+import { LayoutPicker } from '@/components/layout-picker'
 import { Button } from '@/components/ui/button'
+import { useBreakpoint } from '@/hooks/use-breakpoint'
 import { useKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts'
 import type { Camera, CameraLayout } from '@/types/camera'
 
@@ -21,13 +23,6 @@ type CamerasPageProps = {
   torchStates: Record<string, boolean>
 }
 
-const layoutClasses: Record<CameraLayout, string> = {
-  auto: 'grid-cols-[repeat(auto-fill,minmax(380px,1fr))]',
-  '1x1': 'mx-auto max-w-5xl grid-cols-1',
-  '2x2': 'grid-cols-1 lg:grid-cols-2',
-  '1plus3': 'grid-cols-1 lg:grid-cols-[2fr_1fr] lg:[&>*:first-child]:row-span-2',
-}
-
 export function CamerasPage({
   cameras,
   error,
@@ -42,13 +37,44 @@ export function CamerasPage({
   paused,
   torchStates,
 }: CamerasPageProps) {
+  const breakpoint = useBreakpoint()
+  const isMobile = breakpoint === 'mobile'
+
   const [shortcuts] = useState(() => ({
-    '1': () => onLayoutChange('1x1'),
+    '1': () => onLayoutChange('single'),
     '2': () => onLayoutChange('2x2'),
-    '3': () => onLayoutChange('1plus3'),
+    '3': () => onLayoutChange('3x3'),
   }))
 
   useKeyboardShortcuts(shortcuts)
+
+  // A spotlight (FOCUS) megjelenítése a #46 feladata; addig auto-ként viselkedik.
+  const effectiveLayout: CameraLayout = layout === 'spotlight' ? 'auto' : layout
+
+  const visibleCameras = useMemo(() => {
+    if (isMobile) return cameras
+    if (effectiveLayout === '2x2') return cameras.slice(0, 4)
+    if (effectiveLayout === '3x3') return cameras.slice(0, 9)
+    if (effectiveLayout === 'single') {
+      const focused = cameras.find((camera) => camera.name === eventCamera) ?? cameras[0]
+      return focused ? [focused] : []
+    }
+    return cameras
+  }, [cameras, effectiveLayout, eventCamera, isMobile])
+
+  const cols =
+    effectiveLayout === 'single'
+      ? 1
+      : effectiveLayout === '2x2'
+        ? 2
+        : effectiveLayout === '3x3'
+          ? breakpoint === 'tablet'
+            ? 2
+            : 3
+          : breakpoint === 'tablet'
+            ? 2
+            : Math.ceil(Math.sqrt(Math.max(visibleCameras.length, 1)))
+  const rows = Math.max(1, Math.ceil(visibleCameras.length / cols))
 
   if (isLoading) {
     return <div className="p-6 text-sm text-muted-foreground">Loading cameras...</div>
@@ -75,21 +101,55 @@ export function CamerasPage({
     )
   }
 
-  return (
-    <div className={`grid gap-px bg-border ${layoutClasses[layout]}`}>
-      {cameras.map((camera) => (
-        <div className="bg-background" key={camera.name}>
-          <CameraCard
-            camera={camera}
-            isFlashing={eventCamera === camera.name}
-            isPaused={paused}
-            onOpenFullscreen={onOpenFullscreen}
-            onRename={onRenameCamera}
-            onToggleTorch={onToggleTorch}
-            torchEnabled={Boolean(torchStates[camera.name])}
-          />
+  const renderCard = (camera: Camera) => (
+    <CameraCard
+      camera={camera}
+      isFlashing={eventCamera === camera.name}
+      isPaused={paused}
+      onOpenFullscreen={onOpenFullscreen}
+      onRename={onRenameCamera}
+      onToggleTorch={onToggleTorch}
+      torchEnabled={Boolean(torchStates[camera.name])}
+    />
+  )
+
+  if (isMobile) {
+    return (
+      <div>
+        <div className="sticky top-0 z-10 shrink-0 border-b border-[var(--border-row)] bg-[var(--bg-chrome)]">
+          <LayoutPicker layout={layout} onChange={onLayoutChange} variant="chips" />
         </div>
-      ))}
+        <div className="flex flex-col gap-px bg-[var(--border)]">
+          {visibleCameras.map((camera) => (
+            <div className="aspect-video bg-[var(--bg-tile)] [&>*]:h-full" key={camera.name}>
+              {renderCard(camera)}
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex h-full min-h-0 flex-col">
+      <div
+        className="min-h-0 min-w-0"
+        style={{
+          display: 'grid',
+          flex: 1,
+          minHeight: 0,
+          gap: '2px',
+          backgroundColor: 'var(--border)',
+          gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
+          gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))`,
+        }}
+      >
+        {visibleCameras.map((camera) => (
+          <div className="bg-[var(--bg-tile)] [&>*]:h-full" key={camera.name}>
+            {renderCard(camera)}
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
