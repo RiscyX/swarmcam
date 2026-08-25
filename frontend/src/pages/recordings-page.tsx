@@ -1,210 +1,294 @@
 import { useEffect, useRef, useState } from 'react'
+import { Film } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
+import { Dialog } from '@/components/ui/dialog'
+import { EmptyState } from '@/components/ui/empty-state'
+import { Label } from '@/components/ui/label'
+import { Select } from '@/components/ui/select'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useAuth } from '@/hooks/use-auth'
 import { getCameraDisplayName } from '@/lib/cameras'
-import { type EventFilters, type FrigateEvent, deleteRecordingEvent, eventThumbnailUrl, formatDuration, formatEventTime, getRecordingEvents, recordingClipUrl } from '@/lib/events'
+import { type FrigateEvent, deleteRecordingEvent, formatDuration, formatEventTime, getRecordingEvents, recordingClipUrl } from '@/lib/events'
 import type { Camera } from '@/types/camera'
-
-const LABELS = ['person', 'car', 'dog', 'cat', 'bird', 'motorcycle', 'bicycle', 'fire', 'smoke']
 
 type RecordingsPageProps = {
   cameras: Camera[]
 }
 
-function ClipDialog({ event, onClose }: { event: FrigateEvent; onClose: () => void }) {
-  const videoRef = useRef<HTMLVideoElement | null>(null)
-  const [videoError, setVideoError] = useState(false)
-  const [realDuration, setRealDuration] = useState<number | null>(null)
+const RANGES = [
+  { value: 'today', label: 'Today' },
+  { value: '7d', label: 'Last 7 days' },
+  { value: '30d', label: 'Last 30 days' },
+]
 
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) { if (e.key === 'Escape') onClose() }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
-
-  function handleClose() {
-    if (videoRef.current) { videoRef.current.pause(); videoRef.current.src = '' }
-    onClose()
+function rangeAfter(range: string): number | undefined {
+  if (range === 'today') {
+    const start = new Date()
+    start.setHours(0, 0, 0, 0)
+    return Math.floor(start.getTime() / 1000)
   }
+  if (range === '7d') return Math.floor(Date.now() / 1000) - 7 * 86400
+  if (range === '30d') return Math.floor(Date.now() / 1000) - 30 * 86400
+  return undefined
+}
 
-  function handleLoadedMetadata() {
-    if (videoRef.current && Number.isFinite(videoRef.current.duration)) {
-      setRealDuration(videoRef.current.duration)
-    }
-  }
+function formatTimeOnly(ts: number): string {
+  return new Date(ts * 1000).toLocaleTimeString('hu-HU', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+}
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85" onClick={handleClose}>
-      <div className="relative max-h-[90vh] max-w-5xl overflow-hidden rounded border border-border" onClick={(e) => e.stopPropagation()}>
-        {videoError ? (
-          <div className="flex h-[300px] w-[480px] items-center justify-center text-sm text-muted-foreground">
-            No recording available for this event.
-          </div>
-        ) : (
-          <video 
-            autoPlay 
-            className="block max-h-[80vh] w-auto" 
-            controls 
-            onError={() => setVideoError(true)} 
-            onLoadedMetadata={handleLoadedMetadata}
-            ref={videoRef} 
-            src={recordingClipUrl(event.id)} 
-          />
-        )}
-        <div className="flex items-center justify-between bg-zinc-900 px-4 py-2">
-          <span className="font-mono text-xs text-muted-foreground">
-            {event.label} · {event.camera} · {formatEventTime(event.start_time)} · {realDuration !== null ? formatDuration(0, realDuration) : formatDuration(event.start_time, event.end_time)}
-          </span>
-          <div className="flex gap-2">
-            <a
-              className="inline-flex h-7 items-center rounded border border-border px-3 font-mono text-xs text-foreground hover:bg-white/5"
-              download
-              href={recordingClipUrl(event.id)}
-              onClick={(e) => e.stopPropagation()}
-            >
-              Download
-            </a>
-            <Button onClick={handleClose} size="sm" variant="outline">Close</Button>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
+function downloadClip(eventId: string) {
+  const anchor = document.createElement('a')
+  anchor.href = recordingClipUrl(eventId)
+  anchor.download = ''
+  document.body.appendChild(anchor)
+  anchor.click()
+  anchor.remove()
 }
 
 export function RecordingsPage({ cameras }: RecordingsPageProps) {
   const { token } = useAuth()
-  const [filters, setFilters] = useState<EventFilters>({ limit: 50 })
+  const [camera, setCamera] = useState('')
+  const [range, setRange] = useState('today')
   const [events, setEvents] = useState<FrigateEvent[]>([])
   const [loading, setLoading] = useState(false)
   const [selected, setSelected] = useState<FrigateEvent | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<FrigateEvent | null>(null)
+  const [videoError, setVideoError] = useState(false)
+  const [realDuration, setRealDuration] = useState<number | null>(null)
+  const videoRef = useRef<HTMLVideoElement | null>(null)
   const didLoad = useRef(false)
 
-  async function load(f: EventFilters = filters) {
+  async function load() {
     if (!token) return
     setLoading(true)
-    try { setEvents(await getRecordingEvents(token, f)) }
-    catch { setEvents([]) }
-    finally { setLoading(false) }
+    try {
+      const filters = { limit: 50, after: rangeAfter(range), ...(camera ? { camera } : {}) }
+      setEvents(await getRecordingEvents(token, filters))
+    } catch {
+      setEvents([])
+    } finally {
+      setLoading(false)
+    }
   }
 
-  async function handleDelete(ev: FrigateEvent, e: React.MouseEvent) {
-    e.stopPropagation()
-    if (!token) return
-    if (!window.confirm('Are you sure you want to delete this recording?')) return
-    
+  function openPlayer(ev: FrigateEvent) {
+    setVideoError(false)
+    setRealDuration(null)
+    setSelected(ev)
+  }
+
+  function closePlayer() {
+    if (videoRef.current) {
+      videoRef.current.pause()
+      videoRef.current.src = ''
+    }
+    setSelected(null)
+  }
+
+  async function confirmDelete() {
+    if (!token || !deleteTarget) return
     try {
-      await deleteRecordingEvent(token, ev.id)
-      setEvents((prev) => prev.filter((item) => item.id !== ev.id))
-      if (selected?.id === ev.id) setSelected(null)
-    } catch (err) {
+      await deleteRecordingEvent(token, deleteTarget.id)
+      setEvents((prev) => prev.filter((item) => item.id !== deleteTarget.id))
+      if (selected?.id === deleteTarget.id) closePlayer()
+      setDeleteTarget(null)
+    } catch {
       window.alert('Failed to delete recording. Please try again later.')
     }
   }
 
   useEffect(() => {
-    if (!didLoad.current) { didLoad.current = true; void load() }
+    if (!didLoad.current) {
+      didLoad.current = true
+      void load()
+    }
   })
-
-  function setFilter(key: keyof EventFilters, value: string) {
-    setFilters((f) => ({ ...f, [key]: value || undefined }))
-  }
 
   function getCamDisplay(name: string) {
     const cam = cameras.find((c) => c.name === name)
     return cam ? getCameraDisplayName(cam) : name
   }
 
+  function clipLength(ev: FrigateEvent) {
+    return realDuration !== null && selected?.id === ev.id ? formatDuration(0, realDuration) : formatDuration(ev.start_time, ev.end_time)
+  }
+
   return (
     <div className="flex flex-col gap-3">
       {/* Filter bar */}
-      <div className="flex flex-wrap items-center gap-2 border-b border-border pb-3">
-        <select
-          className="h-8 rounded border border-border bg-card px-2 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-          onChange={(e) => setFilter('camera', e.target.value)}
-          value={filters.camera ?? ''}
-        >
-          <option value="">All cameras</option>
-          {cameras.map((c) => <option key={c.name} value={c.name}>{getCameraDisplayName(c)}</option>)}
-        </select>
-        <select
-          className="h-8 rounded border border-border bg-card px-2 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-          onChange={(e) => setFilter('label', e.target.value)}
-          value={filters.label ?? ''}
-        >
-          <option value="">All objects</option>
-          {LABELS.map((l) => <option key={l} value={l}>{l}</option>)}
-        </select>
-        <select
-          className="h-8 rounded border border-border bg-card px-2 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-          onChange={(e) => setFilters((f) => ({ ...f, limit: Number(e.target.value) }))}
-          value={filters.limit ?? 50}
-        >
-          {[25, 50, 100, 200].map((n) => <option key={n} value={n}>{n} results</option>)}
-        </select>
-        <Button className="h-8" disabled={loading} onClick={() => void load()} size="sm">
+      <div className="flex flex-wrap items-end gap-3 border-b border-[var(--border)] pb-3">
+        <div className="w-full sm:w-52">
+          <Label htmlFor="recordings-camera">Camera</Label>
+          <Select id="recordings-camera" onChange={(e) => setCamera(e.target.value)} value={camera}>
+            <option value="">All cameras</option>
+            {cameras.map((c) => (
+              <option key={c.name} value={c.name}>{getCameraDisplayName(c)}</option>
+            ))}
+          </Select>
+        </div>
+        <div className="w-full sm:w-48">
+          <Label htmlFor="recordings-range">Range</Label>
+          <Select id="recordings-range" onChange={(e) => setRange(e.target.value)} value={range}>
+            {RANGES.map((r) => (
+              <option key={r.value} value={r.value}>{r.label}</option>
+            ))}
+          </Select>
+        </div>
+        <Button disabled={loading} onClick={() => void load()}>
           {loading ? 'Loading...' : 'Search'}
         </Button>
-        {loading && <span className="text-xs text-muted-foreground">Loading...</span>}
       </div>
 
-      {/* Table */}
-      {!loading && events.length === 0 ? (
-        <div className="flex min-h-[300px] items-center justify-center">
-          <p className="text-sm text-muted-foreground">No recordings found.</p>
+      {/* Content */}
+      {loading ? (
+        <div className="flex flex-col gap-2">
+          {Array.from({ length: 5 }, (_, i) => (
+            <Skeleton className="h-14 w-full" key={i} />
+          ))}
         </div>
+      ) : events.length === 0 ? (
+        <EmptyState
+          description="Adjust the camera or range filters and search again."
+          icon={<Film className="h-8 w-8" />}
+          title="No recordings found"
+        />
       ) : (
-        <div className="overflow-hidden rounded border border-border">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border bg-card text-left text-xs text-muted-foreground">
-                <th className="w-[100px] px-3 py-2.5 font-medium">Clip</th>
-                <th className="px-3 py-2.5 font-medium">Camera</th>
-                <th className="px-3 py-2.5 font-medium">Object</th>
-                <th className="px-3 py-2.5 font-medium">Time</th>
-                <th className="px-3 py-2.5 font-medium">Duration</th>
-                <th className="w-8 px-3 py-2.5" />
-              </tr>
-            </thead>
-            <tbody>
-              {events.map((ev) => (
-                <tr
-                  className="cursor-pointer border-b border-border/50 last:border-0 transition-colors hover:bg-white/[0.03]"
-                  key={ev.id}
-                  onClick={() => setSelected(ev)}
-                >
-                  <td className="px-3 py-2">
-                    <div className="h-12 w-[85px] overflow-hidden rounded bg-black">
-                      <img alt={ev.label} className="h-full w-full object-cover" src={eventThumbnailUrl(ev.id)} />
-                    </div>
-                  </td>
-                  <td className="px-3 py-2 text-sm text-foreground">{getCamDisplay(ev.camera)}</td>
-                  <td className="px-3 py-2">
-                    <span className="rounded border border-border px-1.5 py-0.5 font-mono text-xs text-muted-foreground">{ev.label}</span>
-                  </td>
-                  <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{formatEventTime(ev.start_time)}</td>
-                  <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{formatDuration(ev.start_time, ev.end_time)}</td>
-                  <td className="px-3 py-2 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <button
-                        className="rounded px-2 py-1 text-xs text-red-500 hover:bg-red-500/10"
-                        onClick={(e) => void handleDelete(ev, e)}
-                        title="Delete recording"
+        <>
+          {/* Desktop — table */}
+          <div className="overflow-hidden rounded-sm border border-[var(--border)]">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Camera</TableHead>
+                  <TableHead>Started</TableHead>
+                  <TableHead>Length</TableHead>
+                  <TableHead>Size</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {events.map((ev) => (
+                  <TableRow className="cursor-pointer" key={ev.id} onClick={() => openPlayer(ev)}>
+                    <TableCell>{getCamDisplay(ev.camera)}</TableCell>
+                    <TableCell variant="mono">{formatEventTime(ev.start_time)}</TableCell>
+                    <TableCell variant="mono">{formatDuration(ev.start_time, ev.end_time)}</TableCell>
+                    <TableCell variant="mono">—</TableCell>
+                    <TableCell variant="actions">
+                      <Button onClick={(e) => { e.stopPropagation(); openPlayer(ev) }} size="sm" variant="outline">
+                        Play
+                      </Button>
+                      <Button asChild size="sm" variant="outline">
+                        <a download href={recordingClipUrl(ev.id)} onClick={(e) => e.stopPropagation()}>
+                          Download
+                        </a>
+                      </Button>
+                      <Button
+                        onClick={(e) => { e.stopPropagation(); setDeleteTarget(ev) }}
+                        size="sm"
+                        variant="destructive"
                       >
                         Delete
-                      </button>
-                      <span className="text-xs text-muted-foreground">▶</span>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Mobile — cards */}
+          <div className="flex flex-col gap-3 md:hidden">
+            {events.map((ev) => (
+              <div className="overflow-hidden rounded-sm border border-[var(--border-row)] bg-[var(--bg-surface)]" key={ev.id}>
+                <div className="flex items-center justify-between gap-2 border-b border-[var(--border-row)] px-3 py-2.5">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <span aria-hidden="true" className="h-2 w-2 shrink-0 rounded-full bg-[var(--status-live)]" />
+                    <span className="truncate text-sm font-bold text-[var(--fg)]">{getCamDisplay(ev.camera)}</span>
+                  </div>
+                  <span className="shrink-0 font-mono text-xs text-[var(--fg-muted)]">{formatDuration(ev.start_time, ev.end_time)}</span>
+                </div>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2 px-3 py-2.5">
+                  <div>
+                    <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--fg-muted)]">Start</div>
+                    <div className="font-mono text-xs text-[var(--fg-secondary)]">{formatTimeOnly(ev.start_time)}</div>
+                  </div>
+                  <div>
+                    <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--fg-muted)]">Size</div>
+                    <div className="font-mono text-xs text-[var(--fg-secondary)]">—</div>
+                  </div>
+                </div>
+                <div className="px-3 pb-3">
+                  <Button className="w-full" onClick={() => openPlayer(ev)}>
+                    Play
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
       )}
 
-      {selected ? <ClipDialog event={selected} onClose={() => setSelected(null)} /> : null}
+      {/* Player dialog */}
+      <Dialog
+        cancelLabel="Close"
+        confirmLabel="Download"
+        onClose={closePlayer}
+        onConfirm={() => selected && downloadClip(selected.id)}
+        open={selected !== null}
+        title={selected ? getCamDisplay(selected.camera) : 'Recording'}
+      >
+        {selected ? (
+          <>
+            <div className="-mx-5 -mt-4">
+              {videoError ? (
+                <div className="flex aspect-video w-full items-center justify-center bg-black px-6 text-center font-mono text-xs text-[var(--fg-muted)]">
+                  No recording available for this event.
+                </div>
+              ) : (
+                <video
+                  autoPlay
+                  className="block aspect-video w-full bg-black"
+                  controls
+                  onError={() => setVideoError(true)}
+                  onLoadedMetadata={() => {
+                    if (videoRef.current && Number.isFinite(videoRef.current.duration)) {
+                      setRealDuration(videoRef.current.duration)
+                    }
+                  }}
+                  ref={videoRef}
+                  src={recordingClipUrl(selected.id)}
+                />
+              )}
+            </div>
+            <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 font-mono text-xs text-[var(--fg-muted)]">
+              <span>START {formatEventTime(selected.start_time)}</span>
+              <span>LENGTH {clipLength(selected)}</span>
+              <span>SIZE —</span>
+            </div>
+          </>
+        ) : null}
+      </Dialog>
+
+      {/* Delete confirmation */}
+      <Dialog
+        confirmLabel="Delete"
+        description={deleteTarget ? `${getCamDisplay(deleteTarget.camera)} · ${formatEventTime(deleteTarget.start_time)}` : undefined}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={() => void confirmDelete()}
+        open={deleteTarget !== null}
+        title="Delete recording"
+        variant="destructive"
+      >
+        {deleteTarget ? (
+          <p className="text-sm text-[var(--fg-secondary)]">
+            This permanently removes the recording from <span className="font-bold text-[var(--fg)]">{getCamDisplay(deleteTarget.camera)}</span> started
+            at <span className="font-mono text-[var(--fg)]">{formatEventTime(deleteTarget.start_time)}</span> (size{' '}
+            <span className="font-mono text-[var(--fg)]">—</span>). This action cannot be undone.
+          </p>
+        ) : null}
+      </Dialog>
     </div>
   )
 }
