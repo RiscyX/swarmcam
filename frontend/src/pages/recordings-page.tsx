@@ -55,6 +55,7 @@ export function RecordingsPage({ cameras }: RecordingsPageProps) {
   const [loading, setLoading] = useState(false)
   const [selected, setSelected] = useState<FrigateEvent | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<FrigateEvent | null>(null)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
   const [videoError, setVideoError] = useState(false)
   const [realDuration, setRealDuration] = useState<number | null>(null)
   const videoRef = useRef<HTMLVideoElement | null>(null)
@@ -89,13 +90,14 @@ export function RecordingsPage({ cameras }: RecordingsPageProps) {
 
   async function confirmDelete() {
     if (!token || !deleteTarget) return
+    setDeleteError(null)
     try {
       await deleteRecordingEvent(token, deleteTarget.id)
       setEvents((prev) => prev.filter((item) => item.id !== deleteTarget.id))
       if (selected?.id === deleteTarget.id) closePlayer()
       setDeleteTarget(null)
     } catch {
-      window.alert('Failed to delete recording. Please try again later.')
+      setDeleteError('Failed to delete recording. Please try again later.')
     }
   }
 
@@ -275,18 +277,28 @@ export function RecordingsPage({ cameras }: RecordingsPageProps) {
       <Dialog
         confirmLabel="Delete"
         description={deleteTarget ? `${getCamDisplay(deleteTarget.camera)} · ${formatEventTime(deleteTarget.start_time)}` : undefined}
-        onClose={() => setDeleteTarget(null)}
+        onClose={() => {
+          setDeleteError(null)
+          setDeleteTarget(null)
+        }}
         onConfirm={() => void confirmDelete()}
         open={deleteTarget !== null}
         title="Delete recording"
         variant="destructive"
       >
         {deleteTarget ? (
-          <p className="text-sm text-[var(--fg-secondary)]">
-            This permanently removes the recording from <span className="font-bold text-[var(--fg)]">{getCamDisplay(deleteTarget.camera)}</span> started
-            at <span className="font-mono text-[var(--fg)]">{formatEventTime(deleteTarget.start_time)}</span> (size{' '}
-            <span className="font-mono text-[var(--fg)]">—</span>). This action cannot be undone.
-          </p>
+          <>
+            <p className="text-sm text-[var(--fg-secondary)]">
+              This permanently removes the recording from <span className="font-bold text-[var(--fg)]">{getCamDisplay(deleteTarget.camera)}</span> started
+              at <span className="font-mono text-[var(--fg)]">{formatEventTime(deleteTarget.start_time)}</span> (size{' '}
+              <span className="font-mono text-[var(--fg)]">—</span>). This action cannot be undone.
+            </p>
+            {deleteError ? (
+              <p className="mt-3 font-mono text-xs text-[var(--status-error)]" role="alert">
+                {deleteError}
+              </p>
+            ) : null}
+          </>
         ) : null}
       </Dialog>
     </div>
