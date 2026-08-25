@@ -131,11 +131,6 @@ export function AppShell() {
     }
   }
 
-  function handleGoLive() {
-    const focused = cameras.find((camera) => camera.name === lastEventCamera) ?? cameras[0]
-    if (focused) setFullscreenCamera(focused)
-  }
-
   const pageSection =
     activeSection === 'cameras' ? (
       <CamerasPage
@@ -239,12 +234,7 @@ export function AppShell() {
       </main>
       {isMobile ? (
         <>
-          <MobileTabBar
-            activeSection={activeSection}
-            canGoLive={cameras.length > 0}
-            onGoLive={handleGoLive}
-            onSectionChange={setActiveSection}
-          />
+          <MobileTabBar activeSection={activeSection} onSectionChange={setActiveSection} />
         </>
       ) : null}
       {toasts}
