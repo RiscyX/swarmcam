@@ -62,3 +62,9 @@ export function setCameraAlias(token: string, name: string, alias: string) {
 export function getCameraDisplayName(camera: Camera) {
   return camera.display_name || camera.name.replace('cam_', '').replace(/_/g, '.')
 }
+
+export function batteryLevelColor(level: number) {
+  if (level <= 20) return 'var(--status-error)'
+  if (level <= 40) return 'var(--status-idle)'
+  return 'var(--status-live)'
+}
