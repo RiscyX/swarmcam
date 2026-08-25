@@ -4,24 +4,67 @@
 
 @layer base {
   :root {
-    --background: 0 0% 6%;
-    --foreground: 0 0% 88%;
-    --card: 0 0% 10%;
-    --card-foreground: 0 0% 88%;
-    --primary: 214 100% 60%;
+    /* ── Modernist sötét paletta (#41) — nyers hex strukturális/status tokenek ── */
+    --bg-canvas: #0a0a0a;
+    --bg-app: #0e0e0e;
+    --bg-chrome: #111111;
+    --bg-surface: #161616;
+    --bg-tile: #0c0c0c;
+    --bg-input: #0e0e0e;
+
+    /* a shadcn --border (lentebb, HSL) viseli a #2b2b2b strukturális színt */
+    --border-row: #232323;
+    --border-raised: #3a3a3a;
+
+    --fg: #f3f2f2;
+    --fg-secondary: #c9c6c4;
+    --fg-muted: #8a8785;
+    --fg-dim: #5f5c5a;
+
+    /* az issue --accent nevét a shadcn --accent (lentebb, HSL) viseli (#ec3013) */
+    --palette-accent: #ec3013;
+    --accent-hover: #ff563c;
+    --accent-soft: #ff8a75;
+    --danger-bg: #170d0b;
+    --danger-border: #4a1a12;
+
+    --status-live: #22c55e;
+    --status-live-bg: #0f2a17;
+    --status-idle: #f59e0b;
+    --status-idle-bg: #2a1f08;
+    --status-offline: #5f5c5a;
+    --status-offline-bg: #1d1d1d;
+    --status-error: #ef4444;
+    --status-admin: #ff8a75;
+    --status-admin-bg: #22100c;
+
+    /* ── shadcn tokenek — az új paletta HSL-hármasai ── */
+    --background: 0 0% 5%;        /* #0e0e0e */
+    --foreground: 0 0% 95%;       /* #f3f2f2 */
+    --card: 0 0% 9%;              /* #161616 */
+    --card-foreground: 0 0% 95%;  /* #f3f2f2 */
+    --primary: 9 85% 50%;         /* #ec3013 */
     --primary-foreground: 0 0% 100%;
-    --secondary: 0 0% 14%;
-    --secondary-foreground: 0 0% 70%;
-    --muted: 0 0% 16%;
-    --muted-foreground: 0 0% 44%;
-    --accent: 214 100% 60%;
+    --secondary: 0 0% 7%;         /* #111111 */
+    --secondary-foreground: 0 0% 79%; /* #c9c6c4 */
+    --muted: 0 0% 11%;            /* #1d1d1d */
+    --muted-foreground: 0 0% 54%; /* #8a8785 */
+    --accent: 9 85% 50%;          /* #ec3013 */
     --accent-foreground: 0 0% 100%;
-    --destructive: 0 72% 51%;
+    --destructive: 0 84% 60%;     /* #ef4444 */
     --destructive-foreground: 0 0% 100%;
-    --border: 0 0% 18%;
-    --input: 0 0% 18%;
-    --ring: 214 100% 60%;
-    --radius: 0.375rem;
+    --border: 0 0% 17%;           /* #2b2b2b */
+    --input: 0 0% 17%;            /* #2b2b2b */
+    --ring: 9 85% 50%;            /* #ec3013 */
+    --radius: 0;
+
+    /* ── Tailwind swarm-* kulcsok — HSL-hármasok, opacity modifierhez ── */
+    --swarm-green: 142 71% 45%;   /* #22c55e */
+    --swarm-red: 0 84% 60%;       /* #ef4444 */
+    --swarm-amber: 38 92% 50%;    /* #f59e0b */
+    --swarm-blue: 9 85% 50%;      /* #ec3013 — accent, nincs többé kék */
+    --swarm-panel: 0 0% 7%;       /* #111111 */
+    --swarm-surface: 0 0% 9%;     /* #161616 */
   }
 
   * {
@@ -38,5 +81,15 @@
     @apply bg-background text-foreground font-ui antialiased;
     font-synthesis: none;
     text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-weight: 800;
+    letter-spacing: -0.015em;
   }
 }
