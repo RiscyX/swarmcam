@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { createPortal } from 'react-dom'
-import { Activity, Bell, Camera, Clapperboard, HeartPulse, Menu, Video } from 'lucide-react'
+import { Activity, Bell, Camera, Clapperboard, HeartPulse, Menu, Radar } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 import { sectionLabels, type SectionId } from '@/lib/sections'
@@ -51,8 +51,6 @@ export function MobileHeader({ cameraCount, camerasUp, liveEventCount, showEvent
 
 type MobileTabBarProps = {
   activeSection: SectionId
-  canGoLive: boolean
-  onGoLive: () => void
   onSectionChange: (section: SectionId) => void
 }
 
@@ -61,9 +59,14 @@ const tabs: Array<{ id: SectionId | 'more'; label: string; icon: typeof Camera }
   { id: 'events', label: 'Events', icon: Activity },
   { id: 'recordings', label: 'Recs', icon: Clapperboard },
   { id: 'health', label: 'Health', icon: HeartPulse },
+  { id: 'discovery', label: 'Scan', icon: Radar },
 ]
 
-export function MobileTabBar({ activeSection, canGoLive, onGoLive, onSectionChange }: MobileTabBarProps) {
+const tabSectionIds = new Set(
+  tabs.flatMap((tab) => (tab.id === 'more' ? [] : [tab.id as SectionId])),
+)
+
+export function MobileTabBar({ activeSection, onSectionChange }: MobileTabBarProps) {
   const [moreOpen, setMoreOpen] = React.useState(false)
 
   const renderTab = (tab: { id: SectionId | 'more'; label: string; icon: typeof Camera }) => {
@@ -94,22 +97,7 @@ export function MobileTabBar({ activeSection, canGoLive, onGoLive, onSectionChan
         aria-label="Main navigation"
         className="flex h-[66px] shrink-0 items-stretch border-t border-[var(--border)] bg-[var(--bg-app)] pb-[env(safe-area-inset-bottom)]"
       >
-        {renderTab(tabs[0])}
-        {renderTab(tabs[1])}
-        <div className="flex items-center justify-center px-1">
-          <button
-            aria-label="Open focused camera fullscreen"
-            className="flex h-11 w-[76px] shrink-0 flex-col items-center justify-center gap-0.5 bg-[var(--accent)] text-white transition-colors hover:bg-[var(--accent-hover)] disabled:pointer-events-none disabled:opacity-40"
-            disabled={!canGoLive}
-            onClick={onGoLive}
-            type="button"
-          >
-            <Video className="h-5 w-5 shrink-0" />
-            <span className="font-mono text-[10px] font-bold uppercase tracking-wide">Live</span>
-          </button>
-        </div>
-        {renderTab(tabs[2])}
-        {renderTab(tabs[3])}
+        {tabs.map(renderTab)}
         {renderTab({ id: 'more', label: 'More', icon: Menu })}
       </nav>
       <MoreDrawer activeSection={activeSection} onClose={() => setMoreOpen(false)} onSectionChange={onSectionChange} open={moreOpen} />
@@ -193,7 +181,9 @@ function MoreDrawer({ activeSection, open, onClose, onSectionChange }: MoreDrawe
           Sections
         </h2>
         <div className="min-h-0 flex-1 overflow-y-auto py-1">
-          {(Object.keys(sectionLabels) as SectionId[]).map((id) => {
+          {(Object.keys(sectionLabels) as SectionId[])
+            .filter((id) => !tabSectionIds.has(id))
+            .map((id) => {
             const active = activeSection === id
             return (
               <button
