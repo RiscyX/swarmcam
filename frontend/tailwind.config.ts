@@ -7,7 +7,7 @@ const config = {
   theme: {
     extend: {
       colors: {
-        border: 'hsl(var(--border))',
+        border: 'hsl(var(--ui-border))',
         input: 'hsl(var(--input))',
         ring: 'hsl(var(--ring))',
         background: 'hsl(var(--background))',
@@ -29,29 +29,29 @@ const config = {
           foreground: 'hsl(var(--muted-foreground))',
         },
         accent: {
-          DEFAULT: 'hsl(var(--accent))',
-          foreground: 'hsl(var(--accent-foreground))',
+          DEFAULT: 'hsl(var(--ui-accent))',
+          foreground: 'hsl(var(--ui-accent-foreground))',
         },
         card: {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))',
         },
         swarm: {
-          green: '#22c55e',
-          red: '#ef4444',
-          amber: '#f59e0b',
-          blue: '#3b82f6',
-          panel: '#141414',
-          surface: '#1a1a1a',
+          green: 'hsl(var(--swarm-green) / <alpha-value>)',
+          red: 'hsl(var(--swarm-red) / <alpha-value>)',
+          amber: 'hsl(var(--swarm-amber) / <alpha-value>)',
+          blue: 'hsl(var(--swarm-blue) / <alpha-value>)',
+          panel: 'hsl(var(--swarm-panel) / <alpha-value>)',
+          surface: 'hsl(var(--swarm-surface) / <alpha-value>)',
         },
       },
       borderRadius: {
         lg: 'var(--radius)',
-        md: 'calc(var(--radius) - 2px)',
-        sm: 'calc(var(--radius) - 4px)',
+        md: 'var(--radius)',
+        sm: 'var(--radius)',
       },
       fontFamily: {
-        ui: ['Inter', 'system-ui', 'sans-serif'],
+        ui: ['Archivo', 'system-ui', 'sans-serif'],
         mono: ['IBM Plex Mono', 'monospace'],
       },
     },
