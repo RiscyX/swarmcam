@@ -5,6 +5,7 @@ import { FullscreenView } from '@/components/fullscreen-view'
 import { LoginOverlay } from '@/components/login-overlay'
 import { Sidebar } from '@/components/sidebar'
 import { Topbar } from '@/components/topbar'
+import { Toast, ToastContainer } from '@/components/ui/toast'
 import { useAuth } from '@/hooks/use-auth'
 import { useCameras } from '@/hooks/use-cameras'
 import { useCameraSocket } from '@/hooks/use-camera-socket'
@@ -119,17 +120,11 @@ export function AppShell() {
           onToggleEventFeed={() => setShowEventFeed((v) => !v)}
         />
         {alerts.length ? (
-          <div className="fixed right-5 top-16 z-30 grid gap-2">
+          <ToastContainer>
             {alerts.map((alert) => (
-              <div
-                className="cursor-pointer rounded border border-swarm-red/40 bg-card px-4 py-3 font-mono text-xs text-swarm-red shadow-lg transition-opacity hover:opacity-80"
-                key={alert.id}
-                onClick={() => dismissAlert(alert.id)}
-              >
-                {alert.message}
-              </div>
+              <Toast key={alert.id} onDismiss={() => dismissAlert(alert.id)} title={alert.message} variant="error" />
             ))}
-          </div>
+          </ToastContainer>
         ) : null}
         <div className="flex min-h-0 flex-1">
           <div className={`flex-1 overflow-y-auto ${activeSection === 'cameras' ? '' : 'p-5'}`}>
