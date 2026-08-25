@@ -31,10 +31,23 @@ type Alert = {
   message: string
 }
 
+const LAYOUT_STORAGE_KEY = 'swarmcam.layout'
+const VALID_LAYOUTS: CameraLayout[] = ['auto', '2x2', '3x3']
+
+function readStoredLayout(): CameraLayout {
+  try {
+    const stored = localStorage.getItem(LAYOUT_STORAGE_KEY)
+    if (stored && (VALID_LAYOUTS as string[]).includes(stored)) return stored as CameraLayout
+  } catch {
+    // localStorage elérhetetlen (privát mód, letiltott sütik) — marad az alapértelmezett
+  }
+  return 'auto'
+}
+
 export function AppShell() {
   const { isAuthenticated, token } = useAuth()
   const [activeSection, setActiveSection] = useState<SectionId>('cameras')
-  const [cameraLayout, setCameraLayout] = useState<CameraLayout>('auto')
+  const [cameraLayout, setCameraLayout] = useState<CameraLayout>(readStoredLayout)
   const [fullscreenCamera, setFullscreenCamera] = useState<Camera | null>(null)
   const [lastEventCamera, setLastEventCamera] = useState<string | null>(null)
   const [liveEvents, setLiveEvents] = useState<FrigateLiveEvent[]>([])
@@ -55,6 +68,15 @@ export function AppShell() {
 
   const dismissAlert = useCallback((id: string) => {
     setAlerts((current) => current.filter((a) => a.id !== id))
+  }, [])
+
+  const handleLayoutChange = useCallback((next: CameraLayout) => {
+    setCameraLayout(next)
+    try {
+      localStorage.setItem(LAYOUT_STORAGE_KEY, next)
+    } catch {
+      // localStorage írás sikertelen — a layout csak addig él, amíg az oldal meg van nyitva
+    }
   }, [])
 
   const handleEvent = useCallback((event: FrigateLiveEvent) => {
@@ -122,7 +144,7 @@ export function AppShell() {
         eventCamera={lastEventCamera}
         isLoading={isLoading}
         layout={cameraLayout}
-        onLayoutChange={setCameraLayout}
+        onLayoutChange={handleLayoutChange}
         onOpenFullscreen={setFullscreenCamera}
         onRenameCamera={handleRenameCamera}
         onReload={reload}
@@ -194,12 +216,16 @@ export function AppShell() {
             liveEventCount={liveEvents.length}
             showEventFeed={showEventFeed}
             socketStatus={socketStatus}
-            onCameraLayoutChange={setCameraLayout}
+            onCameraLayoutChange={handleLayoutChange}
             onToggleEventFeed={() => setShowEventFeed((v) => !v)}
           />
         ) : null}
         <div className="flex min-h-0 flex-1">
-          <div className={`min-w-0 flex-1 overflow-y-auto ${activeSection === 'cameras' ? '' : 'p-5'}`}>
+          <div
+            className={`min-w-0 flex-1 ${
+              activeSection === 'cameras' ? 'overflow-hidden' : 'overflow-y-auto p-5'
+            }`}
+          >
             {pageSection}
           </div>
           {showEventFeed && activeSection === 'cameras' ? (

@@ -75,7 +75,7 @@ export function CameraCard({ camera, isFlashing, isPaused, onOpenFullscreen, onR
 
   return (
     <div
-      className={`group relative aspect-video cursor-pointer overflow-hidden bg-black ${isOnline ? '' : 'opacity-40'} ${
+      className={`group relative cursor-pointer overflow-hidden bg-black ${isOnline ? '' : 'opacity-40'} ${
         isFlashing ? 'ring-2 ring-inset ring-swarm-blue' : ''
       }`}
       onClick={() => onOpenFullscreen(camera)}
