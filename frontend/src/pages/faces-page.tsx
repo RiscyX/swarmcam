@@ -24,7 +24,6 @@ export function FacesPage() {
       setFaces(
         Object.entries(data)
           .map(([name, v]) => ({ name, files: Array.isArray(v) ? v : (v.files ?? []) }))
-          .filter((f) => f.files.length > 0)
       )
       setDisabled(false)
     } catch (e) {
