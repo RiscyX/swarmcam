@@ -1,34 +1,66 @@
-import { useEffect, useState, type Dispatch, type FormEvent, type SetStateAction } from 'react'
+import { useEffect, useRef, useState, type Dispatch, type FormEvent, type SetStateAction } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { PulseDot } from '@/components/ui/pulse-dot'
 import { useAuth } from '@/hooks/use-auth'
 import { startDiscoveryStream } from '@/hooks/use-discovery-stream'
 import { clearRecordings, getNetworks, resetCameras, type NetworkInfo } from '@/lib/discovery'
 import type { Camera } from '@/types/camera'
 
-type LogLine = { message: string; kind: 'found' | 'warn' | 'normal' }
+type LogLine = { message: string; kind: 'live' | 'idle' | 'cmd' | 'muted' }
 
 type DiscoveryPageProps = {
   onCamerasFound: Dispatch<SetStateAction<Camera[]>>
 }
 
+const LINE_COLORS: Record<LogLine['kind'], string> = {
+  live: 'text-[var(--status-live)]',
+  idle: 'text-[var(--status-idle)]',
+  cmd: 'text-[var(--fg)]',
+  muted: 'text-[var(--fg-muted)]',
+}
+
 function classifyLine(msg: string): LogLine['kind'] {
-  if (msg.startsWith('[+]')) return 'found'
-  if (msg.startsWith('[!]')) return 'warn'
-  return 'normal'
+  if (msg.startsWith('[ok]') || msg.startsWith('[+]')) return 'live'
+  if (msg.startsWith('[warn]') || msg.startsWith('[!]') || msg.startsWith('[skip]')) return 'idle'
+  if (msg.startsWith('$')) return 'cmd'
+  return 'muted'
 }
 
 export function DiscoveryPage({ onCamerasFound }: DiscoveryPageProps) {
   const { token } = useAuth()
-  const [networks, setNetworks]       = useState<NetworkInfo[]>([])
-  const [subnet, setSubnet]           = useState('')
-  const [port, setPort]               = useState(8080)
-  const [timeout, setTimeoutValue]    = useState(1)
+  const [networks, setNetworks]         = useState<NetworkInfo[]>([])
+  const [subnet, setSubnet]             = useState('')
+  const [port, setPort]                 = useState(8080)
+  const [timeout, setTimeoutValue]      = useState(1)
   const [updateFrigate, setUpdateFrigate] = useState(false)
-  const [logLines, setLogLines]       = useState<LogLine[]>([])
-  const [isScanning, setIsScanning]   = useState(false)
-  const [status, setStatus]           = useState('')
+  const [logLines, setLogLines]         = useState<LogLine[]>([])
+  const [isScanning, setIsScanning]     = useState(false)
+  const [status, setStatus]             = useState('')
+
+  const logRef = useRef<HTMLDivElement>(null)
+  const lineCountRef = useRef(0)
+  const abortRef = useRef<AbortController | null>(null)
+  const unmountedRef = useRef(false)
+
+  useEffect(() => {
+    return () => {
+      unmountedRef.current = true
+      abortRef.current?.abort()
+    }
+  }, [])
+
+  useEffect(() => {
+    const el = logRef.current
+    if (!el || logLines.length === lineCountRef.current) return
+    lineCountRef.current = logLines.length
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight
+    if (distanceFromBottom < 40) {
+      el.scrollTop = el.scrollHeight
+    }
+  }, [logLines])
 
   useEffect(() => {
     if (!token) return
@@ -47,12 +79,18 @@ export function DiscoveryPage({ onCamerasFound }: DiscoveryPageProps) {
   async function handleScan(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!token) return
+    if (isScanning) {
+      abortRef.current?.abort()
+      return
+    }
+    abortRef.current = new AbortController()
     setIsScanning(true)
     setStatus('')
     setLogLines([])
     try {
       await startDiscoveryStream({
         token,
+        signal: abortRef.current.signal,
         body: { port, timeout, update_frigate: updateFrigate, ...(subnet ? { subnet } : {}) },
         onEvent: (e) => {
           if (e.type === 'progress') appendLog(e.message)
@@ -61,8 +99,15 @@ export function DiscoveryPage({ onCamerasFound }: DiscoveryPageProps) {
         },
       })
     } catch (err) {
-      setStatus(err instanceof Error ? err.message : 'Discovery error')
+      if (unmountedRef.current) return
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        setStatus('Scan stopped')
+      } else {
+        setStatus(err instanceof Error ? err.message : 'Discovery error')
+      }
       setIsScanning(false)
+    } finally {
+      abortRef.current = null
     }
   }
 
@@ -80,88 +125,124 @@ export function DiscoveryPage({ onCamerasFound }: DiscoveryPageProps) {
   }
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[340px_1fr]">
-      {/* Left column */}
-      <div className="flex flex-col gap-3">
-
-        {/* IP Webcam scan */}
-        <div className="rounded border border-border bg-card p-4">
-          <div className="mb-1 text-sm font-medium text-foreground">IP Webcam Scan</div>
-          <div className="mb-3 text-xs text-muted-foreground">Android phones running IP Webcam APK</div>
-          <form className="space-y-3" onSubmit={handleScan}>
-            <label className="block space-y-1.5">
-              <span className="text-xs text-muted-foreground">Network</span>
-              <Input
-                className="font-mono text-xs"
-                list="network-suggestions"
-                onChange={(e) => setSubnet(e.target.value)}
-                placeholder="auto-detect (e.g. 192.168.0.0/24)"
-                value={subnet}
-              />
-              <datalist id="network-suggestions">
-                {networks.map((n) => (
-                  <option key={n.subnet} value={n.subnet}>{n.iface} – {n.ip}</option>
-                ))}
-              </datalist>
-            </label>
-            <div className="grid grid-cols-2 gap-3">
-              <label className="block space-y-1.5">
-                <span className="text-xs text-muted-foreground">Port</span>
-                <Input min={1} onChange={(e) => setPort(Number(e.target.value))} type="number" value={port} />
-              </label>
-              <label className="block space-y-1.5">
-                <span className="text-xs text-muted-foreground">Timeout (s)</span>
-                <Input min={0.5} onChange={(e) => setTimeoutValue(Number(e.target.value))} step={0.5} type="number" value={timeout} />
-              </label>
-            </div>
-            <label className="flex items-center gap-2 text-xs text-muted-foreground">
-              <input checked={updateFrigate} onChange={(e) => setUpdateFrigate(e.target.checked)} type="checkbox" />
-              Update Frigate config
-            </label>
-            <Button className="w-full" disabled={isScanning} type="submit">
-              {isScanning ? 'Scanning...' : 'Scan Network'}
-            </Button>
-          </form>
+    <div className="grid items-start gap-4 lg:grid-cols-[340px_minmax(0,1fr)] lg:items-stretch">
+      {/* Scan panel */}
+      <form className="flex flex-col gap-4 self-start rounded-sm border border-[var(--border-raised)] bg-[var(--bg-surface)] p-4" onSubmit={handleScan}>
+        <div className="font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--fg-secondary)]">
+          Scan Parameters
         </div>
 
-        {/* Management */}
-        <div className="rounded border border-border bg-card p-4">
-          <div className="mb-3 text-sm font-medium text-foreground">Management</div>
-          <div className="flex flex-col gap-2">
-            <Button disabled={isScanning} onClick={handleReset} size="sm" variant="outline">Reset Cameras</Button>
-            <Button disabled={isScanning} onClick={handleClearRecordings} size="sm" variant="destructive">Delete Recordings</Button>
-            {status ? <div className="text-xs text-muted-foreground">{status}</div> : null}
+        <div>
+          <Label htmlFor="discovery-subnet">Subnet</Label>
+          <Input
+            className="h-11 font-mono text-xs"
+            id="discovery-subnet"
+            list="network-suggestions"
+            onChange={(e) => setSubnet(e.target.value)}
+            placeholder="auto-detect (e.g. 192.168.0.0/24)"
+            value={subnet}
+          />
+          <datalist id="network-suggestions">
+            {networks.map((n) => (
+              <option key={n.subnet} value={n.subnet}>{n.iface} – {n.ip}</option>
+            ))}
+          </datalist>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <Label htmlFor="discovery-port">Port</Label>
+            <Input
+              className="h-11"
+              id="discovery-port"
+              min={1}
+              onChange={(e) => setPort(Number(e.target.value))}
+              type="number"
+              value={port}
+            />
+          </div>
+          <div>
+            <Label htmlFor="discovery-timeout">Timeout (s)</Label>
+            <Input
+              className="h-11"
+              id="discovery-timeout"
+              min={0.5}
+              onChange={(e) => setTimeoutValue(Number(e.target.value))}
+              step={0.5}
+              type="number"
+              value={timeout}
+            />
           </div>
         </div>
-      </div>
 
-      {/* Log panel */}
-      <div className="rounded border border-border bg-card p-4">
-        <div className="mb-3 flex items-center justify-between">
-          <span className="text-sm font-medium text-foreground">Discovery Log</span>
-          {isScanning && (
-            <span className="font-mono text-xs text-swarm-blue">scanning...</span>
-          )}
+        <label className="flex cursor-pointer items-center gap-2 text-xs text-[var(--fg-muted)]">
+          <input
+            checked={updateFrigate}
+            className="accent-[var(--accent)]"
+            onChange={(e) => setUpdateFrigate(e.target.checked)}
+            type="checkbox"
+          />
+          Update Frigate config
+        </label>
+
+        <Button
+          className={
+            isScanning
+              ? 'h-12 w-full border border-[var(--accent)] bg-transparent text-[var(--accent)] hover:bg-[color-mix(in_srgb,var(--accent)_15%,transparent)]'
+              : 'h-12 w-full'
+          }
+          type="submit"
+        >
+          {isScanning ? 'Stop Scan' : 'Start Scan'}
+        </Button>
+
+        <p className="text-xs leading-5 text-[var(--fg-muted)]">
+          Runs discovery.py on the host machine and streams its stderr here over SSE.
+        </p>
+
+        <div className="mt-auto flex flex-col gap-2 border-t border-[var(--border-row)] pt-3">
+          <div className="font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--fg-dim)]">
+            Maintenance
+          </div>
+          <div className="flex gap-2">
+            <Button disabled={isScanning} onClick={handleReset} size="sm" type="button" variant="outline">
+              Reset Cameras
+            </Button>
+            <Button disabled={isScanning} onClick={handleClearRecordings} size="sm" type="button" variant="destructive">
+              Delete Recordings
+            </Button>
+          </div>
+          {status ? <div className="text-xs text-[var(--fg-muted)]">{status}</div> : null}
         </div>
-        <div className="min-h-[420px] overflow-y-auto rounded border border-border bg-background p-3 font-mono text-xs leading-6">
+      </form>
+
+      {/* Live log */}
+      <section className="flex min-h-[420px] flex-col overflow-hidden rounded-sm border border-[var(--border-raised)] bg-[var(--bg-canvas)] lg:min-h-[420px]">
+        <header className="flex shrink-0 items-center justify-between border-b border-[var(--border-row)] px-4 py-3">
+          <div className="flex items-center gap-2.5">
+            <PulseDot animated={isScanning} speed={1.2} tone={isScanning ? 'live' : 'offline'} />
+            <span className="font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--fg-secondary)]">
+              Live Log
+            </span>
+          </div>
+          <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--fg-dim)]">
+            {logLines.length} lines
+          </span>
+        </header>
+        <div ref={logRef} className="min-h-0 flex-1 overflow-y-auto p-3 font-mono text-xs leading-5">
           {logLines.length ? (
             logLines.map((line, i) => (
-              <div
-                className={
-                  line.kind === 'found' ? 'text-swarm-green' :
-                  line.kind === 'warn'  ? 'text-swarm-red'   :
-                  'text-muted-foreground'
-                }
-                key={`${line.message}-${i}`}
-              >
+              <div className={LINE_COLORS[line.kind]} key={`${line.message}-${i}`}>
                 {line.message}
               </div>
             ))
           ) : (
-            <div className="text-center text-muted-foreground">No active scan</div>
+            <div className="flex h-full items-center justify-center font-mono text-xs text-[var(--fg-dim)]">
+              No active scan — press Start Scan
+            </div>
           )}
         </div>
-      </div>
+      </section>
     </div>
   )
 }
