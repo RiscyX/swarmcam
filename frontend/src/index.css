@@ -40,3 +40,12 @@
     text-rendering: optimizeLegibility;
   }
 }
+
+@keyframes swarmShimmer {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 300px 0;
+  }
+}
