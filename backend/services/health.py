@@ -48,7 +48,7 @@ async def health_loop() -> None:
                     prev = _prev_charging.get(ip)
                     if prev is not None and prev != now_charging:
                         label = cam["name"].replace("cam_", "").replace("_", ".")
-                        msg = f"{label} {'csatlakozott a töltőre' if now_charging else 'lecsatlakozott a töltésről'}!"
+                        msg = f"{label} {'connected to charger' if now_charging else 'disconnected from charger'}!"
                         await broadcast(json.dumps({"type": "alert", "message": msg}))
                     _prev_charging[ip] = now_charging
                 else:

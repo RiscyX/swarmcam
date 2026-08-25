@@ -31,8 +31,8 @@ export function PlaceholderPage({ section, title }: PlaceholderPageProps) {
               </div>
               <h1 className="font-ui text-4xl font-black uppercase tracking-[0.18em] text-swarm-amber">SwarmCam</h1>
               <p className="mt-3 font-mono text-xs leading-6 text-muted-foreground">
-                Az app shell és az auth réteg elkészült. A következő körökben ez a placeholder kapja meg a valós
-                kamera, health, discovery és settings funkciókat.
+                The app shell and auth layer are ready. In the next iterations, this placeholder will receive the real
+                camera, health, discovery, and settings functions.
               </p>
             </div>
           </div>

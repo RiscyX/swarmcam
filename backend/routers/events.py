@@ -1,9 +1,12 @@
 from typing import Optional
+import os
 
+import asyncio
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import Response
+from fastapi.responses import Response, FileResponse, StreamingResponse
 
-from services.frigate_client import frigate_get
+from services.frigate_client import frigate_get, frigate_get_stream
+from routers.fire_utils import get_fire_events_db, get_fire_event_db, SNAPSHOT_DIR
 
 router = APIRouter()
 
@@ -43,6 +46,17 @@ async def get_events(
         raise HTTPException(503, "Frigate unavailable")
 
 
+@router.get("/api/fire-events")
+async def get_fire_events(
+    camera: Optional[str] = None,
+    label: Optional[str] = None,
+    limit: int = 100,
+):
+    try:
+        return get_fire_events_db(camera=camera, label=label, limit=limit)
+    except Exception as e:
+        raise HTTPException(500, f"Database error: {e}")
+
 @router.get("/api/events/stats")
 async def get_event_stats(camera: Optional[str] = None, days: int = 7):
     import asyncio
@@ -61,6 +75,13 @@ async def get_event_stats(camera: Optional[str] = None, days: int = 7):
 
 @router.get("/api/events/{event_id}/thumbnail")
 async def get_event_thumbnail(event_id: str):
+    fire_event = get_fire_event_db(event_id)
+    if fire_event:
+        file_path = os.path.join(SNAPSHOT_DIR, f"{event_id}.jpg")
+        if os.path.exists(file_path):
+            return FileResponse(file_path, media_type="image/jpeg")
+        return Response(content=_PLACEHOLDER_GIF, media_type="image/gif", status_code=200)
+
     try:
         r = await frigate_get(f"/api/events/{event_id}/snapshot.jpg")
         if r.status_code == 200:
@@ -68,3 +89,11 @@ async def get_event_thumbnail(event_id: str):
     except Exception:
         pass
     return Response(content=_PLACEHOLDER_GIF, media_type="image/gif", status_code=200)
+
+@router.get("/api/fire-events/{event_id}/snapshot")
+async def get_fire_event_snapshot(event_id: str):
+    file_path = os.path.join(SNAPSHOT_DIR, f"{event_id}.jpg")
+    if os.path.exists(file_path):
+        return FileResponse(file_path, media_type="image/jpeg")
+    return Response(content=_PLACEHOLDER_GIF, media_type="image/gif", status_code=200)
+

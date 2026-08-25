@@ -43,6 +43,8 @@ services:
     - ./docker-compose.yml:/swarmcam/docker/docker-compose.yml:ro
     - ./media:/swarmcam/docker/media
     - ../backend/aliases.json:/swarmcam/backend/aliases.json
+    - ../backend/fire_events.db:/swarmcam/backend/fire_events.db
+    - ../backend/fire_snapshots:/swarmcam/backend/fire_snapshots
     environment:
       FRIGATE_URL: http://localhost:5000
       MQTT_HOST: localhost
@@ -56,6 +58,22 @@ services:
     network_mode: host
     depends_on:
     - backend
+  fire-detector:
+    container_name: swarmcam-fire-detector
+    build:
+      context: ../fire-detector
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ../fire-detector/models:/app/models
+    environment:
+      MQTT_HOST: localhost
+      BACKEND_URL: http://localhost:8000
+      SCAN_INTERVAL: "5"
+      CONFIDENCE: "0.5"
+    depends_on:
+      - backend
+      - mosquitto
 volumes:
   frigate_db: null
 networks:

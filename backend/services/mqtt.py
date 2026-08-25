@@ -1,12 +1,51 @@
 import asyncio
 import json
 import sys
+import sqlite3
+import time
+import uuid
+import os
+import base64
 
 import aiomqtt
 from fastapi import WebSocket
 
 import state
 from settings import MQTT_HOST, MQTT_PORT
+
+DB_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "fire_events.db")
+SNAPSHOT_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "fire_snapshots")
+os.makedirs(SNAPSHOT_DIR, exist_ok=True)
+
+def init_db():
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS fire_events (
+                id TEXT PRIMARY KEY,
+                camera TEXT,
+                label TEXT,
+                score REAL,
+                timestamp REAL
+            )
+        ''')
+init_db()
+
+def save_fire_event(camera: str, label: str, score: float) -> dict:
+    event_id = uuid.uuid4().hex
+    ts = time.time()
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.execute(
+            "INSERT INTO fire_events (id, camera, label, score, timestamp) VALUES (?, ?, ?, ?, ?)",
+            (event_id, camera, label, score, ts)
+        )
+    return {
+        "id": event_id,
+        "camera": camera,
+        "label": label,
+        "score": score,
+        "timestamp": ts,
+        "type": "fire_event"
+    }
 
 
 async def broadcast(msg: str) -> None:
@@ -25,18 +64,55 @@ async def mqtt_loop() -> None:
             async with aiomqtt.Client(hostname=MQTT_HOST, port=MQTT_PORT) as client:
                 print(f"[MQTT] Connected to {MQTT_HOST}:{MQTT_PORT}", file=sys.stderr)
                 await client.subscribe("frigate/events")
+                await client.subscribe("swarmcam/fire/#")
                 async for message in client.messages:
                     try:
                         payload = json.loads(message.payload)
-                        after = payload.get("after", {})
-                        event = json.dumps({
-                            "type":   "frigate_event",
-                            "camera": after.get("camera"),
-                            "label":  after.get("label"),
-                            "score":  round(after.get("score") or 0.0, 2),
-                            "id":     after.get("id"),
-                        })
-                        await broadcast(event)
+                        topic = str(message.topic)
+                        if topic == "frigate/events":
+                            after = payload.get("after", {})
+                            event = json.dumps({
+                                "type":   "frigate_event",
+                                "camera": after.get("camera"),
+                                "label":  after.get("label"),
+                                "score":  round(after.get("score") or 0.0, 2),
+                                "id":     after.get("id"),
+                            })
+                            await broadcast(event)
+                        elif topic.startswith("swarmcam/fire/"):
+                            camera = payload.get("camera", "unknown")
+                            label = payload.get("label", "unknown")
+                            try:
+                                score = float(payload.get("score", 0.0))
+                            except (TypeError, ValueError):
+                                score = 0.0
+
+                            event = save_fire_event(camera, label, score)
+                            event_id = event["id"]
+
+                            image_b64 = payload.get("image")
+                            if image_b64:
+                                try:
+                                    image_data = base64.b64decode(image_b64)
+                                    with open(os.path.join(SNAPSHOT_DIR, f"{event_id}.jpg"), "wb") as f:
+                                        f.write(image_data)
+                                except Exception as e:
+                                    print(f"[MQTT] Failed to save fire snapshot for {event_id}: {e}", file=sys.stderr)
+
+                            alert_msg = json.dumps({
+                                "type": "alert",
+                                "message": f"🔥 Fire/smoke detected: {camera} ({score:.0%})"
+                            })
+                            await broadcast(alert_msg)
+
+                            event_msg = json.dumps({
+                                "type": "frigate_event",
+                                "camera": camera,
+                                "label": label,
+                                "score": score,
+                                "id": None
+                            })
+                            await broadcast(event_msg)
                     except Exception:
                         pass
         except aiomqtt.MqttError as e:
