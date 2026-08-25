@@ -148,7 +148,15 @@ export function AppShell() {
         torchStates={torchStates}
       />
     ) : activeSection === 'health' ? (
-      <HealthPage cameras={cameras} isLoading={isLoading} />
+      <HealthPage
+        cameras={cameras}
+        isLoading={isLoading}
+        onOpenStream={(camera) => {
+          setActiveSection('cameras')
+          setFullscreenCamera(camera)
+        }}
+        onReload={reload}
+      />
     ) : activeSection === 'discovery' ? (
       <DiscoveryPage onCamerasFound={setCameras} />
     ) : activeSection === 'camera-settings' ? (
