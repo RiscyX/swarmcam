@@ -59,6 +59,7 @@ export function EventsPage({ cameras }: EventsPageProps) {
   const [selected, setSelected] = useState<UIEvent | null>(null)
   const [pendingDelete, setPendingDelete] = useState<UIEvent | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
   const didLoad = useRef(false)
 
   async function load(f: EventFilters = filters) {
@@ -103,13 +104,14 @@ export function EventsPage({ cameras }: EventsPageProps) {
   async function handleDelete() {
     if (!token || !pendingDelete || deleting) return
     setDeleting(true)
+    setDeleteError(null)
     try {
       await deleteRecordingEvent(token, pendingDelete.id)
       setPendingDelete(null)
       setSelected(null)
       await load()
     }
-    catch { setPendingDelete(null) }
+    catch { setDeleteError('Delete failed. The event could not be removed from Frigate — check the connection and try again.') }
     finally { setDeleting(false) }
   }
 
@@ -282,17 +284,24 @@ export function EventsPage({ cameras }: EventsPageProps) {
         cancelLabel="Cancel"
         confirmLabel={deleting ? 'Deleting…' : 'Delete'}
         description="The snapshot AND the clip will be permanently deleted from Frigate. This cannot be undone."
-        onClose={() => setPendingDelete(null)}
+        onClose={() => { setPendingDelete(null); setDeleteError(null) }}
         onConfirm={() => void handleDelete()}
         open={Boolean(pendingDelete)}
         title="Delete event"
         variant="destructive"
       >
         {pendingDelete ? (
-          <p className="text-sm text-[var(--fg-secondary)]">
-            {pendingDelete.label} · {getCamDisplay(pendingDelete.camera)} ·{' '}
-            <span className="font-mono text-xs text-[var(--fg-muted)]">{formatEventTime(pendingDelete.start_time)}</span>
-          </p>
+          <>
+            <p className="text-sm text-[var(--fg-secondary)]">
+              {pendingDelete.label} · {getCamDisplay(pendingDelete.camera)} ·{' '}
+              <span className="font-mono text-xs text-[var(--fg-muted)]">{formatEventTime(pendingDelete.start_time)}</span>
+            </p>
+            {deleteError ? (
+              <p className="mt-3 font-mono text-xs text-[var(--status-error)]" role="alert">
+                {deleteError}
+              </p>
+            ) : null}
+          </>
         ) : null}
       </Dialog>
     </div>
