@@ -3,10 +3,12 @@ import { useCallback, useState } from 'react'
 import { EventFeedPanel } from '@/components/event-feed-panel'
 import { FullscreenView } from '@/components/fullscreen-view'
 import { LoginOverlay } from '@/components/login-overlay'
+import { MobileHeader, MobileTabBar } from '@/components/mobile-nav'
 import { Sidebar } from '@/components/sidebar'
 import { Topbar } from '@/components/topbar'
 import { Toast, ToastContainer } from '@/components/ui/toast'
 import { useAuth } from '@/hooks/use-auth'
+import { useBreakpoint } from '@/hooks/use-breakpoint'
 import { useCameras } from '@/hooks/use-cameras'
 import { useCameraSocket } from '@/hooks/use-camera-socket'
 import { setCameraTorch } from '@/lib/cameras'
@@ -40,6 +42,8 @@ export function AppShell() {
   const [alerts, setAlerts] = useState<Alert[]>([])
   const [torchStates, setTorchStates] = useState<Record<string, boolean>>({})
   const { cameras, error, isLoading, reload, setCameras } = useCameras()
+  const breakpoint = useBreakpoint()
+  const isMobile = breakpoint === 'mobile'
 
   const handleAlert = useCallback((message: string) => {
     const id = Math.random().toString(36).substring(2, 9)
@@ -105,63 +109,98 @@ export function AppShell() {
     }
   }
 
+  function handleGoLive() {
+    const focused = cameras.find((camera) => camera.name === lastEventCamera) ?? cameras[0]
+    if (focused) setFullscreenCamera(focused)
+  }
+
+  const pageSection =
+    activeSection === 'cameras' ? (
+      <CamerasPage
+        cameras={cameras}
+        error={error}
+        eventCamera={lastEventCamera}
+        isLoading={isLoading}
+        layout={cameraLayout}
+        onLayoutChange={setCameraLayout}
+        onOpenFullscreen={setFullscreenCamera}
+        onRenameCamera={handleRenameCamera}
+        onReload={reload}
+        onToggleTorch={toggleTorch}
+        paused={Boolean(fullscreenCamera)}
+        torchStates={torchStates}
+      />
+    ) : activeSection === 'health' ? (
+      <HealthPage cameras={cameras} isLoading={isLoading} />
+    ) : activeSection === 'discovery' ? (
+      <DiscoveryPage onCamerasFound={setCameras} />
+    ) : activeSection === 'camera-settings' ? (
+      <CameraSettingsPage cameras={cameras} onDeleteCamera={handleDeleteCamera} onRenameCamera={handleRenameCamera} />
+    ) : activeSection === 'events' ? (
+      <EventsPage cameras={cameras} />
+    ) : activeSection === 'recordings' ? (
+      <RecordingsPage cameras={cameras} />
+    ) : activeSection === 'faces' ? (
+      <FacesPage />
+    ) : activeSection === 'users' ? (
+      <UsersPage />
+    ) : activeSection === 'settings' ? (
+      <SettingsPage />
+    ) : (
+      <PlaceholderPage section={activeSection} title={sectionLabels[activeSection]} />
+    )
+
+  const toasts =
+    alerts.length > 0 ? (
+      <ToastContainer>
+        {alerts.map((alert) => (
+          <Toast key={alert.id} onDismiss={() => dismissAlert(alert.id)} title={alert.message} variant="error" />
+        ))}
+      </ToastContainer>
+    ) : null
+
+  const camerasUp = cameras.filter((camera) => camera.online).length
+
   return (
-    <div className="flex min-h-screen bg-background text-foreground">
-      <Sidebar activeSection={activeSection} onSectionChange={setActiveSection} socketStatus={socketStatus} />
-      <main className="flex min-w-0 flex-1 flex-col">
-        <Topbar
-          activeSection={activeSection}
+    <div
+      className={`flex bg-background text-foreground ${
+        isMobile ? 'h-dvh flex-col overflow-hidden' : 'min-h-screen'
+      }`}
+    >
+      {isMobile ? (
+        <MobileHeader
           cameraCount={cameras.length}
-          cameraLayout={cameraLayout}
+          camerasUp={camerasUp}
           liveEventCount={liveEvents.length}
           showEventFeed={showEventFeed}
-          socketStatus={socketStatus}
-          onCameraLayoutChange={setCameraLayout}
           onToggleEventFeed={() => setShowEventFeed((v) => !v)}
         />
-        {alerts.length ? (
-          <ToastContainer>
-            {alerts.map((alert) => (
-              <Toast key={alert.id} onDismiss={() => dismissAlert(alert.id)} title={alert.message} variant="error" />
-            ))}
-          </ToastContainer>
+      ) : (
+        <Sidebar
+          activeSection={activeSection}
+          liveEventCount={liveEvents.length}
+          onSectionChange={setActiveSection}
+          socketStatus={socketStatus}
+          variant={breakpoint === 'tablet' ? 'rail' : 'full'}
+        />
+      )}
+      <main className={`flex min-w-0 flex-1 flex-col ${isMobile ? 'min-h-0' : ''}`}>
+        {!isMobile ? (
+          <Topbar
+            activeSection={activeSection}
+            cameraCount={cameras.length}
+            cameraLayout={cameraLayout}
+            camerasUp={camerasUp}
+            liveEventCount={liveEvents.length}
+            showEventFeed={showEventFeed}
+            socketStatus={socketStatus}
+            onCameraLayoutChange={setCameraLayout}
+            onToggleEventFeed={() => setShowEventFeed((v) => !v)}
+          />
         ) : null}
         <div className="flex min-h-0 flex-1">
-          <div className={`flex-1 overflow-y-auto ${activeSection === 'cameras' ? '' : 'p-5'}`}>
-            {activeSection === 'cameras' ? (
-              <CamerasPage
-                cameras={cameras}
-                error={error}
-                eventCamera={lastEventCamera}
-                isLoading={isLoading}
-                layout={cameraLayout}
-                onLayoutChange={setCameraLayout}
-                onOpenFullscreen={setFullscreenCamera}
-                onRenameCamera={handleRenameCamera}
-                onReload={reload}
-                onToggleTorch={toggleTorch}
-                paused={Boolean(fullscreenCamera)}
-                torchStates={torchStates}
-              />
-            ) : activeSection === 'health' ? (
-              <HealthPage cameras={cameras} isLoading={isLoading} />
-            ) : activeSection === 'discovery' ? (
-              <DiscoveryPage onCamerasFound={setCameras} />
-            ) : activeSection === 'camera-settings' ? (
-              <CameraSettingsPage cameras={cameras} onDeleteCamera={handleDeleteCamera} onRenameCamera={handleRenameCamera} />
-            ) : activeSection === 'events' ? (
-              <EventsPage cameras={cameras} />
-            ) : activeSection === 'recordings' ? (
-              <RecordingsPage cameras={cameras} />
-            ) : activeSection === 'faces' ? (
-              <FacesPage />
-            ) : activeSection === 'users' ? (
-              <UsersPage />
-            ) : activeSection === 'settings' ? (
-              <SettingsPage />
-            ) : (
-              <PlaceholderPage section={activeSection} title={sectionLabels[activeSection]} />
-            )}
+          <div className={`min-w-0 flex-1 overflow-y-auto ${activeSection === 'cameras' ? '' : 'p-5'}`}>
+            {pageSection}
           </div>
           {showEventFeed && activeSection === 'cameras' ? (
             <EventFeedPanel
@@ -172,6 +211,17 @@ export function AppShell() {
           ) : null}
         </div>
       </main>
+      {isMobile ? (
+        <>
+          <MobileTabBar
+            activeSection={activeSection}
+            canGoLive={cameras.length > 0}
+            onGoLive={handleGoLive}
+            onSectionChange={setActiveSection}
+          />
+        </>
+      ) : null}
+      {toasts}
       <FullscreenView
         camera={fullscreenCamera}
         onClose={() => setFullscreenCamera(null)}
