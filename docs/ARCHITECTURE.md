@@ -10,14 +10,14 @@ SwarmCam is a self-hosted, distributed security camera system. Old Android phone
 ┌─────────────────────────────────────┐
 │        Android phones               │
 │   Android IP Camera APK (4444)      │
-│   • HTTP H.264: /video/h264         │
+│   • HTTPS H.264: /video/h264        │
 │     (raw Annex-B, no RTSP)          │
 │   • HTTP API: /info.json            │
 │              /video/mjpeg (live)    │
 │              /video/snapshot        │
 │              /control/*             │
 └────────────┬────────────────────────┘
-             │ HTTP (H.264)
+             │ HTTPS (H.264)
              ▼
 ┌────────────────────────────────────┐
 │          Frigate NVR               │
