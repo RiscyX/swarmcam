@@ -22,4 +22,4 @@ export type CameraStats = {
   process_fps: number
 }
 
-export type CameraLayout = 'auto' | '2x2' | '3x3'
+export type CameraLayout = 'auto' | '2x2' | '3x3' | 'spotlight'
