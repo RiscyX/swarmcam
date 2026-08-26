@@ -2,6 +2,7 @@ import { CameraOff } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
 import { CameraCard } from '@/components/camera-card'
+import { CameraSpotlight } from '@/components/camera-spotlight'
 import { LayoutPicker } from '@/components/layout-picker'
 import { Button } from '@/components/ui/button'
 import { useBreakpoint } from '@/hooks/use-breakpoint'
@@ -11,10 +12,12 @@ import type { Camera, CameraLayout } from '@/types/camera'
 type CamerasPageProps = {
   cameras: Camera[]
   error: string | null
+  focusId: string | null
   isLoading: boolean
   onReload: () => void
   eventCamera: string | null
   layout: CameraLayout
+  onFocusChange: (name: string) => void
   onLayoutChange: (layout: CameraLayout) => void
   onOpenFullscreen: (camera: Camera) => void
   onRenameCamera: (name: string, displayName: string) => void
@@ -27,8 +30,10 @@ export function CamerasPage({
   cameras,
   error,
   eventCamera,
+  focusId,
   isLoading,
   layout,
+  onFocusChange,
   onLayoutChange,
   onOpenFullscreen,
   onRenameCamera,
@@ -44,6 +49,7 @@ export function CamerasPage({
     '1': () => onLayoutChange('auto'),
     '2': () => onLayoutChange('2x2'),
     '3': () => onLayoutChange('3x3'),
+    '4': () => onLayoutChange('spotlight'),
   }))
 
   useKeyboardShortcuts(shortcuts)
@@ -99,21 +105,35 @@ export function CamerasPage({
           <LayoutPicker layout={layout} onChange={onLayoutChange} variant="chips" />
         </div>
       ) : null}
-      <div className="min-h-0 min-w-0 flex-1" style={gridStyle}>
-        {visibleCameras.map((camera) => (
-          <div className="bg-[var(--bg-tile)] [&>*]:h-full" key={camera.name}>
-            <CameraCard
-              camera={camera}
-              isFlashing={eventCamera === camera.name}
-              isPaused={paused}
-              onOpenFullscreen={onOpenFullscreen}
-              onRename={onRenameCamera}
-              onToggleTorch={onToggleTorch}
-              torchEnabled={Boolean(torchStates[camera.name])}
-            />
-          </div>
-        ))}
-      </div>
+      {layout === 'spotlight' ? (
+        <CameraSpotlight
+          cameras={visibleCameras}
+          eventCamera={eventCamera}
+          focusId={focusId}
+          isPaused={paused}
+          onFocusChange={onFocusChange}
+          onOpenFullscreen={onOpenFullscreen}
+          onRenameCamera={onRenameCamera}
+          onToggleTorch={onToggleTorch}
+          torchStates={torchStates}
+        />
+      ) : (
+        <div className="min-h-0 min-w-0 flex-1" style={gridStyle}>
+          {visibleCameras.map((camera) => (
+            <div className="bg-[var(--bg-tile)] [&>*]:h-full" key={camera.name}>
+              <CameraCard
+                camera={camera}
+                isFlashing={eventCamera === camera.name}
+                isPaused={paused}
+                onOpenFullscreen={onOpenFullscreen}
+                onRename={onRenameCamera}
+                onToggleTorch={onToggleTorch}
+                torchEnabled={Boolean(torchStates[camera.name])}
+              />
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

@@ -21,6 +21,7 @@ type CameraCardProps = {
   isFlashing: boolean
   isPaused: boolean
   overlayVisibility?: OverlayVisibility
+  variant?: 'tile' | 'hero'
   onOpenFullscreen: (camera: Camera) => void
   onRename: (name: string, displayName: string) => void
   onToggleTorch: (camera: Camera) => void
@@ -38,6 +39,7 @@ export function CameraCard({
   onRename,
   onToggleTorch,
   torchEnabled,
+  variant = 'tile',
 }: CameraCardProps) {
   const { token } = useAuth()
   const breakpoint = useBreakpoint()
@@ -48,6 +50,7 @@ export function CameraCard({
   const [isEditing, setIsEditing] = useState(false)
   const [editValue, setEditValue] = useState('')
 
+  const isHero = variant === 'hero'
   const isOnline = camera.online !== false
   const isLive = (camera.video_connections ?? 0) > 0
   const displayName = getCameraDisplayName(camera)
@@ -204,12 +207,22 @@ export function CameraCard({
               value={editValue}
             />
           ) : (
-            <span
-              className="truncate text-[13px] font-extrabold leading-tight text-[var(--fg)]"
-              style={{ textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}
-            >
-              {displayName}
-            </span>
+            <>
+              <span
+                className={`truncate font-extrabold leading-tight text-[var(--fg)] ${isHero ? 'text-[16px]' : 'text-[13px]'}`}
+                style={{ textShadow: isHero ? '0 1px 4px #000' : '0 1px 3px rgba(0,0,0,0.8)' }}
+              >
+                {displayName}
+              </span>
+              {isHero ? (
+                <span
+                  className="shrink-0 font-mono text-[10px] text-[var(--fg-muted)]"
+                  style={{ textShadow: '0 1px 4px #000' }}
+                >
+                  {camera.ip}
+                </span>
+              ) : null}
+            </>
           )}
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
