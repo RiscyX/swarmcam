@@ -223,7 +223,7 @@ export function AppShell() {
             onToggleEventFeed={() => setShowEventFeed((v) => !v)}
           />
         ) : null}
-        <div className="flex min-h-0 flex-1">
+        <div className="relative flex min-h-0 flex-1">
           <div
             className={`min-w-0 flex-1 ${
               activeSection === 'cameras' ? 'overflow-hidden' : 'overflow-y-auto p-5'
@@ -235,6 +235,7 @@ export function AppShell() {
             <EventFeedPanel
               cameras={cameras}
               events={liveEvents}
+              onClose={() => setShowEventFeed(false)}
               onClear={() => setLiveEvents([])}
             />
           ) : null}
