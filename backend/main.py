@@ -56,18 +56,18 @@ async def _startup():
         try:
             cfg = read_yaml(FRIGATE_CONFIG)
             # Camera IP/port is recovered from the go2rtc stream URLs
-            # (e.g. http://192.168.0.100:4444/video/h264), keyed by camera name.
+            # (e.g. https://192.168.0.100:4444/video/h264), keyed by camera name.
             streams = (cfg.get("go2rtc") or {}).get("streams") or {}
             for name, entry in streams.items():
                 urls = [entry] if isinstance(entry, str) else (entry or [])
                 for url in urls:
-                    m = re.match(r"http://([^:/]+):(\d+)/video/h264", url)
+                    m = re.match(r"https?://([^:/]+):(\d+)/video/h264", url)
                     if m:
                         ip, port = m.group(1), int(m.group(2))
                         state._last_cameras.append({
                             "ip": ip, "port": port, "name": name,
                             "stream_url": url,
-                            "http_url": f"http://{ip}:{port}",
+                            "http_url": f"https://{ip}:{port}",
                         })
                         break
         except Exception:

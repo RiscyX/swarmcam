@@ -66,8 +66,8 @@ List all registered cameras (loaded from `frigate/config.yml` on startup, update
     "ip": "192.168.0.100",
     "port": 4444,
     "name": "cam_192_168_0_100",
-    "stream_url": "http://192.168.0.100:4444/video/h264",
-    "http_url": "http://192.168.0.100:4444",
+    "stream_url": "https://192.168.0.100:4444/video/h264",
+    "http_url": "https://192.168.0.100:4444",
     "display_name": "192.168.0.100"
   }
 ]
