@@ -15,6 +15,7 @@ Usage:
 import argparse
 import ipaddress
 import json
+import re
 import socket
 import sys
 import time
@@ -44,6 +45,25 @@ FRIGATE_CONFIG_PATH = Path(__file__).parent.parent / "docker" / "frigate" / "con
 # Data model
 # ---------------------------------------------------------------------------
 
+RAW_SUFFIX = "_raw"
+
+
+def rotation_of(config: dict, name: str) -> int:
+    """
+    Forgatás a go2rtc source stringből (`ffmpeg:..#rotate=90..`), 0 ha nincs.
+    A backend `services/frigate_config.py`-ja írja; ez a szkript standalone is
+    fut, ezért nem importál onnan.
+    """
+    streams = (config.get("go2rtc") or {}).get("streams") or {}
+    entry = streams.get(name)
+    urls = [entry] if isinstance(entry, str) else (entry or [])
+    for url in urls:
+        m = re.search(r"#rotate=(\d+)", str(url))
+        if m:
+            return int(m.group(1))
+    return 0
+
+
 @dataclass
 class Camera:
     ip: str
@@ -72,13 +92,18 @@ class Camera:
 
         if config:
             # Read sample from existing camera entry, or from the first camera
-            sample = next(iter((config.get("cameras") or {}).values()), None)
+            cams = config.get("cameras") or {}
+            sample = cams.get(self.name) or next(iter(cams.values()), None)
             if sample:
                 d = sample.get("detect", {})
                 detect_fps = d.get("fps", detect_fps)
                 detect_w   = d.get("width", detect_w)
                 detect_h   = d.get("height", detect_h)
                 hwaccel_args = sample.get("ffmpeg", {}).get("hwaccel_args")
+            # A detect méret a saját forgatásához igazodik (90/270 → álló kép);
+            # a minta másik kameráé is lehet, ezért itt kell visszaigazítani.
+            if (rotation_of(config, self.name) in (90, 270)) != (detect_h > detect_w):
+                detect_w, detect_h = detect_h, detect_w
 
         entry: dict = {
             "ffmpeg": {
@@ -267,7 +292,10 @@ def update_frigate_config(cameras: list[Camera], config_path: Path = FRIGATE_CON
         go2rtc["streams"] = {}
 
     for cam in cameras:
-        go2rtc["streams"][cam.name] = [cam.stream_url]
+        # Ha a kamerán forgatás van, a cam.name streamet a go2rtc ffmpeg
+        # transpose forrása foglalja — az URL ilyenkor a _raw streambe megy.
+        raw = cam.name + RAW_SUFFIX
+        go2rtc["streams"][raw if raw in go2rtc["streams"] else cam.name] = [cam.stream_url]
         config["cameras"][cam.name] = cam.to_frigate_camera(config)
         print(f"[*] Frigate config updated: {cam.name}", file=sys.stderr)
 

@@ -1,7 +1,20 @@
-# SwarmCam – Fejlesztési Terv
+# SwarmCam – Fejlesztési Terv (lezárt, archív)
 
-> Ez a dokumentum a SwarmCam projekt hátralévő fejlesztési feladatait tartalmazza.
-> A Claude Code is használja referencia tervként az implementáció során.
+> [!WARNING]
+> **Ez a dokumentum egy LEZÁRT tervezési előzmény, nem az aktuális állapot leírása.**
+>
+> A benne szereplő hat feladat mind elkészült (Camera Settings, Events, Recordings,
+> Face Recognition, health fix, camera stats). Emellett a kamera-protokoll azóta
+> lecserélődött: az itt hivatkozott IP Webcam végpontok (`/status.json`,
+> `/command.json`, `/enabletorch`, RTSP 8080) **már nem léteznek** a rendszerben.
+>
+> A szöveget szándékosan nem írtuk át, mert dokumentálja, hogyan alakult a projekt —
+> a szakdolgozathoz ez az előzmény érték. **Referenciaként ne használd.**
+>
+> Aktuális állapot: [`ARCHITECTURE.md`](ARCHITECTURE.md) · [`API.md`](API.md) ·
+> [`../DECISIONS.md`](../DECISIONS.md) (D-001: a protokollcsere indoklása)
+>
+> Lezárva: 2026-08-26
 
 ## Architektúra összefoglaló
 

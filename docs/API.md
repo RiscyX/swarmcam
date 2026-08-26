@@ -86,10 +86,40 @@ Returns `image/jpeg` on success, or a 1×1 transparent GIF if the camera is offl
 
 ---
 
+### `WS /ws/cameras/{name}/mse`
+
+Live H.264 video, relayed from the Frigate-embedded go2rtc. This is the path the
+dashboard uses; the MJPEG endpoint below is only the fallback.
+
+Client sends one JSON frame naming the codecs it accepts:
+
+```json
+{"type": "mse", "value": "avc1.640029,avc1.64002a,avc1.4d002a,avc1.42e01f,mp4a.40.2"}
+```
+
+The server replies with the negotiated MIME type, then streams binary fMP4
+segments (an `ftyp`/`moov` init segment, then `moof`+`mdat` fragments):
+
+```json
+{"type": "mse", "value": "video/mp4; codecs=\"avc1.64001F\""}
+```
+
+Feed the binary frames to a `MediaSource` `SourceBuffer`. go2rtc repackages the
+phone's stream without re-encoding, so resolution and frame rate are the phone's.
+
+**No auth required.** Note the `/ws/` prefix: the dashboard nginx only passes the
+WebSocket `Upgrade` header on that location, not on `/api/`.
+
+**Close `1008`:** Camera name not in registry.
+
+---
+
 ### `GET /api/cameras/{name}/stream`
 
-MJPEG live stream proxied directly from the camera's Android IP Camera `/video/mjpeg` endpoint.  
+MJPEG live stream proxied from Frigate's `/api/<camera>` feed.  
 Streams indefinitely as `multipart/x-mixed-replace`. Use as `<img src="...">`.
+Served at the *detect* resolution and roughly the detect frame rate, and costs a
+CPU JPEG encoder per viewer — kept only as the fallback when MSE fails.
 
 **No auth required.**
 

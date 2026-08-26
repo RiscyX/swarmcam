@@ -5,10 +5,13 @@ import logging
 import io
 import requests
 import base64
+import urllib3
 import cv2
 from PIL import Image
 from paho.mqtt import client as mqtt_client
 from ultralytics import YOLO
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # Configuration from environment variables
 MQTT_HOST = os.getenv("MQTT_HOST", "localhost")
@@ -84,12 +87,22 @@ def main():
                 continue
                 
             try:
-                # Fetch snapshot
-                snapshot_url = f"http://{cam_host}:{cam_port}/shot.jpg"
-                resp = requests.get(snapshot_url, timeout=5)
-                resp.raise_for_status()
-                
-                img = Image.open(io.BytesIO(resp.content))
+                # Fetch first MJPEG frame as snapshot (app has no still-image endpoint)
+                with requests.get(f"https://{cam_host}:{cam_port}/video/mjpeg",
+                                  stream=True, timeout=5, verify=False) as resp:
+                    resp.raise_for_status()
+                    buf = b""
+                    for chunk in resp.iter_content(chunk_size=4096):
+                        buf += chunk
+                        start = buf.find(b"\xff\xd8")
+                        end = buf.find(b"\xff\xd9", start + 2)
+                        if start != -1 and end != -1:
+                            img_bytes = buf[start:end + 2]
+                            break
+                    else:
+                        raise ValueError("no complete JPEG frame received")
+
+                img = Image.open(io.BytesIO(img_bytes))
                 
                 # Run inference
                 results = model(img, verbose=False)
