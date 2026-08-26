@@ -52,7 +52,6 @@ export function CameraCard({
 
   const isHero = variant === 'hero'
   const isOnline = camera.online !== false
-  const isLive = (camera.video_connections ?? 0) > 0
   const displayName = getCameraDisplayName(camera)
   const { mode, snapshotSrc } = useCameraStream({
     name: camera.name,
@@ -112,9 +111,6 @@ export function CameraCard({
 
   const fps = stats?.camera_fps ?? null
   const batteryLevel = camera.battery_level ?? null
-  const batteryTempC = camera.battery_temp_c ?? null
-  const freeSpaceGb = camera.free_space_gb ?? null
-  const nightVision = camera.night_vision
 
   const telemetryParts: React.ReactNode[] = []
   if (fps !== null && fps > 0) telemetryParts.push(<span key="fps">{fps.toFixed(1)} FPS</span>)
@@ -133,17 +129,12 @@ export function CameraCard({
             }}
           />
         </span>
-        BAT {Math.round(batteryLevel)}%{camera.battery_charging ? ' ⚡' : ''}
+        BAT {Math.round(batteryLevel)}%
       </span>,
     )
   }
-  if (batteryTempC !== null) telemetryParts.push(<span key="temp">{Math.round(batteryTempC)}°C</span>)
-  if (freeSpaceGb !== null) telemetryParts.push(<span key="space">{freeSpaceGb.toFixed(1)} GB</span>)
-  if (nightVision !== null && nightVision !== undefined) {
-    telemetryParts.push(<span key="ir">IR {nightVision ? 'ON' : 'OFF'}</span>)
-  }
 
-  const statusLabel = !isOnline ? 'OFFLINE' : isLive ? 'LIVE' : 'IDLE'
+  const statusLabel = !isOnline ? 'OFFLINE' : 'ONLINE'
   const showNoSignal = !isOnline || (!hasSignal && !isPaused)
   const overlayVisibilityClass = hideOnIdle
     ? 'opacity-0 transition-opacity duration-200 focus-within:opacity-100 group-hover:opacity-100'
@@ -186,12 +177,12 @@ export function CameraCard({
       >
         <div className="flex min-w-0 items-center gap-1.5">
           <PulseDot
-            animated={isOnline && isLive}
+            animated={isOnline}
             size={6}
             speed={2.6}
-            tone={!isOnline || !isLive ? 'offline' : 'live'}
+            tone={!isOnline ? 'offline' : 'live'}
           />
-          <span className={`font-mono text-[9px] tracking-widest ${isOnline && isLive ? 'text-[var(--status-live)]' : 'text-[var(--fg-muted)]'}`}>
+          <span className={`font-mono text-[9px] tracking-widest ${isOnline ? 'text-[var(--status-live)]' : 'text-[var(--fg-muted)]'}`}>
             {statusLabel}
           </span>
           {isEditing ? (

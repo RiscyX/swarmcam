@@ -29,16 +29,8 @@ type MobileView = 'list' | 'detail'
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 
-// Returned by the backend and persisted there, just not editable in the UI before.
-type SettingsData = CameraSettingsPayload & {
-  quality?: number | null
-  video_fps?: number | null
-  night_vision?: string | null
-}
-
 const ORIENTATIONS = ['landscape', 'portrait', 'landscape_flipped', 'portrait_flipped']
 const VIDEO_SIZES = ['1920x1080', '1280x720', '854x480', '640x480', '320x240']
-const QUALITIES = ['100', '90', '80', '70', '60', '50', '40', '30', '20']
 const VIDEO_FPS = ['30', '25', '20', '15', '10', '5']
 
 function shortIp(ip: string) {
@@ -208,7 +200,7 @@ function DetailPanel({
 }) {
   const { token } = useAuth()
 
-  const [settings, setSettings] = useState<SettingsData | null>(null)
+  const [settings, setSettings] = useState<CameraSettingsPayload | null>(null)
   const [loadFailed, setLoadFailed] = useState(false)
   const [status, setStatus] = useState<SaveStatus>('idle')
   const [appliedFields, setAppliedFields] = useState<string[]>([])
@@ -354,13 +346,6 @@ function DetailPanel({
                 value={settings.video_size ?? ''}
               />
               <SelectSetting
-                id="set-quality"
-                label="Quality"
-                onChange={(v) => setSettings({ ...settings, quality: v === '' ? null : Number(v) })}
-                options={QUALITIES}
-                value={settings.quality != null ? String(settings.quality) : ''}
-              />
-              <SelectSetting
                 id="set-fps"
                 label="FPS"
                 onChange={(v) => setSettings({ ...settings, video_fps: v === '' ? null : Number(v) })}
@@ -371,19 +356,14 @@ function DetailPanel({
 
             <div className="mt-4 flex flex-wrap gap-x-8 border-t border-[var(--border-row)] pt-4">
               <ToggleSetting
-                checked={Boolean(settings.mirror_flip && settings.mirror_flip !== 'none')}
+                checked={Boolean(settings.mirror)}
                 label="Mirror image"
-                onCheckedChange={(v) => setSettings({ ...settings, mirror_flip: v ? 'mirror' : 'none' })}
+                onCheckedChange={(v) => setSettings({ ...settings, mirror: v })}
               />
               <ToggleSetting
-                checked={settings.ffc === 'on'}
+                checked={settings.camera === 'front'}
                 label="Front camera (FFC)"
-                onCheckedChange={(v) => setSettings({ ...settings, ffc: v ? 'on' : 'off' })}
-              />
-              <ToggleSetting
-                checked={settings.night_vision === 'on'}
-                label="Night vision"
-                onCheckedChange={(v) => setSettings({ ...settings, night_vision: v ? 'on' : 'off' })}
+                onCheckedChange={(v) => setSettings({ ...settings, camera: v ? 'front' : 'back' })}
               />
             </div>
 

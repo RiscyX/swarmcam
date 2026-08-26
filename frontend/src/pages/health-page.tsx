@@ -1,5 +1,3 @@
-import { BatteryCharging } from 'lucide-react'
-
 import { Button } from '@/components/ui/button'
 import { PulseDot } from '@/components/ui/pulse-dot'
 import { StatusPill } from '@/components/ui/status-pill'
@@ -63,17 +61,12 @@ export function HealthPage({ cameras, isLoading, onOpenStream, onReload }: Healt
               <TableHead>Camera</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Battery</TableHead>
-              <TableHead>Temp</TableHead>
-              <TableHead>Storage</TableHead>
-              <TableHead>Quality</TableHead>
-              <TableHead>Night</TableHead>
-              <TableHead>Conn</TableHead>
+              <TableHead>Wi-Fi</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {cameras.map((cam) => {
               const isOnline = cam.online !== false
-              const isLive = (cam.video_connections ?? 0) > 0
               const pct = cam.battery_level != null ? clampPercent(cam.battery_level) : null
               return (
                 <TableRow className={isOnline ? undefined : 'opacity-60'} key={cam.name}>
@@ -87,7 +80,7 @@ export function HealthPage({ cameras, isLoading, onOpenStream, onReload }: Healt
                   </TableCell>
                   <TableCell>
                     {isOnline ? (
-                      <StatusPill tone={isLive ? 'live' : 'idle'}>{isLive ? 'Live' : 'Idle'}</StatusPill>
+                      <StatusPill tone="live">Online</StatusPill>
                     ) : (
                       <StatusPill tone="offline">Offline</StatusPill>
                     )}
@@ -104,19 +97,10 @@ export function HealthPage({ cameras, isLoading, onOpenStream, onReload }: Healt
                           />
                         </div>
                         <span className="font-mono text-xs tabular-nums text-[var(--fg-secondary)]">{pct}%</span>
-                        {cam.battery_charging ? (
-                          <BatteryCharging aria-label="Charging" className="h-3 w-3 text-[var(--status-live)]" />
-                        ) : null}
                       </div>
                     )}
                   </TableCell>
-                  <TableCell variant="mono">{isOnline ? fmt(cam.battery_temp_c, '°C') : DIM_DASH}</TableCell>
-                  <TableCell variant="mono">{isOnline ? fmt(cam.free_space_gb, ' GB') : DIM_DASH}</TableCell>
-                  <TableCell variant="mono">{isOnline ? fmt(cam.quality, '%') : DIM_DASH}</TableCell>
-                  <TableCell variant="mono">
-                    {cam.night_vision == null ? DIM_DASH : cam.night_vision ? 'ON' : 'OFF'}
-                  </TableCell>
-                  <TableCell variant="mono">{isOnline ? fmt(cam.video_connections) : DIM_DASH}</TableCell>
+                  <TableCell variant="mono">{isOnline ? fmt(cam.wifi_strength, ' dBm') : DIM_DASH}</TableCell>
                 </TableRow>
               )
             })}
@@ -128,15 +112,11 @@ export function HealthPage({ cameras, isLoading, onOpenStream, onReload }: Healt
       <div className="flex flex-col gap-2 md:hidden">
         {cameras.map((cam) => {
           const isOnline = cam.online !== false
-          const isLive = (cam.video_connections ?? 0) > 0
           const pct = cam.battery_level != null ? clampPercent(cam.battery_level) : null
           const cells: Array<[string, string]> = [
-            ['Bat', !isOnline || pct == null ? '—' : `${pct}%${cam.battery_charging ? ' ⚡' : ''}`],
-            ['Temp', isOnline ? fmt(cam.battery_temp_c, '°C') : '—'],
-            ['Free', isOnline ? fmt(cam.free_space_gb, ' GB') : '—'],
+            ['Bat', !isOnline || pct == null ? '—' : `${pct}%`],
+            ['Wi-Fi', isOnline ? fmt(cam.wifi_strength, ' dBm') : '—'],
             ['Fps', '—'],
-            ['IR', cam.night_vision == null ? '—' : cam.night_vision ? 'ON' : 'OFF'],
-            ['Conn', isOnline ? fmt(cam.video_connections) : '—'],
           ]
           return (
             <div
@@ -145,9 +125,9 @@ export function HealthPage({ cameras, isLoading, onOpenStream, onReload }: Healt
             >
               <div className="flex items-center gap-2 px-3 py-2.5">
                 <PulseDot
-                  animated={isOnline && isLive}
+                  animated={isOnline}
                   size={6}
-                  tone={isOnline ? (isLive ? 'live' : 'accent') : 'offline'}
+                  tone={isOnline ? 'live' : 'offline'}
                 />
                 <span className="min-w-0 flex-1 truncate text-xs font-bold uppercase tracking-[0.12em] text-[var(--fg)]">
                   {getCameraDisplayName(cam)}
