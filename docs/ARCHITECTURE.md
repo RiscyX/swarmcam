@@ -13,6 +13,7 @@ SwarmCam is a self-hosted, distributed security camera system. Old Android phone
 │   • HTTP H.264: /video/h264         │
 │     (raw Annex-B, no RTSP)          │
 │   • HTTP API: /info.json            │
+│              /video/mjpeg (live)    │
 │              /video/snapshot        │
 │              /control/*             │
 └────────────┬────────────────────────┘
@@ -72,7 +73,7 @@ SwarmCam is a self-hosted, distributed security camera system. Old Android phone
 │    Cameras     — live MJPEG grid, torch, fullscreen  │
 │    Health      — battery, stream status per camera   │
 │    Discovery   — network scan with SSE log           │
-│    Camera Sett.— camera controls (/control/*), rename │
+│    Camera Sett.— query params (?key=val), rename     │
 │    Events      — Frigate detection event browser     │
 │    Recordings  — clip playback, download             │
 │    Faces       — face registration, recognition log  │
