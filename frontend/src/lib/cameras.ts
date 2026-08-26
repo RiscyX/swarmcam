@@ -69,3 +69,7 @@ export function batteryLevelColor(level: number) {
   if (level <= 40) return 'var(--status-idle)'
   return 'var(--status-live)'
 }
+
+export function wifiStrengthPercent(strength: number | null | undefined): string {
+  return strength == null || strength < 0 ? '—' : `${strength}%`
+}
