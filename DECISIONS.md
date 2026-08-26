@@ -8,7 +8,7 @@ Tervezési döntések és azok indoklása — szakdolgozati szöveghez újrahasz
 
 ### Kontextus
 
-A kamera-node-ok eredetileg a Pavel Khlebovich féle **IP Webcam** APK-t futtatták. Az alkalmazás zárt forrású, kizárólag a Google Play áruházból telepíthető. Egy teljesen self-hosted, felhőfüggetlen rendszerben ez idegen függőség: a Play áruház nem minden telefonon érhető el (régebbi vagy gyártói szolgáltatások nélküli készülékeken), így nem minden kéznél lévő telefon tehető node-dá. Emellett a régi protokoll az RTSP-re (`h264_ulaw.sdp`) épült, amelynek a Frigate-ben való közvetlen dekódolása rugalmatlan.
+A kamera-node-ok eredetileg a Pavel Khlebovich féle **IP Webcam** APK-t futtatták. Az alkalmazás zárt forrású, kizárólag a Google Play áruházból telepíthető. Egy teljesen self-hosted, felhőfüggetlen rendszerben ez idegen függőség: a Play áruház nem minden készüléken nyitja meg az app oldalát (gyártói szolgáltatások és régiós korlátok miatt — függetlenül a készülék korától), így nem minden kéznél lévő telefon tehető node-dá. Emellett a régi protokoll az RTSP-re (`h264_ulaw.sdp`) épült, amelynek a Frigate-ben való közvetlen dekódolása rugalmatlan.
 
 ### Döntés
 

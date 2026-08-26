@@ -47,7 +47,7 @@ class AliasRequest(BaseModel):
 class CameraSettings(BaseModel):
     orientation: str | None = None
     video_size: str | None = None
-    mirror: str | None = None
+    mirror: bool | str | None = None
     video_fps: int | None = None
     camera: str | None = None
 
@@ -206,7 +206,10 @@ async def set_camera_settings(name: str, body: CameraSettings):
     loop = asyncio.get_event_loop()
     fields = body.model_dump(exclude_none=True)
     # All settings go in a single request: GET /?k1=v1&k2=v2
-    params = {_KEY_MAP[k]: str(v) for k, v in fields.items()}
+    params = {
+        _KEY_MAP[k]: (str(v).lower() if isinstance(v, bool) else str(v))
+        for k, v in fields.items()
+    }
     if not params:
         return {"ok": False, "applied": []}
 
@@ -218,7 +221,7 @@ async def set_camera_settings(name: str, body: CameraSettings):
     except Exception:
         raise HTTPException(503, "Camera unreachable")
 
-    applied = list(params.keys()) if r.status_code == 200 else []
+    applied = list(fields.keys()) if r.status_code == 200 else []
     return {"ok": len(applied) > 0, "applied": applied}
 
 
