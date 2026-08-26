@@ -3,6 +3,7 @@ import { CameraOff, Flashlight, Maximize2, Pencil } from 'lucide-react'
 
 import { useBreakpoint } from '@/hooks/use-breakpoint'
 import { useAuth } from '@/hooks/use-auth'
+import { useCameraStream } from '@/hooks/use-camera-stream'
 import {
   batteryLevelColor,
   cameraStreamUrl,
@@ -50,7 +51,12 @@ export function CameraCard({
   const isOnline = camera.online !== false
   const isLive = (camera.video_connections ?? 0) > 0
   const displayName = getCameraDisplayName(camera)
-  const src = isPaused ? '' : cameraStreamUrl(camera.name)
+  const { mode, snapshotSrc } = useCameraStream({
+    name: camera.name,
+    paused: isPaused,
+    preferred: isFlashing,
+  })
+  const src = mode === 'stream' ? cameraStreamUrl(camera.name) : (snapshotSrc ?? '')
   const hideOnIdle = overlayVisibility === 'hover' && breakpoint !== 'mobile'
 
   useEffect(() => {
@@ -212,7 +218,7 @@ export function CameraCard({
               EVENT
             </span>
           )}
-          {isPaused && isOnline && (
+          {(isPaused || mode === 'snapshot') && isOnline && (
             <span className="bg-black/70 px-1.5 py-0.5 font-mono text-[9px] tracking-widest text-[var(--fg-secondary)]">
               SNAPSHOT
             </span>
