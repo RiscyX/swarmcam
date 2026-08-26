@@ -7,6 +7,7 @@ from services.frigate_client import frigate_post
 from services.frigate_config import (
     ConfigSettings,
     apply_settings,
+    compose_writable,
     extract_settings,
     read_yaml,
     update_compose_nvidia,
@@ -32,6 +33,15 @@ async def save_config(settings: ConfigSettings):
     loop = asyncio.get_event_loop()
     old = extract_settings(read_yaml(FRIGATE_CONFIG))
     decoder_changed = old.decoder != settings.decoder
+
+    # A decoder váltás a compose fájlt is írja. Ha az nem írható, itt állunk meg —
+    # a frigate config kiírása után elszállva félig alkalmazott állapot maradna.
+    if decoder_changed and not compose_writable():
+        raise HTTPException(
+            500,
+            "Cannot switch decoder: docker/docker-compose.yml is not writable. "
+            "Remove the ':ro' flag from the backend's compose mount, then recreate the backend container.",
+        )
 
     config = read_yaml(FRIGATE_CONFIG)
     write_yaml(FRIGATE_CONFIG, apply_settings(config, settings))

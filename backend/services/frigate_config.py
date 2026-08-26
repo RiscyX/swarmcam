@@ -1,3 +1,4 @@
+import os
 import re
 from pathlib import Path
 from typing import Literal
@@ -97,6 +98,11 @@ def apply_settings(config: dict, s: ConfigSettings) -> dict:
             inp["input_args"] = f"{transport} {cleaned}".strip() if cleaned else transport
 
     return config
+
+
+def compose_writable() -> bool:
+    """A compose fájl :ro mountról is olvasható, de írni csak rw mountról lehet."""
+    return COMPOSE_FILE.exists() and os.access(COMPOSE_FILE, os.W_OK)
 
 
 def update_compose_nvidia(enable: bool) -> None:
