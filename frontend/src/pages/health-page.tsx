@@ -2,7 +2,7 @@ import { Button } from '@/components/ui/button'
 import { PulseDot } from '@/components/ui/pulse-dot'
 import { StatusPill } from '@/components/ui/status-pill'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { getCameraDisplayName } from '@/lib/cameras'
+import { getCameraDisplayName, wifiStrengthPercent } from '@/lib/cameras'
 import type { Camera } from '@/types/camera'
 
 type HealthPageProps = {
@@ -24,10 +24,6 @@ function batteryBarClass(pct: number): string {
   if (pct <= 20) return 'bg-[var(--status-error)]'
   if (pct <= 50) return 'bg-[var(--status-idle)]'
   return 'bg-[var(--status-live)]'
-}
-
-function fmt(value: number | null | undefined, suffix = ''): string {
-  return value != null ? `${value}${suffix}` : '—'
 }
 
 export function HealthPage({ cameras, isLoading, onOpenStream, onReload }: HealthPageProps) {
@@ -100,7 +96,7 @@ export function HealthPage({ cameras, isLoading, onOpenStream, onReload }: Healt
                       </div>
                     )}
                   </TableCell>
-                  <TableCell variant="mono">{isOnline ? fmt(cam.wifi_strength, ' dBm') : DIM_DASH}</TableCell>
+                  <TableCell variant="mono">{isOnline ? wifiStrengthPercent(cam.wifi_strength) : DIM_DASH}</TableCell>
                 </TableRow>
               )
             })}
@@ -115,7 +111,7 @@ export function HealthPage({ cameras, isLoading, onOpenStream, onReload }: Healt
           const pct = cam.battery_level != null ? clampPercent(cam.battery_level) : null
           const cells: Array<[string, string]> = [
             ['Bat', !isOnline || pct == null ? '—' : `${pct}%`],
-            ['Wi-Fi', isOnline ? fmt(cam.wifi_strength, ' dBm') : '—'],
+            ['Wi-Fi', isOnline ? wifiStrengthPercent(cam.wifi_strength) : '—'],
             ['Fps', '—'],
           ]
           return (
