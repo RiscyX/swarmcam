@@ -16,7 +16,7 @@ router = APIRouter()
 
 class DiscoverRequest(BaseModel):
     subnet: str | None = None
-    port: int = 8080
+    port: int = 4444
     timeout: float = 1.0
     update_frigate: bool = False
 

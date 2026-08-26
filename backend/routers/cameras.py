@@ -46,12 +46,10 @@ class AliasRequest(BaseModel):
 
 class CameraSettings(BaseModel):
     orientation: str | None = None
-    quality: int | None = None
     video_size: str | None = None
-    night_vision: str | None = None
+    mirror: str | None = None
     video_fps: int | None = None
-    mirror_flip: str | None = None
-    ffc: str | None = None
+    camera: str | None = None
 
 
 @router.get("/api/cameras")
@@ -86,7 +84,7 @@ async def camera_stream(name: str):
     try:
         r = await loop.run_in_executor(
             None,
-            lambda: http.get(f"http://{ip}:{port}/videofeed", stream=True, timeout=3),
+            lambda: http.get(f"http://{ip}:{port}/video/mjpeg", stream=True, timeout=3),
         )
     except Exception:
         raise HTTPException(503, "Camera unreachable")
@@ -113,11 +111,14 @@ async def camera_torch(name: str, body: TorchRequest):
         raise HTTPException(404, "Camera not found")
     ip, port = cam["ip"], cam["port"]
     loop = asyncio.get_event_loop()
-    endpoint = "enabletorch" if body.enabled else "disabletorch"
     try:
         r = await loop.run_in_executor(
             None,
-            lambda: http.get(f"http://{ip}:{port}/{endpoint}", timeout=3),
+            lambda: http.get(
+                f"http://{ip}:{port}/",
+                params={"torch": "on" if body.enabled else "off"},
+                timeout=3,
+            ),
         )
         return {"ok": r.status_code == 200}
     except Exception:
@@ -153,20 +154,32 @@ async def get_camera_settings(name: str):
     try:
         r = await loop.run_in_executor(
             None,
-            lambda: http.get(f"http://{ip}:{port}/status.json", timeout=3),
+            lambda: http.get(f"http://{ip}:{port}/info.json", timeout=3),
         )
         if r.status_code != 200:
             raise HTTPException(503, "Camera unreachable")
         data = r.json()
-        curvals = data.get("curvals", {})
+        settings = data.get("settings", {})
+        cams = data.get("cameras") or []
+        active_id = settings.get("cameraId")
+        active = next((c for c in cams if c.get("id") == active_id), cams[0] if cams else None)
+        lens = (active or {}).get("lensSettings", {})
+
+        res = settings.get("streamRes", "")
+        video_size = res if "x" in res else None
+        try:
+            video_fps = int(settings["fps"])
+        except (KeyError, TypeError, ValueError):
+            video_fps = None
+
+        sensor_orientation = (active or {}).get("sensorOrientation")
+
         return CameraSettings(
-            orientation=curvals.get("orientation"),
-            quality=int(curvals["quality"]) if "quality" in curvals else None,
-            video_size=curvals.get("video_size"),
-            night_vision=curvals.get("night_vision"),
-            video_fps=int(curvals["video_fps"]) if "video_fps" in curvals else None,
-            mirror_flip=curvals.get("mirror_flip"),
-            ffc=curvals.get("ffc"),
+            orientation=str(sensor_orientation) if sensor_orientation is not None else None,
+            video_size=video_size,
+            mirror=lens.get("mirror"),
+            video_fps=video_fps,
+            camera=settings.get("cameraId"),
         )
     except HTTPException:
         raise
@@ -174,7 +187,14 @@ async def get_camera_settings(name: str):
         raise HTTPException(503, "Camera unreachable")
 
 
-_FFC_MAP = {"on": "1", "off": "0"}
+# CameraSettings field -> Android IP Camera query parameter
+_KEY_MAP = {
+    "orientation": "rotate",
+    "video_size": "resolution",
+    "mirror": "mirror",
+    "video_fps": "fps",
+    "camera": "camera",
+}
 
 
 @router.post("/api/cameras/{name}/settings")
@@ -184,40 +204,22 @@ async def set_camera_settings(name: str, body: CameraSettings):
         raise HTTPException(404, "Camera not found")
     ip, port = cam["ip"], cam["port"]
     loop = asyncio.get_event_loop()
-    applied = []
     fields = body.model_dump(exclude_none=True)
-    # Apply orientation last — IP Webcam restarts its HTTP server on orientation change,
-    # which would cause all subsequent requests in the same batch to fail.
-    ordered = sorted(fields.items(), key=lambda kv: kv[0] == "orientation")
+    # All settings go in a single request: GET /?k1=v1&k2=v2
+    params = {_KEY_MAP[k]: str(v) for k, v in fields.items()}
+    if not params:
+        return {"ok": False, "applied": []}
 
-    async def _apply(k: str, v) -> bool:
-        str_v = str(v)
-        for attempt_v in _unique([str_v, _FFC_MAP.get(str_v, str_v)]):
-            try:
-                r = await loop.run_in_executor(
-                    None,
-                    lambda kk=k, vv=attempt_v: http.get(
-                        f"http://{ip}:{port}/settings/{kk}",
-                        params={"set": vv},
-                        timeout=3,
-                    ),
-                )
-                if r.status_code == 200:
-                    return True
-            except Exception:
-                pass
-        return False
+    try:
+        r = await loop.run_in_executor(
+            None,
+            lambda: http.get(f"http://{ip}:{port}/", params=params, timeout=3),
+        )
+    except Exception:
+        raise HTTPException(503, "Camera unreachable")
 
-    for key, value in ordered:
-        if await _apply(key, value):
-            applied.append(key)
-
+    applied = list(params.keys()) if r.status_code == 200 else []
     return {"ok": len(applied) > 0, "applied": applied}
-
-
-def _unique(seq: list) -> list:
-    seen: set = set()
-    return [x for x in seq if not (x in seen or seen.add(x))]
 
 
 @router.patch("/api/cameras/{name}/alias")

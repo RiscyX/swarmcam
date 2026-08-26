@@ -1,18 +1,18 @@
 # AGENTS.md
 
 ## Repo Facts
-- SwarmCam is a local-only surveillance system: Android IP Webcam devices -> Frigate/Mosquitto -> FastAPI backend -> custom dashboard.
-- Do not route live camera viewing through Frigate UI. Dashboard live view uses backend proxy `GET /api/cameras/{name}/stream` to the IP Webcam `/videofeed` MJPEG stream.
+- SwarmCam is a local-only surveillance system: Android IP Camera devices -> Frigate/Mosquitto -> FastAPI backend -> custom dashboard.
+- Do not route live camera viewing through Frigate UI. Dashboard live view uses backend proxy `GET /api/cameras/{name}/stream` to the camera's `/video/mjpeg` MJPEG stream.
 - Frigate UI is not part of the product flow; use Frigate REST API and MQTT output only.
 - Backend entrypoint is `backend/main.py`; routers live in `backend/routers/`, background loops in `backend/services/`.
-- Discovery entrypoint is `discovery/discovery.py`; it scans IP Webcam `/status.json` and can update `docker/frigate/config.yml`.
+- Discovery entrypoint is `discovery/discovery.py`; it scans Android IP Camera `/info.json` (port 4444) and can update `docker/frigate/config.yml` (`cameras:` + `go2rtc.streams:`).
 - Current dashboard is legacy static vanilla JS in `dashboard/`; keep it as an archive while the React migration is in progress.
 - Planned new frontend goes in `/frontend`, TypeScript + React + shadcn/ui + Tailwind, using `pnpm` only.
 
 ## Commands
 - Start infra: `cd docker && docker compose up -d`
 - Run backend locally: `cd backend && source venv/bin/activate && uvicorn main:app --reload`
-- Run discovery manually: `cd discovery && python discovery.py --subnet 192.168.0.0/24 --port 8080 --timeout 1.5`
+- Run discovery manually: `cd discovery && python discovery.py --subnet 192.168.0.0/24 --port 4444 --timeout 1.5`
 - Discovery with Frigate config update: `cd discovery && python discovery.py --update-frigate`
 - Backend dependencies are in `backend/requirements.txt`; discovery dependencies are in `discovery/requirements.txt`.
 - No repo-level test/lint/CI config is currently present; use focused manual verification unless adding project tooling.
