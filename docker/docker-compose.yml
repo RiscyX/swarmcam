@@ -40,7 +40,7 @@ services:
     volumes:
     - /var/run/docker.sock:/var/run/docker.sock
     - ./frigate/config.yml:/swarmcam/docker/frigate/config.yml
-    - ./docker-compose.yml:/swarmcam/docker/docker-compose.yml:ro
+    - ./docker-compose.yml:/swarmcam/docker/docker-compose.yml
     - ./media:/swarmcam/docker/media
     - ../backend/aliases.json:/swarmcam/backend/aliases.json
     - ../backend/fire_events.db:/swarmcam/backend/fire_events.db
