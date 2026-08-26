@@ -92,7 +92,7 @@ export function useCameraStream({ name, paused, preferred = false }: UseCameraSt
     return () => window.clearInterval(intervalId)
   }, [mode, name])
 
-  const snapshotSrc = mode === 'snapshot' ? `${cameraSnapshotUrl(name)}&n=${snapshotTick}` : null
+  const snapshotSrc = mode === 'snapshot' ? cameraSnapshotUrl(name, snapshotTick) : null
 
   return { mode, snapshotSrc }
 }
