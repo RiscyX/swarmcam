@@ -29,7 +29,7 @@ type MobileView = 'list' | 'detail'
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 
-const ORIENTATIONS = ['landscape', 'portrait', 'landscape_flipped', 'portrait_flipped']
+const ORIENTATIONS = ['0', '90', '180', '270']
 const VIDEO_SIZES = ['1920x1080', '1280x720', '854x480', '640x480', '320x240']
 const VIDEO_FPS = ['30', '25', '20', '15', '10', '5']
 
