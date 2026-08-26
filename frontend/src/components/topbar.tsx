@@ -2,6 +2,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { LayoutPicker } from '@/components/layout-picker'
 import { useAuth } from '@/hooks/use-auth'
+import { useBreakpoint } from '@/hooks/use-breakpoint'
 import { sectionLabels, type SectionId } from '@/lib/sections'
 import type { CameraLayout } from '@/types/camera'
 import type { CameraSocketStatus } from '@/types/events'
@@ -29,6 +30,14 @@ export function Topbar({
   showEventFeed,
 }: TopbarProps) {
   const { logout, user } = useAuth()
+  const breakpoint = useBreakpoint()
+  const visibleCameras =
+    cameraLayout === '2x2'
+      ? Math.min(cameraCount, 4)
+      : cameraLayout === '3x3'
+        ? Math.min(cameraCount, 9)
+        : cameraCount
+  const streamLabel = breakpoint === 'mobile' ? '1 STREAM ACTIVE' : `${visibleCameras} MJPEG STREAMS`
 
   return (
     <header className="flex h-14 shrink-0 items-center gap-3 border-b border-[var(--border-row)] bg-[var(--bg-chrome)] px-4">
@@ -38,7 +47,7 @@ export function Topbar({
           {camerasUp}/{cameraCount} nodes up
         </span>
         <span className="px-1.5 text-[var(--fg-dim)]">·</span>
-        <span>{cameraCount} mjpeg streams</span>
+        <span>{streamLabel}</span>
       </div>
 
       <div className="flex flex-1 items-center justify-end gap-2">
