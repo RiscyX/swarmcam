@@ -3,7 +3,7 @@ import { Flashlight, X } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { PulseDot } from '@/components/ui/pulse-dot'
-import { cameraStreamUrl, getCameraDisplayName } from '@/lib/cameras'
+import { cameraStreamUrl, getCameraDisplayName, wifiStrengthPercent } from '@/lib/cameras'
 import type { Camera } from '@/types/camera'
 
 type FullscreenViewProps = {
@@ -43,7 +43,7 @@ export function FullscreenView({ camera, onClose, onToggleTorch, torchEnabled }:
   const telemetry: Array<[string, string]> = [
     ['FPS', '—'],
     ['BAT', camera.battery_level != null ? `${fmt(camera.battery_level)}%` : '—'],
-    ['WIFI', camera.wifi_strength != null ? `${fmt(camera.wifi_strength)} dBm` : '—'],
+    ['WIFI', wifiStrengthPercent(camera.wifi_strength)],
   ]
 
   return (
