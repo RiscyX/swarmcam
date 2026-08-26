@@ -3,15 +3,10 @@ export type Camera = {
   port: number
   name: string
   display_name?: string
-  rtsp_url?: string
+  stream_url?: string
   http_url?: string
   battery_level?: number | null
-  battery_charging?: boolean | null
-  battery_temp_c?: number | null
-  free_space_gb?: number | null
-  video_connections?: number | null
-  night_vision?: boolean | null
-  quality?: number | null
+  wifi_strength?: number | null
   online?: boolean
 }
 

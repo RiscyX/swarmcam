@@ -46,7 +46,6 @@ function FilmstripTile({ camera, isFlashing, isPaused, onSelect, width }: Filmst
   }, [camera.name, token])
 
   const isOnline = camera.online !== false
-  const isLive = (camera.video_connections ?? 0) > 0
   const fps = stats?.camera_fps ?? null
   const src = mode === 'stream' ? cameraStreamUrl(camera.name) : (snapshotSrc ?? '')
 
@@ -65,7 +64,7 @@ function FilmstripTile({ camera, isFlashing, isPaused, onSelect, width }: Filmst
       <img alt={`${getCameraDisplayName(camera)} thumbnail`} className="h-full w-full object-cover" src={src} />
 
       <div className="absolute inset-x-0 top-0 flex items-center gap-1 bg-gradient-to-b from-black/80 to-transparent px-1.5 pb-4 pt-1">
-        <PulseDot animated={isOnline && isLive} size={5} speed={2.6} tone={!isOnline || !isLive ? 'offline' : 'live'} />
+        {!isOnline ? <PulseDot animated={false} size={5} speed={2.6} tone="offline" /> : null}
         <span
           className="min-w-0 truncate font-mono text-[9px] tracking-wider text-[var(--fg-secondary)]"
           style={{ textShadow: '0 1px 4px #000' }}
