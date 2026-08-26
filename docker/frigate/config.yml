@@ -36,16 +36,19 @@ snapshots:
   bounding_box: false
   retain:
     default: 14
+go2rtc:
+  streams:
+    cam_192_168_1_15:
+    - "ffmpeg:http://192.168.1.15:4444/video/h264#video=copy"
 cameras:
   cam_192_168_1_15:
     ffmpeg:
       inputs:
-      - path: rtsp://192.168.1.15:8080/h264_ulaw.sdp
+      - path: rtsp://127.0.0.1:8554/cam_192_168_1_15
         roles:
         - detect
         - record
-        input_args: -rtsp_transport tcp -fflags +genpts+discardcorrupt -avoid_negative_ts
-          make_zero
+        input_args: preset-rtsp-restream
     detect:
       enabled: true
       width: 1920
