@@ -9,23 +9,26 @@ SwarmCam is a self-hosted, distributed security camera system. Old Android phone
 ```
 ┌─────────────────────────────────────┐
 │        Android phones               │
-│   IP Webcam APK (port 8080)         │
-│   • RTSP stream: h264_ulaw.sdp      │
-│   • HTTP API: /status.json          │
-│              /videofeed (MJPEG)     │
-│              /settings/*            │
-│              /enabletorch           │
-└────────────┬──────────┬─────────────┘
-             │ RTSP     │ HTTP
-             ▼          ▼
+│   Android IP Camera APK (4444)      │
+│   • HTTP H.264: /video/h264         │
+│     (raw Annex-B, no RTSP)          │
+│   • HTTP API: /info.json            │
+│              /video/mjpeg (live)    │
+│              /video/snapshot        │
+│              /control/*             │
+└────────────┬────────────────────────┘
+             │ HTTP (H.264)
+             ▼
 ┌────────────────────────────────────┐
 │          Frigate NVR               │
+│  • go2rtc pulls /video/h264 and    │
+│    re-serves it as RTSP            │
+│    (rtsp://127.0.0.1:8554/{name})  │
 │  • Decodes RTSP streams via FFmpeg │
 │  • Runs AI object detection        │
 │    (person, car, cat, dog …)       │
 │  • Stores clips + snapshots        │
 │  • Exposes REST API (port 5000)    │
-│  • go2rtc for WebRTC re-streaming  │
 └────────────┬───────────────────────┘
              │ MQTT (frigate/events)
              ▼
@@ -70,7 +73,7 @@ SwarmCam is a self-hosted, distributed security camera system. Old Android phone
 │    Cameras     — live MJPEG grid, torch, fullscreen  │
 │    Health      — battery, stream status per camera   │
 │    Discovery   — network scan with SSE log           │
-│    Camera Sett.— IP Webcam controls, rename          │
+│    Camera Sett.— query params (?key=val), rename     │
 │    Events      — Frigate detection event browser     │
 │    Recordings  — clip playback, download             │
 │    Faces       — face registration, recognition log  │
