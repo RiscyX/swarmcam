@@ -32,7 +32,7 @@ type Alert = {
 }
 
 const LAYOUT_STORAGE_KEY = 'swarmcam.layout'
-const VALID_LAYOUTS: CameraLayout[] = ['auto', '2x2', '3x3']
+const VALID_LAYOUTS: CameraLayout[] = ['auto', '2x2', '3x3', 'spotlight']
 
 function readStoredLayout(): CameraLayout {
   try {
@@ -48,6 +48,7 @@ export function AppShell() {
   const { isAuthenticated, token } = useAuth()
   const [activeSection, setActiveSection] = useState<SectionId>('cameras')
   const [cameraLayout, setCameraLayout] = useState<CameraLayout>(readStoredLayout)
+  const [focusId, setFocusId] = useState<string | null>(null)
   const [fullscreenCamera, setFullscreenCamera] = useState<Camera | null>(null)
   const [lastEventCamera, setLastEventCamera] = useState<string | null>(null)
   const [liveEvents, setLiveEvents] = useState<FrigateLiveEvent[]>([])
@@ -137,8 +138,10 @@ export function AppShell() {
         cameras={cameras}
         error={error}
         eventCamera={lastEventCamera}
+        focusId={focusId}
         isLoading={isLoading}
         layout={cameraLayout}
+        onFocusChange={setFocusId}
         onLayoutChange={handleLayoutChange}
         onOpenFullscreen={setFullscreenCamera}
         onRenameCamera={handleRenameCamera}
