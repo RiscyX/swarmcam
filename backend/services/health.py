@@ -33,10 +33,13 @@ def _parse_info(info: dict) -> dict:
     cams = info.get("cameras") or []
     active_id = settings.get("cameraId")
     active = next((c for c in cams if c.get("id") == active_id), cams[0] if cams else None)
+    # User-set rotation lives in lensSettings.rotate; sensorOrientation is the
+    # constant hardware mounting angle, not meaningful to display.
+    lens = (active or {}).get("lensSettings", {}) if active else {}
     return {
         "battery_level":  int(info["batteryPercent"]) if "batteryPercent" in info else None,
         "wifi_strength":  int(info["wifiStrength"])   if "wifiStrength"   in info else None,
-        "orientation":    _orientation_label(active.get("sensorOrientation")) if active else None,
+        "orientation":    _orientation_label(lens.get("rotate")),
     }
 
 

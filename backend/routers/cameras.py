@@ -172,14 +172,15 @@ async def get_camera_settings(name: str):
         except (KeyError, TypeError, ValueError):
             video_fps = None
 
-        sensor_orientation = (active or {}).get("sensorOrientation")
-
+        # User-set values live in the active camera's lensSettings map (all strings):
+        # rotate holds the user rotation the `rotate=` param writes to — the
+        # hardware-mounted sensorOrientation never changes and is not user-facing.
         return CameraSettings(
-            orientation=str(sensor_orientation) if sensor_orientation is not None else None,
+            orientation=lens.get("rotate"),
             video_size=video_size,
-            mirror=lens.get("mirror"),
+            mirror=(lens.get("mirror") == "true"),
             video_fps=video_fps,
-            camera=settings.get("cameraId"),
+            camera=(active or {}).get("facing"),  # 'front'/'back', what the UI expects
         )
     except HTTPException:
         raise
