@@ -39,7 +39,7 @@ snapshots:
 go2rtc:
   streams:
     cam_192_168_1_15:
-    - "http://192.168.1.15:4444/video/h264"
+    - "https://192.168.1.15:4444/video/h264"
 cameras:
   cam_192_168_1_15:
     ffmpeg:
