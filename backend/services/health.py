@@ -2,16 +2,31 @@ import asyncio
 import json
 
 import requests as http
+import urllib3
 
 import state
 from settings import FRIGATE_URL, HEALTH_INTERVAL
+
+# The camera app serves HTTPS with a self-signed certificate by default;
+# accepting it without verification is an intentional LAN-only decision.
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+# settings.cameraId is usually a facing keyword ("front"/"back"), not an
+# element of cameras[].id ("0", "1", "1:3") — match both.
+def _find_active(cams: list, active_id) -> dict | None:
+    if not cams:
+        return None
+    if active_id in ("front", "back"):
+        return next((c for c in cams if c.get("facing") == active_id), cams[0])
+    return next((c for c in cams if c.get("id") == active_id), cams[0])
 
 
 async def poll_status(ip: str, port: int) -> dict | None:
     loop = asyncio.get_event_loop()
     try:
         resp = await loop.run_in_executor(
-            None, lambda: http.get(f"http://{ip}:{port}/info.json", timeout=2.0)
+            None,
+            lambda: http.get(f"https://{ip}:{port}/info.json", timeout=2.0, verify=False),
         )
         if resp.status_code == 200:
             return resp.json()
@@ -31,8 +46,7 @@ def _orientation_label(angle) -> str | None:
 def _parse_info(info: dict) -> dict:
     settings = info.get("settings", {})
     cams = info.get("cameras") or []
-    active_id = settings.get("cameraId")
-    active = next((c for c in cams if c.get("id") == active_id), cams[0] if cams else None)
+    active = _find_active(cams, settings.get("cameraId"))
     # User-set rotation lives in lensSettings.rotate; sensorOrientation is the
     # constant hardware mounting angle, not meaningful to display.
     lens = (active or {}).get("lensSettings", {}) if active else {}

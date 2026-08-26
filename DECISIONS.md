@@ -45,13 +45,26 @@ Az új protokoll nem szolgáltatja az alábbi adatokat, ezért ezek a funkciók 
 
 Cserébe **új** lehetőségek jöttek: Wi-Fi jelerősség (`wifiStrength`, RSSI dBm), zoom, expozíció, kontraszt, natív H.264 hardveres enkódolás.
 
+### Miért fogadunk el self-signed tanúsítványt ellenőrzés nélkül? (issue #88)
+
+Az Android IP Camera app **alapértelmezetten HTTPS-t szolgál ki** önaláírt tanúsítvánnyal (a `tls_version` beállítás alapértéke `"1.3"`); a sima HTTP csak kifejezett kikapcsolás után érhető el. A TLS-es üzem tehát az app szándékolt alapesete, nem kivétel — ezért a „kapcsold ki a TLS-t minden telefonon" provisioning lépés helyett a backend és a discovery minden kamera felé menő kérést `https://`-en küld, `verify=False` beállítással.
+
+Az ellenőrzés nélküli tanúsítványelfogadás indoklása:
+
+1. **LAN-only rendszer:** a forgalom kizárólag a helyi hálózaton közlekedik, nincs közbülső támadó felület, amely ellen a MITM-védelem értelmét vesztené.
+2. **Nincs CA:** az app első induláskor maga generálja a self-signed tanúsítványt; tanúsítóhatóság nem létezik, így az ellenőrzésnek nem lehetne mit ellenőriznie.
+3. **A titkosítás megmarad:** a cél a hálózati forgalom titkosítása (jelszó, stream), nem a szerveridentitás hitelesítése — ezt a `verify=False` nem érinti.
+4. **Konfigurációs kapcsolót nem vezetünk be:** a self-signed cert elfogadása tudatos, rendszerszintű döntés, nem opció.
+
+Az `urllib3` `InsecureRequestWarning` üzeneteit központilag némítjuk, hogy ne szemeteljék tele a logot.
+
 ### Miért go2rtc restream, és nem direkt ffmpeg?
 
-A telefon H.264 streamje (`http://ip:4444/video/h264`) nyers Annex-B elemi folyam, nem RTSP. A Frigate ffmpeg inputja ezt közvetlenül is fogyasztaná, de:
+A telefon H.264 streamje (`https://ip:4444/video/h264`) nyers Annex-B elemi folyam, nem RTSP. A Frigate ffmpeg inputja ezt közvetlenül is fogyasztaná, de:
 
 1. **Egy kapcsolat, több fogyasztó:** a telefon HTTP szervere korlátozott számú klienst szolgál ki. A go2rtc-n belüli restream (`rtsp://127.0.0.1:8554/{name}`, `preset-rtsp-restream`) után a Frigate detect/record role-jai — és esetleges jövőbeli fogyasztók — a helyi go2rtc-hez csatlakoznak, nem magához a telefonhoz.
 2. **Robusztus újracsatlakozás:** a go2rtc kezeli a forrás kiesését és visszatérését; a Frigate ffmpeg folyamatai stabil, lokális RTSP forrást látnak.
-3. **Backend restart biztonság:** a kamera IP-je/portja a Frigate config `go2rtc.streams` URL-eiből visszaparszolható (`http://ip:port/video/h264`), mivel a Frigate camera entry path-ja ezután `127.0.0.1:8554`. Ezért a backend induláskor a `cameras:` szekció helyett a `go2rtc.streams` bejegyzésekből tölti vissza a kameralistát.
+3. **Backend restart biztonság:** a kamera IP-je/portja a Frigate config `go2rtc.streams` URL-eiből visszaparszolható (`https?://ip:port/video/h264`), mivel a Frigate camera entry path-ja ezután `127.0.0.1:8554`. Ezért a backend induláskor a `cameras:` szekció helyett a `go2rtc.streams` bejegyzésekből tölti vissza a kameralistát.
 
 ### Következmények a kódban
 

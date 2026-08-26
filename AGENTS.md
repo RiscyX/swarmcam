@@ -2,7 +2,7 @@
 
 ## Repo Facts
 - SwarmCam is a local-only surveillance system: Android IP Camera devices -> Frigate/Mosquitto -> FastAPI backend -> custom dashboard.
-- Do not route live camera viewing through Frigate UI. Dashboard live view uses backend proxy `GET /api/cameras/{name}/stream` to the camera's `/video/mjpeg` MJPEG stream.
+- Do not route live camera viewing through Frigate UI. Dashboard live view uses backend proxy `GET /api/cameras/{name}/stream` to the camera's `/video/mjpeg` MJPEG stream. Camera nodes serve HTTPS with a self-signed certificate — all camera-bound requests use `https://` with `verify=False` (intentional, LAN-only).
 - Frigate UI is not part of the product flow; use Frigate REST API and MQTT output only.
 - Backend entrypoint is `backend/main.py`; routers live in `backend/routers/`, background loops in `backend/services/`.
 - Discovery entrypoint is `discovery/discovery.py`; it scans Android IP Camera `/info.json` (port 4444) and can update `docker/frigate/config.yml` (`cameras:` + `go2rtc.streams:`).

@@ -3,12 +3,17 @@ import json
 import pathlib
 
 import requests as http
+import urllib3
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel
 
 import state
 from services.frigate_client import frigate_get
+
+# The camera app serves HTTPS with a self-signed certificate by default;
+# accepting it without verification is an intentional LAN-only decision.
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 router = APIRouter()
 
@@ -84,7 +89,7 @@ async def camera_stream(name: str):
     try:
         r = await loop.run_in_executor(
             None,
-            lambda: http.get(f"http://{ip}:{port}/video/mjpeg", stream=True, timeout=3),
+            lambda: http.get(f"https://{ip}:{port}/video/mjpeg", stream=True, timeout=3, verify=False),
         )
     except Exception:
         raise HTTPException(503, "Camera unreachable")
@@ -115,9 +120,10 @@ async def camera_torch(name: str, body: TorchRequest):
         r = await loop.run_in_executor(
             None,
             lambda: http.get(
-                f"http://{ip}:{port}/",
+                f"https://{ip}:{port}/",
                 params={"torch": "on" if body.enabled else "off"},
                 timeout=3,
+                verify=False,
             ),
         )
         return {"ok": r.status_code == 200}
@@ -154,15 +160,22 @@ async def get_camera_settings(name: str):
     try:
         r = await loop.run_in_executor(
             None,
-            lambda: http.get(f"http://{ip}:{port}/info.json", timeout=3),
+            lambda: http.get(f"https://{ip}:{port}/info.json", timeout=3, verify=False),
         )
         if r.status_code != 200:
             raise HTTPException(503, "Camera unreachable")
         data = r.json()
         settings = data.get("settings", {})
         cams = data.get("cameras") or []
+        # settings.cameraId is usually a facing keyword ("front"/"back"), not an
+        # element of cameras[].id ("0", "1", "1:3") — match both.
         active_id = settings.get("cameraId")
-        active = next((c for c in cams if c.get("id") == active_id), cams[0] if cams else None)
+        if not cams:
+            active = None
+        elif active_id in ("front", "back"):
+            active = next((c for c in cams if c.get("facing") == active_id), cams[0])
+        else:
+            active = next((c for c in cams if c.get("id") == active_id), cams[0])
         lens = (active or {}).get("lensSettings", {})
 
         res = settings.get("streamRes", "")
@@ -217,7 +230,7 @@ async def set_camera_settings(name: str, body: CameraSettings):
     try:
         r = await loop.run_in_executor(
             None,
-            lambda: http.get(f"http://{ip}:{port}/", params=params, timeout=3),
+            lambda: http.get(f"https://{ip}:{port}/", params=params, timeout=3, verify=False),
         )
     except Exception:
         raise HTTPException(503, "Camera unreachable")

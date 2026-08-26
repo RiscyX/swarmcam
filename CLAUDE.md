@@ -63,7 +63,7 @@ python ../discovery/xm_discovery.py --subnet 192.168.0.0/24  # XM/Sofia protocol
 
 ```
 Android phones (Android IP Camera app, port 4444)
-  │ HTTP H.264 (/video/h264) → go2rtc restream
+  │ HTTPS H.264 (/video/h264, self-signed) → go2rtc restream
   ▼
 Frigate NVR (port 5000) — AI detection, clips, snapshots
   │ publishes to MQTT "frigate/events"
@@ -113,7 +113,7 @@ services/
 `routers/discovery.py` spawns `discovery/discovery.py` as a subprocess. Backend streams the subprocess's stderr line-by-line to the frontend as Server-Sent Events. This means `discovery.py` is testable standalone and the SSE gives live scan progress.
 
 **MJPEG, not WebRTC:**
-Live video is a direct HTTP proxy: `GET /api/cameras/{name}/stream` → `GET http://{ip}:{port}/video/mjpeg` from the camera's Android IP Camera server. The browser's `<img>` tag handles MJPEG natively. ~0.1s latency, zero client-side complexity.
+Live video is a direct HTTP proxy: `GET /api/cameras/{name}/stream` → `GET https://{ip}:{port}/video/mjpeg` from the camera's Android IP Camera server (self-signed TLS, accepted without verification — LAN-only). The browser's `<img>` tag handles MJPEG natively. ~0.1s latency, zero client-side complexity.
 
 **Camera naming convention:**
 `cam_{ip_with_dots_as_underscores}` — e.g. `cam_192_168_0_100`. Deterministic so the same phone always gets the same name across restarts (and across the IP Webcam → Android IP Camera protocol swap, so `aliases.json` needed no migration). The `display_name` overlay (stored in `aliases.json`) is separate from this internal key.

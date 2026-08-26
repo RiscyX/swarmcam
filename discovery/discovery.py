@@ -24,7 +24,12 @@ from datetime import datetime
 from pathlib import Path
 
 import requests
+import urllib3
 import yaml
+
+# The camera app serves HTTPS with a self-signed certificate by default;
+# accepting it without verification is an intentional LAN-only decision.
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 IPCAM_PORT = 4444
 SCAN_TIMEOUT = 1.0          # socket connect timeout (s)
@@ -127,8 +132,9 @@ def _fetch_info(ip: str, port: int) -> dict | None:
     """
     try:
         resp = requests.get(
-            f"http://{ip}:{port}/info.json",
+            f"https://{ip}:{port}/info.json",
             timeout=HTTP_TIMEOUT,
+            verify=False,
         )
         if resp.status_code == 200:
             data = resp.json()
@@ -145,7 +151,11 @@ def _active_camera(info: dict) -> dict | None:
     cams = info.get("cameras") or []
     if not cams:
         return None
+    # settings.cameraId is usually a facing keyword ("front"/"back"), not an
+    # element of cameras[].id ("0", "1", "1:3") — match both.
     active_id = (info.get("settings") or {}).get("cameraId")
+    if active_id in ("front", "back"):
+        return next((c for c in cams if c.get("facing") == active_id), cams[0])
     return next((c for c in cams if c.get("id") == active_id), cams[0])
 
 
@@ -199,8 +209,8 @@ def probe_ipcam(ip: str, port: int) -> Camera | None:
         ip=ip,
         port=port,
         name=f"cam_{safe_ip}",
-        stream_url=f"http://{ip}:{port}/video/h264",
-        http_url=f"http://{ip}:{port}",
+        stream_url=f"https://{ip}:{port}/video/h264",
+        http_url=f"https://{ip}:{port}",
         battery_level=int(info["batteryPercent"]) if "batteryPercent" in info else None,
         wifi_strength=int(info["wifiStrength"]) if "wifiStrength" in info else None,
         resolution=_parse_resolution(info),
