@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this project is
 
-SwarmCam — a self-hosted distributed security camera system. Old Android phones running the **IP Webcam APK** act as camera nodes. A Docker-based server stack (Frigate NVR + MQTT + FastAPI backend + React dashboard) discovers, monitors, and streams these cameras with AI detection. Thesis project — no cloud dependency.
+SwarmCam — a self-hosted distributed security camera system. Old Android phones running the **Android IP Camera app** (F-Droid: `com.github.digitallyrefined.androidipcamera`) act as camera nodes. A Docker-based server stack (Frigate NVR + MQTT + FastAPI backend + React dashboard) discovers, monitors, and streams these cameras with AI detection. Thesis project — no cloud dependency.
 
 Full architecture: `docs/ARCHITECTURE.md`
 
@@ -62,8 +62,8 @@ python ../discovery/xm_discovery.py --subnet 192.168.0.0/24  # XM/Sofia protocol
 ### Stack overview
 
 ```
-Android phones (IP Webcam APK, port 8080)
-  │ RTSP h264_ulaw.sdp
+Android phones (Android IP Camera app, port 4444)
+  │ HTTP H.264 (/video/h264) → go2rtc restream
   ▼
 Frigate NVR (port 5000) — AI detection, clips, snapshots
   │ publishes to MQTT "frigate/events"
@@ -94,7 +94,7 @@ routers/         — FastAPI routers (one per domain)
   config.py      — Frigate config.yml read/write API
   system.py      — Network interfaces, GPU/docker info
 services/
-  health.py      — 5s poll loop: GET /status.json per camera → broadcasts via WS
+  health.py      — 5s poll loop: GET /info.json per camera → broadcasts via WS
   mqtt.py        — aiomqtt subscriber, re-broadcasts Frigate events via WS
   frigate_client.py — Persistent requests.Session with auto-renewing JWT to Frigate
   frigate_config.py — YAML read/write helpers + ConfigSettings model
@@ -113,10 +113,10 @@ services/
 `routers/discovery.py` spawns `discovery/discovery.py` as a subprocess. Backend streams the subprocess's stderr line-by-line to the frontend as Server-Sent Events. This means `discovery.py` is testable standalone and the SSE gives live scan progress.
 
 **MJPEG, not WebRTC:**
-Live video is a direct HTTP proxy: `GET /api/cameras/{name}/stream` → `GET http://{ip}:{port}/videofeed` from IP Webcam. The browser's `<img>` tag handles MJPEG natively. ~0.1s latency, zero client-side complexity. go2rtc (bundled with Frigate) exists but is not used for the live view.
+Live video is a direct HTTP proxy: `GET /api/cameras/{name}/stream` → `GET http://{ip}:{port}/video/mjpeg` from the camera's Android IP Camera server. The browser's `<img>` tag handles MJPEG natively. ~0.1s latency, zero client-side complexity.
 
 **Camera naming convention:**
-`cam_{ip_with_dots_as_underscores}` — e.g. `cam_192_168_0_100`. Deterministic so the same phone always gets the same name across restarts. The `display_name` overlay (stored in `aliases.json`) is separate from this internal key.
+`cam_{ip_with_dots_as_underscores}` — e.g. `cam_192_168_0_100`. Deterministic so the same phone always gets the same name across restarts (and across the IP Webcam → Android IP Camera protocol swap, so `aliases.json` needed no migration). The `display_name` overlay (stored in `aliases.json`) is separate from this internal key.
 
 **Frigate uses `network_mode: host`:**
 This is required because Frigate processes camera RTSP streams and needs low-latency local network access. The backend also uses host networking so it can reach Frigate on `localhost:5000` without Docker DNS.

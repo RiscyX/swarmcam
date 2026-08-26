@@ -1,15 +1,15 @@
 """
-SwarmCam – automatic IP Webcam camera discovery
+SwarmCam – automatic Android IP Camera discovery
 
 Scans the local network, finds Android devices running
-the IP Webcam APK (default port: 8080), and optionally updates
+the Android IP Camera app (default port: 4444), and optionally updates
 the Frigate configuration.
 
 Usage:
     python discovery.py                        # scan + print JSON
     python discovery.py --update-frigate       # + Frigate config update
     python discovery.py --subnet 192.168.0.0/24
-    python discovery.py --port 8080 --timeout 1.5
+    python discovery.py --port 4444 --timeout 1.5
 """
 
 import argparse
@@ -26,7 +26,7 @@ from pathlib import Path
 import requests
 import yaml
 
-IPCAM_PORT = 8080
+IPCAM_PORT = 4444
 SCAN_TIMEOUT = 1.0          # socket connect timeout (s)
 HTTP_TIMEOUT = 2.0          # requests timeout (s)
 MAX_WORKERS = 128
@@ -44,31 +44,26 @@ class Camera:
     ip: str
     port: int
     name: str
-    rtsp_url: str
+    stream_url: str
     http_url: str
     battery_level: int | None
-    battery_charging: bool | None
-    battery_temp_c: float | None
-    battery_voltage: float | None
-    free_space_gb: float | None
+    wifi_strength: int | None
     resolution: tuple[int, int] | None
     orientation: str | None
-    video_connections: int
-    night_vision: bool
-    quality: int | None
     discovered_at: str = field(default_factory=lambda: datetime.now().isoformat())
 
     def to_frigate_camera(self, config: dict | None = None) -> dict:
         """
         As a Frigate config camera entry dict.
-        If config is passed, it reads the existing detect/ffmpeg settings from it
-        (detection fps, resolution, hwaccel, rtsp transport) instead of hardcoding.
+        The phone's H.264 stream is fed into go2rtc (written separately by
+        update_frigate_config); Frigate consumes the go2rtc RTSP restream.
+        If config is passed, it reads the existing detect settings and
+        hwaccel args from it instead of hardcoding.
         """
         # Detect settings: from config, otherwise phone resolution, otherwise 1080p
         detect_fps = 5
         detect_w, detect_h = self.resolution or (1920, 1080)
         hwaccel_args = None
-        rtsp_transport = "-rtsp_transport tcp -fflags +genpts+discardcorrupt -avoid_negative_ts make_zero"
 
         if config:
             # Read sample from existing camera entry, or from the first camera
@@ -78,14 +73,15 @@ class Camera:
                 detect_fps = d.get("fps", detect_fps)
                 detect_w   = d.get("width", detect_w)
                 detect_h   = d.get("height", detect_h)
-                ffmpeg = sample.get("ffmpeg", {})
-                hwaccel_args = ffmpeg.get("hwaccel_args")
-                for inp in ffmpeg.get("inputs", []):
-                    rtsp_transport = inp.get("input_args")
+                hwaccel_args = sample.get("ffmpeg", {}).get("hwaccel_args")
 
         entry: dict = {
             "ffmpeg": {
-                "inputs": [{"path": self.rtsp_url, "roles": ["detect", "record"]}]
+                "inputs": [{
+                    "path": f"rtsp://127.0.0.1:8554/{self.name}",
+                    "input_args": "preset-rtsp-restream",
+                    "roles": ["detect", "record"],
+                }]
             },
             "detect": {
                 "enabled": True,
@@ -97,8 +93,6 @@ class Camera:
 
         if hwaccel_args:
             entry["ffmpeg"]["hwaccel_args"] = hwaccel_args
-        if rtsp_transport:
-            entry["ffmpeg"]["inputs"][0]["input_args"] = rtsp_transport
 
         return entry
 
@@ -123,109 +117,94 @@ def _port_open(ip: str, port: int, timeout: float) -> bool:
 
 
 # ---------------------------------------------------------------------------
-# IP Webcam fingerprinting
+# Android IP Camera fingerprinting
 # ---------------------------------------------------------------------------
 
-def _fetch_status(ip: str, port: int) -> dict | None:
+def _fetch_info(ip: str, port: int) -> dict | None:
     """
-    Fetch IP Webcam /status.json.
-    Returns None if the device is not IP Webcam.
+    Fetch the camera's /info.json.
+    Returns None if the device is not an Android IP Camera.
     """
     try:
         resp = requests.get(
-            f"http://{ip}:{port}/status.json",
+            f"http://{ip}:{port}/info.json",
             timeout=HTTP_TIMEOUT,
         )
         if resp.status_code == 200:
             data = resp.json()
-            # IP Webcam always contains "curvals" or "id" field
-            if "curvals" in data or "id" in data:
+            # Android IP Camera always contains "cameras" and "settings"
+            if "cameras" in data and "settings" in data:
                 return data
     except Exception:
         pass
     return None
 
 
-def _parse_resolution(status: dict) -> tuple[int, int] | None:
+def _active_camera(info: dict) -> dict | None:
+    """Returns the info.json cameras[] entry of the active sensor."""
+    cams = info.get("cameras") or []
+    if not cams:
+        return None
+    active_id = (info.get("settings") or {}).get("cameraId")
+    return next((c for c in cams if c.get("id") == active_id), cams[0])
+
+
+def _parse_resolution(info: dict) -> tuple[int, int] | None:
     try:
-        res_str = status["curvals"]["video_size"]   # e.g. "1280x720"
-        w, h = res_str.split("x")
-        return int(w), int(h)
+        res_str = info["settings"]["streamRes"]     # e.g. "1280x720", "auto", "max"
+        if "x" in res_str:
+            w, h = res_str.split("x")
+            return int(w), int(h)
+    except Exception:
+        pass
+    # Fall back to the largest supported size of the active camera
+    try:
+        cam = _active_camera(info)
+        sizes = cam["sizes"]
+        best = max(sizes, key=lambda s: s["w"] * s["h"])
+        return int(best["w"]), int(best["h"])
     except Exception:
         return None
 
 
-def _parse_orientation(status: dict) -> str | None:
+def _parse_orientation(info: dict) -> str | None:
     try:
-        val = status["curvals"].get("orientation", "")
-        if val in ("portrait", "landscape"):
-            return val
-        angle = int(val)
+        angle = int(_active_camera(info)["sensorOrientation"])
         return "portrait" if angle in (0, 180) else "landscape"
-    except Exception:
-        return None
-
-
-def _parse_battery(status: dict) -> tuple[int | None, bool | None, float | None, float | None]:
-    try:
-        info = status.get("deviceInfo", {})
-        level    = int(info["batteryPercent"])
-        charging = bool(info.get("batteryCharging", ""))   # empty string = not charging
-        temp     = round(float(info.get("batteryTemperatureC", 0)), 1) or None
-        voltage  = float(info.get("batteryVoltage", 0)) or None
-        return level, charging, temp, voltage
-    except Exception:
-        return None, None, None, None
-
-
-def _parse_free_space(status: dict) -> float | None:
-    try:
-        return round(int(status["deviceInfo"]["freeSpaceBytes"]) / 1024 ** 3, 1)
     except Exception:
         return None
 
 
 def probe_ipcam(ip: str, port: int) -> Camera | None:
     """
-    Checks if the ip:port is an IP Webcam.
+    Checks if the ip:port runs the Android IP Camera app.
     If yes, returns a Camera object.
     """
     if not _port_open(ip, port, SCAN_TIMEOUT):
         return None
 
-    status = None
+    info = None
     for attempt in range(PROBE_RETRIES):
-        status = _fetch_status(ip, port)
-        if status is not None:
+        info = _fetch_info(ip, port)
+        if info is not None:
             break
         if attempt < PROBE_RETRIES - 1:
             time.sleep(RETRY_DELAY)
-    if status is None:
+    if info is None:
         return None
 
-    battery_level, battery_charging, battery_temp, battery_voltage = _parse_battery(status)
-    resolution   = _parse_resolution(status)
-    orientation  = _parse_orientation(status)
-    free_space   = _parse_free_space(status)
-    curvals      = status.get("curvals", {})
-
+    settings = info.get("settings", {})
     safe_ip = ip.replace(".", "_")
     return Camera(
         ip=ip,
         port=port,
         name=f"cam_{safe_ip}",
-        rtsp_url=f"rtsp://{ip}:{port}/h264_ulaw.sdp",
+        stream_url=f"http://{ip}:{port}/video/h264",
         http_url=f"http://{ip}:{port}",
-        battery_level=battery_level,
-        battery_charging=battery_charging,
-        battery_temp_c=battery_temp,
-        battery_voltage=battery_voltage,
-        free_space_gb=free_space,
-        resolution=resolution,
-        orientation=orientation,
-        video_connections=int(status.get("video_connections", 0)),
-        night_vision=curvals.get("night_vision", "off") == "on",
-        quality=int(curvals["quality"]) if "quality" in curvals else None,
+        battery_level=int(info["batteryPercent"]) if "batteryPercent" in info else None,
+        wifi_strength=int(info["wifiStrength"]) if "wifiStrength" in info else None,
+        resolution=_parse_resolution(info),
+        orientation=_parse_orientation(info),
     )
 
 
@@ -259,8 +238,9 @@ def scan_network(subnet: str, port: int, workers: int = MAX_WORKERS) -> list[Cam
 
 def update_frigate_config(cameras: list[Camera], config_path: Path = FRIGATE_CONFIG_PATH) -> None:
     """
-    Loads the existing Frigate config.yml, updates the cameras section,
-    then writes it back. Keeps existing camera entries, adds new ones.
+    Loads the existing Frigate config.yml, updates the cameras section and the
+    go2rtc streams section, then writes it back.
+    Keeps existing camera entries, adds new ones.
     """
     if not config_path.exists():
         print(f"[!] Frigate config not found: {config_path}", file=sys.stderr)
@@ -272,9 +252,16 @@ def update_frigate_config(cameras: list[Camera], config_path: Path = FRIGATE_CON
     if "cameras" not in config or config["cameras"] is None:
         config["cameras"] = {}
 
+    go2rtc = config.get("go2rtc") or {}
+    if "streams" not in go2rtc or go2rtc["streams"] is None:
+        go2rtc["streams"] = {}
+
     for cam in cameras:
+        go2rtc["streams"][cam.name] = [cam.stream_url]
         config["cameras"][cam.name] = cam.to_frigate_camera(config)
         print(f"[*] Frigate config updated: {cam.name}", file=sys.stderr)
+
+    config["go2rtc"] = go2rtc
 
     with open(config_path, "w") as f:
         yaml.dump(config, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
@@ -289,7 +276,7 @@ def update_frigate_config(cameras: list[Camera], config_path: Path = FRIGATE_CON
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="SwarmCam – IP Webcam camera discovery"
+        description="SwarmCam – Android IP Camera discovery"
     )
     parser.add_argument(
         "--subnet",
@@ -300,7 +287,7 @@ def parse_args() -> argparse.Namespace:
         "--port",
         type=int,
         default=IPCAM_PORT,
-        help=f"IP Webcam port (default: {IPCAM_PORT})",
+        help=f"Android IP Camera port (default: {IPCAM_PORT})",
     )
     parser.add_argument(
         "--timeout",
@@ -332,7 +319,7 @@ def main() -> None:
     cameras = scan_network(subnet, args.port, args.workers)
 
     if not cameras:
-        print("[!] No IP Webcam cameras found.", file=sys.stderr)
+        print("[!] No Android IP Camera devices found.", file=sys.stderr)
         print("[]")
         return
 
