@@ -80,7 +80,7 @@ export function HealthPage({ cameras, isLoading, onOpenStream, onReload }: Healt
                   </TableCell>
                   <TableCell>
                     {isOnline ? (
-                      <StatusPill tone="live">Online</StatusPill>
+                      <StatusPill tone="idle">Online</StatusPill>
                     ) : (
                       <StatusPill tone="offline">Offline</StatusPill>
                     )}
@@ -124,11 +124,7 @@ export function HealthPage({ cameras, isLoading, onOpenStream, onReload }: Healt
               key={cam.name}
             >
               <div className="flex items-center gap-2 px-3 py-2.5">
-                <PulseDot
-                  animated={isOnline}
-                  size={6}
-                  tone={isOnline ? 'live' : 'offline'}
-                />
+                {!isOnline ? <PulseDot animated={false} size={6} tone="offline" /> : null}
                 <span className="min-w-0 flex-1 truncate text-xs font-bold uppercase tracking-[0.12em] text-[var(--fg)]">
                   {getCameraDisplayName(cam)}
                 </span>

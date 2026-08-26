@@ -133,8 +133,6 @@ export function CameraCard({
       </span>,
     )
   }
-
-  const statusLabel = !isOnline ? 'OFFLINE' : 'ONLINE'
   const showNoSignal = !isOnline || (!hasSignal && !isPaused)
   const overlayVisibilityClass = hideOnIdle
     ? 'opacity-0 transition-opacity duration-200 focus-within:opacity-100 group-hover:opacity-100'
@@ -176,15 +174,7 @@ export function CameraCard({
         className={`absolute inset-x-0 top-0 z-20 flex items-start justify-between gap-2 bg-gradient-to-b from-black/80 via-black/40 to-transparent px-2.5 pb-6 pt-2 ${overlayVisibilityClass}`}
       >
         <div className="flex min-w-0 items-center gap-1.5">
-          <PulseDot
-            animated={isOnline}
-            size={6}
-            speed={2.6}
-            tone={!isOnline ? 'offline' : 'live'}
-          />
-          <span className={`font-mono text-[9px] tracking-widest ${isOnline ? 'text-[var(--status-live)]' : 'text-[var(--fg-muted)]'}`}>
-            {statusLabel}
-          </span>
+          {!isOnline ? <PulseDot animated={false} size={6} speed={2.6} tone="offline" /> : null}
           {isEditing ? (
             <input
               autoFocus
