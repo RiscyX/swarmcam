@@ -1,4 +1,4 @@
-import { Grid2X2, Grid3X3, LayoutGrid } from 'lucide-react'
+import { GalleryThumbnails, Grid2X2, Grid3X3, LayoutGrid } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
 import type { CameraLayout } from '@/types/camera'
@@ -13,6 +13,7 @@ const LAYOUTS: Array<{ id: CameraLayout; label: string; icon: LucideIcon; title:
   { icon: LayoutGrid, id: 'auto', label: 'AUTO', title: 'Auto – minden kamera belefér a viewportba' },
   { icon: Grid2X2, id: '2x2', label: '2×2', title: '2×2 – első 4 kamera' },
   { icon: Grid3X3, id: '3x3', label: '3×3', title: '3×3 – első 9 kamera' },
+  { icon: GalleryThumbnails, id: 'spotlight', label: 'FOCUS', title: 'Focus – egy nagy kamera, alatta filmstrip' },
 ]
 
 const baseButton =
