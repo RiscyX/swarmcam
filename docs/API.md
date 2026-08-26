@@ -64,10 +64,10 @@ List all registered cameras (loaded from `frigate/config.yml` on startup, update
 [
   {
     "ip": "192.168.0.100",
-    "port": 8080,
+    "port": 4444,
     "name": "cam_192_168_0_100",
-    "rtsp_url": "rtsp://192.168.0.100:8080/h264_ulaw.sdp",
-    "http_url": "http://192.168.0.100:8080",
+    "stream_url": "http://192.168.0.100:4444/video/h264",
+    "http_url": "http://192.168.0.100:4444",
     "display_name": "192.168.0.100"
   }
 ]
@@ -88,7 +88,7 @@ Returns `image/jpeg` on success, or a 1×1 transparent GIF if the camera is offl
 
 ### `GET /api/cameras/{name}/stream`
 
-MJPEG live stream proxied directly from the IP Webcam `/videofeed` endpoint.  
+MJPEG live stream proxied directly from the camera's Android IP Camera `/video/mjpeg` endpoint.  
 Streams indefinitely as `multipart/x-mixed-replace`. Use as `<img src="...">`.
 
 **No auth required.**
@@ -116,20 +116,22 @@ Toggle the phone's flashlight.
 
 ### `GET /api/cameras/{name}/settings`
 
-Read current IP Webcam settings from the camera's `/status.json`.
+Read current camera settings from the camera's `/info.json`.
 
 **Response `200`:**
 ```json
 {
-  "orientation": "landscape",
-  "quality": 80,
+  "orientation": "90",
   "video_size": "1280x720",
-  "night_vision": "off",
-  "video_fps": 15,
-  "mirror_flip": "none",
-  "ffc": "off"
+  "mirror": "false",
+  "video_fps": 30,
+  "camera": "0"
 }
 ```
+
+`orientation` is the active sensor's rotation in degrees.  
+`video_size` is the current stream resolution (`null` if set to a preset like `auto`).  
+`camera` is the Android IP Camera sensor id.
 
 **Response `503`:** Camera unreachable.
 
@@ -137,18 +139,16 @@ Read current IP Webcam settings from the camera's `/status.json`.
 
 ### `POST /api/cameras/{name}/settings`
 
-Apply one or more IP Webcam settings. Sends `GET /settings/{key}?set={value}` to the phone for each field provided.
+Apply one or more camera settings. All fields are sent to the phone in a single request (`GET /?k1=v1&k2=v2`) using the Android IP Camera remote-control query parameters: `orientation`→`rotate`, `video_size`→`resolution`, `mirror`→`mirror`, `video_fps`→`fps`, `camera`→`camera`.
 
 **Request body** (all fields optional):
 ```json
 {
-  "orientation": "portrait",
-  "quality": 60,
+  "orientation": "180",
   "video_size": "854x480",
-  "night_vision": "auto",
-  "video_fps": 10,
-  "mirror_flip": "flip",
-  "ffc": "on"
+  "mirror": "false",
+  "video_fps": 15,
+  "camera": "1"
 }
 ```
 
@@ -220,7 +220,7 @@ Start a network scan and stream progress as Server-Sent Events (SSE).
 ```json
 {
   "subnet": "192.168.0.0/24",
-  "port": 8080,
+  "port": 4444,
   "timeout": 1.0,
   "update_frigate": true
 }
@@ -233,13 +233,13 @@ Start a network scan and stream progress as Server-Sent Events (SSE).
 
 ```
 event: progress
-data: "[*] Scanning 254 hosts on 192.168.0.0/24 (port 8080)..."
+data: "[*] Scanning 254 hosts on 192.168.0.0/24 (port 4444)..."
 
 event: progress
 data: "[+] Found: 192.168.0.100  battery=87%  res=(1280, 720)"
 
 event: result
-data: [{"ip":"192.168.0.100","port":8080,"name":"cam_192_168_0_100",...}]
+data: [{"ip":"192.168.0.100","port":4444,"name":"cam_192_168_0_100",...}]
 
 event: done
 data: {}
@@ -602,16 +602,11 @@ Camera health update, sent every 5 seconds per the polling loop.
   "cameras": [
     {
       "ip": "192.168.0.100",
-      "port": 8080,
+      "port": 4444,
       "name": "cam_192_168_0_100",
       "online": true,
       "battery_level": 87,
-      "battery_charging": false,
-      "battery_temp_c": 28.5,
-      "free_space_gb": 4.2,
-      "video_connections": 1,
-      "night_vision": false,
-      "quality": 80,
+      "wifi_strength": -52,
       "orientation": "landscape"
     }
   ]
@@ -637,12 +632,3 @@ Real-time AI detection event from Frigate via MQTT.
 ```
 
 Use `id` to fetch the snapshot: `GET /api/events/{id}/thumbnail`.
-
-#### `alert`
-Charging state change notification.
-```json
-{
-  "type": "alert",
-  "message": "192.168.0.100 csatlakozott a töltőre!"
-}
-```
