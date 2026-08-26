@@ -42,10 +42,8 @@ export function FullscreenView({ camera, onClose, onToggleTorch, torchEnabled }:
 
   const telemetry: Array<[string, string]> = [
     ['FPS', '—'],
-    ['BAT', camera.battery_level != null ? `${fmt(camera.battery_level)}%${camera.battery_charging ? ' ⚡' : ''}` : '—'],
-    ['TEMP', camera.battery_temp_c != null ? `${fmt(Math.round(camera.battery_temp_c))}°C` : '—'],
-    ['DISK', camera.free_space_gb != null ? `${fmt(Number(camera.free_space_gb.toFixed(1)))}GB` : '—'],
-    ['IR', camera.night_vision == null ? '—' : camera.night_vision ? 'ON' : 'OFF'],
+    ['BAT', camera.battery_level != null ? `${fmt(camera.battery_level)}%` : '—'],
+    ['WIFI', camera.wifi_strength != null ? `${fmt(camera.wifi_strength)} dBm` : '—'],
   ]
 
   return (
