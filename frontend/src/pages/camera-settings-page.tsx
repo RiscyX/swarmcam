@@ -32,12 +32,14 @@ type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 // Returned by the backend and persisted there, just not editable in the UI before.
 type SettingsData = CameraSettingsPayload & {
   quality?: number | null
+  video_fps?: number | null
   night_vision?: string | null
 }
 
 const ORIENTATIONS = ['landscape', 'portrait', 'landscape_flipped', 'portrait_flipped']
 const VIDEO_SIZES = ['1920x1080', '1280x720', '854x480', '640x480', '320x240']
 const QUALITIES = ['100', '90', '80', '70', '60', '50', '40', '30', '20']
+const VIDEO_FPS = ['30', '25', '20', '15', '10', '5']
 
 function shortIp(ip: string) {
   const parts = ip.split('.')
@@ -357,6 +359,13 @@ function DetailPanel({
                 onChange={(v) => setSettings({ ...settings, quality: v === '' ? null : Number(v) })}
                 options={QUALITIES}
                 value={settings.quality != null ? String(settings.quality) : ''}
+              />
+              <SelectSetting
+                id="set-fps"
+                label="FPS"
+                onChange={(v) => setSettings({ ...settings, video_fps: v === '' ? null : Number(v) })}
+                options={VIDEO_FPS}
+                value={settings.video_fps != null ? String(settings.video_fps) : ''}
               />
             </div>
 
