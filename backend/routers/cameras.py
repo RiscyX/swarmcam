@@ -1,15 +1,25 @@
 import asyncio
+import contextlib
 import json
 import pathlib
+from urllib.parse import quote
 
 import requests as http
 import urllib3
-from fastapi import APIRouter, HTTPException
+import websockets
+from fastapi import APIRouter, HTTPException, WebSocket
 from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel
 
 import state
-from services.frigate_client import frigate_get
+from services.frigate_client import frigate_get, frigate_get_stream, frigate_post
+from services.frigate_config import (
+    camera_rotation,
+    read_yaml,
+    set_camera_rotation,
+    write_yaml,
+)
+from settings import FRIGATE_CONFIG, GO2RTC_WS_URL
 
 # The camera app serves HTTPS with a self-signed certificate by default;
 # accepting it without verification is an intentional LAN-only decision.
@@ -81,20 +91,21 @@ async def camera_snapshot(name: str):
 
 @router.get("/api/cameras/{name}/stream")
 async def camera_stream(name: str):
+    # Live view a Frigate MJPEG feedjéről megy (ugyanaz a go2rtc H264 stream,
+    # amiből a felvételek készülnek) — így a képállás és a simaság is egyezik
+    # a Frigate UI-val, és kikerüljük a telefon MJPEG throttlingját.
     cam = next((c for c in state._last_cameras if c["name"] == name), None)
     if not cam:
         raise HTTPException(404, "Camera not found")
-    ip, port = cam["ip"], cam["port"]
-    loop = asyncio.get_event_loop()
     try:
-        r = await loop.run_in_executor(
-            None,
-            lambda: http.get(f"https://{ip}:{port}/video/mjpeg", stream=True, timeout=3, verify=False),
-        )
+        r = await frigate_get_stream(f"/api/{name}", timeout=5)
     except Exception:
         raise HTTPException(503, "Camera unreachable")
+    if r.status_code != 200:
+        raise HTTPException(503, "Camera unreachable")
 
-    content_type = r.headers.get("Content-Type", "multipart/x-mixed-replace;boundary=ipcam")
+    content_type = r.headers.get("Content-Type", "multipart/x-mixed-replace;boundary=frame")
+    loop = asyncio.get_event_loop()
 
     async def generate():
         try:
@@ -107,6 +118,50 @@ async def camera_stream(name: str):
             r.close()
 
     return StreamingResponse(generate(), media_type=content_type)
+
+
+@router.websocket("/ws/cameras/{name}/mse")
+async def camera_mse(ws: WebSocket, name: str):
+    """
+    A go2rtc MSE streamjének átjátszása a böngészőnek: fMP4 szegmensek
+    ugyanabból a H.264 forrásból, amiből a Frigate detektál és felvesz.
+    A go2rtc csak újracsomagol, nem kódol újra — az MJPEG proxyval szemben
+    nincs JPEG-enkódolás, és a képfrissítés nincs a detect fps-hez kötve.
+
+    A /ws prefix nem esztétikai: a dashboard nginxében csak az a location
+    adja tovább a WebSocket Upgrade headert, az /api/ nem.
+    """
+    if not any(c["name"] == name for c in state._last_cameras):
+        await ws.close(code=1008)
+        return
+
+    await ws.accept()
+    try:
+        async with websockets.connect(f"{GO2RTC_WS_URL}?src={quote(name)}", max_size=None) as up:
+            async def client_to_go2rtc() -> None:
+                while True:
+                    await up.send(await ws.receive_text())
+
+            async def go2rtc_to_client() -> None:
+                async for msg in up:
+                    if isinstance(msg, bytes):
+                        await ws.send_bytes(msg)
+                    else:
+                        await ws.send_text(msg)
+
+            tasks = [
+                asyncio.create_task(client_to_go2rtc()),
+                asyncio.create_task(go2rtc_to_client()),
+            ]
+            _, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+            for task in pending:
+                task.cancel()
+    except Exception:
+        # A relay bármelyik vége normálisan is elszakadhat (fülváltás, navigáció).
+        pass
+    finally:
+        with contextlib.suppress(Exception):
+            await ws.close()
 
 
 @router.post("/api/cameras/{name}/torch")
@@ -150,6 +205,66 @@ async def camera_stats(name: str):
         raise HTTPException(503, "Frigate unavailable")
 
 
+_ROTATIONS = (0, 90, 180, 270)
+
+
+def _pipeline_rotation(name: str) -> int:
+    """A kamerára ténylegesen alkalmazott forgatás a Frigate configból."""
+    if not FRIGATE_CONFIG.exists():
+        return 0
+    try:
+        return camera_rotation(read_yaml(FRIGATE_CONFIG), name)
+    except Exception:
+        return 0
+
+
+async def _clear_phone_rotation(ip: str, port: int) -> None:
+    """
+    Nullázza a telefon saját rotate-jét. A /video/h264 streamet az nem forgatja
+    el, csak beleilleszti a kisebbre skálázott képet a változatlan méretű keretbe
+    (fekete sávok) — a forgatás után ez dupla munka és felbontásvesztés lenne.
+    """
+    loop = asyncio.get_event_loop()
+    try:
+        await loop.run_in_executor(
+            None,
+            lambda: http.get(f"https://{ip}:{port}/", params={"rotate": "0"},
+                             timeout=3, verify=False),
+        )
+    except Exception:
+        pass
+
+
+async def _apply_rotation(name: str, orientation: str, ip: str, port: int) -> tuple[bool, bool]:
+    """
+    Beírja a forgatást a go2rtc streamekbe és újraindítja a Frigate-et.
+    Restart kell, mert a detect mérete is változik.
+    Visszatérés: (érvényben van-e a kért forgatás, újraindult-e a Frigate).
+    """
+    try:
+        rotation = int(orientation)
+    except (TypeError, ValueError):
+        return False, False
+    if rotation not in _ROTATIONS or not FRIGATE_CONFIG.exists():
+        return False, False
+
+    await _clear_phone_rotation(ip, port)
+
+    config = read_yaml(FRIGATE_CONFIG)
+    if camera_rotation(config, name) == rotation:
+        return True, False
+    try:
+        write_yaml(FRIGATE_CONFIG, set_camera_rotation(config, name, rotation))
+    except KeyError:
+        return False, False
+
+    try:
+        await frigate_post("/api/restart", timeout=10)
+    except Exception:
+        pass
+    return True, True
+
+
 @router.get("/api/cameras/{name}/settings")
 async def get_camera_settings(name: str):
     cam = next((c for c in state._last_cameras if c["name"] == name), None)
@@ -185,11 +300,12 @@ async def get_camera_settings(name: str):
         except (KeyError, TypeError, ValueError):
             video_fps = None
 
-        # User-set values live in the active camera's lensSettings map (all strings):
-        # rotate holds the user rotation the `rotate=` param writes to — the
-        # hardware-mounted sensorOrientation never changes and is not user-facing.
+        # A forgatás kivételével minden érték a telefonról jön (lensSettings,
+        # csupa string). A forgatást viszont a go2rtc pipeline végzi, ezért azt
+        # a Frigate configból olvassuk — az mutatja, mit lát ténylegesen a
+        # felhasználó a dashboardon, a Frigate UI-n és a felvételeken.
         return CameraSettings(
-            orientation=lens.get("rotate"),
+            orientation=str(_pipeline_rotation(name)),
             video_size=video_size,
             mirror=(lens.get("mirror") == "true"),
             video_fps=video_fps,
@@ -219,24 +335,39 @@ async def set_camera_settings(name: str, body: CameraSettings):
     ip, port = cam["ip"], cam["port"]
     loop = asyncio.get_event_loop()
     fields = body.model_dump(exclude_none=True)
-    # All settings go in a single request: GET /?k1=v1&k2=v2
+    # A forgatás nem a telefonra megy, hanem a go2rtc pipeline-ba — lásd
+    # _apply_rotation. A többi beállítás egyetlen kérésben: GET /?k1=v1&k2=v2
+    phone_fields = {k: v for k, v in fields.items() if k != "orientation"}
     params = {
         _KEY_MAP[k]: (str(v).lower() if isinstance(v, bool) else str(v))
-        for k, v in fields.items()
+        for k, v in phone_fields.items()
     }
-    if not params:
+    if not fields:
         return {"ok": False, "applied": []}
 
-    try:
-        r = await loop.run_in_executor(
-            None,
-            lambda: http.get(f"https://{ip}:{port}/", params=params, timeout=3, verify=False),
-        )
-    except Exception:
-        raise HTTPException(503, "Camera unreachable")
+    applied = []
+    if params:
+        try:
+            r = await loop.run_in_executor(
+                None,
+                lambda: http.get(f"https://{ip}:{port}/", params=params, timeout=3, verify=False),
+            )
+        except Exception:
+            raise HTTPException(503, "Camera unreachable")
+        if r.status_code == 200:
+            applied = list(phone_fields.keys())
 
-    applied = list(fields.keys()) if r.status_code == 200 else []
-    return {"ok": len(applied) > 0, "applied": applied}
+    frigate_restarted = False
+    if "orientation" in fields:
+        rotated, frigate_restarted = await _apply_rotation(name, body.orientation, ip, port)
+        if rotated:
+            applied.append("orientation")
+
+    return {
+        "ok": len(applied) > 0,
+        "applied": applied,
+        "frigate_restarted": frigate_restarted,
+    }
 
 
 @router.patch("/api/cameras/{name}/alias")

@@ -85,7 +85,7 @@ state.py         — In-memory state: _last_cameras, _ws_clients, _health_cache
 settings.py      — All config constants + env var overrides (single source of truth)
 routers/         — FastAPI routers (one per domain)
   auth.py        — Login proxy to Frigate, JWT decode
-  cameras.py     — Camera list, MJPEG proxy, torch, alias, settings
+  cameras.py     — Camera list, MSE relay + MJPEG fallback, torch, alias, settings
   discovery.py   — SSE endpoint that spawns discovery.py subprocess
   events.py      — Frigate events/thumbnails proxy
   recordings.py  — Clip streaming + download proxy
@@ -112,8 +112,14 @@ services/
 **Discovery runs as a subprocess:**
 `routers/discovery.py` spawns `discovery/discovery.py` as a subprocess. Backend streams the subprocess's stderr line-by-line to the frontend as Server-Sent Events. This means `discovery.py` is testable standalone and the SSE gives live scan progress.
 
-**MJPEG, not WebRTC:**
-Live video is a direct HTTP proxy: `GET /api/cameras/{name}/stream` → `GET https://{ip}:{port}/video/mjpeg` from the camera's Android IP Camera server (self-signed TLS, accepted without verification — LAN-only). The browser's `<img>` tag handles MJPEG natively. ~0.1s latency, zero client-side complexity.
+**Live video is go2rtc MSE, not MJPEG or WebRTC:**
+`WS /ws/cameras/{name}/mse` relays the Frigate-embedded go2rtc's MSE feed (`ws://localhost:1984/api/ws?src=<name>`) to the browser as fMP4 segments, played through a `MediaSource`. go2rtc repackages the phone's H.264 without re-encoding, so live view runs at the phone's native resolution, independent of the detect resolution/fps, at 0.03–0.07s latency and ~2 percentage points of Frigate CPU per viewer.
+
+The `/ws/` prefix is load-bearing: the dashboard nginx only passes the WebSocket `Upgrade` header on `/ws/`, not on `/api/`.
+
+The older MJPEG proxy (`GET /api/cameras/{name}/stream`, proxying Frigate's `/api/<camera>` debug feed) is still there as the fallback after 3 failed MSE attempts, and still backs the FOCUS-mode filmstrip thumbnails. It serves the detect resolution and costs a CPU JPEG encoder per viewer.
+
+**Live frame rate is capped by the phone, not the server.** Android auto-exposure drops the sensor frame rate in low light — measured 0.9 fps dark vs 16.6 fps with the torch on. Don't chase this server-side.
 
 **Camera naming convention:**
 `cam_{ip_with_dots_as_underscores}` — e.g. `cam_192_168_0_100`. Deterministic so the same phone always gets the same name across restarts (and across the IP Webcam → Android IP Camera protocol swap, so `aliases.json` needed no migration). The `display_name` overlay (stored in `aliases.json`) is separate from this internal key.
@@ -130,13 +136,14 @@ The backend container mounts `/var/run/docker.sock` so it can run `docker compos
 App.tsx            — AuthProvider wraps AppShell, that's it
 components/
   app-shell.tsx    — Main layout: sidebar + page outlet; owns activeSection state
-  camera-card.tsx  — Camera tile with MJPEG live/snapshot toggle, torch, rename
+  camera-card.tsx  — Camera tile with MSE live/snapshot toggle, torch, rename
   event-feed-panel.tsx — Slide-in panel with Frigate detection events
   ...
 pages/             — One component per sidebar section
 hooks/
   use-auth.tsx     — AuthContext: token, user, login/logout
   use-camera-socket.ts — WebSocket /ws/cameras: status/event/alert dispatch
+  use-mse-stream.ts — go2rtc MSE player: fMP4 → MediaSource, buffer trim + live-edge seek
   use-cameras.ts   — REST fetch + socket merge for camera list
   use-discovery-stream.ts — SSE consumer for discovery progress
 lib/

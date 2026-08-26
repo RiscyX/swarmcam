@@ -2,7 +2,7 @@
 
 ## Overview
 
-SwarmCam is a self-hosted, distributed security camera system. Old Android phones running the **IP Webcam APK** act as camera nodes. A server-side stack (Frigate NVR, MQTT broker, FastAPI backend, React dashboard) discovers, monitors, and presents these cameras with AI-based detection and live video streaming.
+SwarmCam is a self-hosted, distributed security camera system. Old Android phones running the **Android IP Camera app** act as camera nodes. A server-side stack (Frigate NVR, MQTT broker, FastAPI backend, React dashboard) discovers, monitors, and presents these cameras with AI-based detection and live video streaming.
 
 **Design goal:** Zero cloud dependency. Everything runs on a local machine (NUC or similar) in Docker containers.
 
@@ -50,7 +50,7 @@ SwarmCam is a self-hosted, distributed security camera system. Old Android phone
 │                                                        │
 │  routers:                                              │
 │    auth        — login proxy, JWT decode               │
-│    cameras     — list, MJPEG proxy, torch, alias       │
+│    cameras     — list, MSE relay, torch, alias         │
 │    discovery   — network scan SSE endpoint             │
 │    events      — Frigate events proxy                  │
 │    recordings  — clip streaming proxy                  │
@@ -70,7 +70,7 @@ SwarmCam is a self-hosted, distributed security camera system. Old Android phone
 │         React Dashboard (nginx port 80)              │
 │                                                      │
 │  Pages (state-based routing):                        │
-│    Cameras     — live MJPEG grid, torch, fullscreen  │
+│    Cameras     — live H.264 grid, torch, fullscreen  │
 │    Health      — battery, stream status per camera   │
 │    Discovery   — network scan with SSE log           │
 │    Camera Sett.— query params (?key=val), rename     │
@@ -86,18 +86,20 @@ SwarmCam is a self-hosted, distributed security camera system. Old Android phone
 
 ## Components
 
-### IP Webcam APK
+### Android IP Camera app
 
-- Android app by Pavel Khlebovich, runs a mini HTTP/RTSP server on the phone
-- Port 8080 (default)
+- Open-source (GPL) Android app, distributed on F-Droid as `com.github.digitallyrefined.androidipcamera`. Runs a mini HTTP server on the phone.
+- Port 4444 (default), **HTTPS with a self-signed certificate** — TLS is on out of the box (the `tls_version` preference defaults to `1.3`). SwarmCam accepts the certificate without verification; see `DECISIONS.md`.
+- Requires Android 7.0 or newer.
 - Key endpoints used by SwarmCam:
-  - `GET /status.json` — device info, battery, current settings (`curvals`)
-  - `GET /videofeed` — MJPEG stream (used for low-latency live view)
-  - `GET /settings/{key}?set={value}` — change orientation, quality, resolution, night vision
-  - `GET /enabletorch` / `GET /disabletorch` — flashlight control
-  - RTSP `rtsp://{ip}:8080/h264_ulaw.sdp` — H.264 stream for Frigate
+  - `GET /info.json` — camera sensors, battery percentage, Wi-Fi strength, current settings
+  - `GET /video/mjpeg` — MJPEG stream (used for low-latency live view)
+  - `GET /video/h264` — raw Annex-B H.264 stream, consumed by go2rtc (the app serves no RTSP of its own)
+  - `GET /?{key}={value}` — change rotation, resolution, fps, mirror, active camera; several keys in one request
+  - `GET /?torch=on|off` — flashlight control
+  - `GET /control/start|stop|status` — enable/disable the media routes without touching the device
 
-**Why this APK?** Turns e-waste phones into camera hardware with zero cost. The HTTP API is well-documented and stable across 1.x versions.
+**Why this app?** Turns e-waste phones into camera hardware with zero cost, and unlike the previously used IP Webcam APK it is open source and installable without the Play Store. See `DECISIONS.md` (D-001) for the full rationale and the telemetry given up in the swap.
 
 ---
 
@@ -143,7 +145,7 @@ Central orchestration layer. All frontend-to-Frigate communication goes through 
 | MQTT events | `services/mqtt.py` — `aiomqtt` client, transforms Frigate payloads, broadcasts via WebSocket |
 | Frigate proxy | `services/frigate_client.py` — persistent `requests.Session` with auto-renewing JWT auth |
 | Discovery trigger | `routers/discovery.py` — spawns `discovery.py` as subprocess, streams stderr via SSE |
-| MJPEG proxy | `routers/cameras.py` — streams IP Webcam `/videofeed` to the browser via `StreamingResponse` |
+| Live video relay | `routers/cameras.py` — `/ws/cameras/{name}/mse` relays go2rtc's fMP4 stream to the browser; the older MJPEG proxy at `/api/cameras/{name}/stream` remains as fallback |
 | Config management | `services/frigate_config.py` — YAML read/write for `frigate/config.yml`, decoder switching restarts Frigate via docker compose |
 | WebSocket hub | `main.py` — `/ws/cameras` endpoint, `state._ws_clients` set, broadcasts from health loop and MQTT loop |
 
@@ -157,17 +159,17 @@ The system is self-hosted, single-node, and the camera list is small (typically 
 
 ### Discovery Script (`discovery/discovery.py`)
 
-Standalone Python script that scans the local network for IP Webcam instances.
+Standalone Python script that scans the local network for Android IP Camera instances.
 
 **Algorithm:**
 1. Auto-detect or accept `--subnet` (e.g. `192.168.0.0/24`)
-2. TCP port-scan all 254 hosts in parallel (128 threads) on port 8080
-3. For each open port: HTTP `GET /status.json`
-4. Fingerprint: IP Webcam always has `curvals` or `id` in the JSON — if present, it's a camera
+2. TCP port-scan all 254 hosts in parallel (128 threads) on port 4444
+3. For each open port: HTTPS `GET /info.json` (self-signed certificate accepted)
+4. Fingerprint: the response always has both `cameras` and `settings` — if present, it's a camera
 5. 2 retry attempts with 0.5s delay (handles slow phones waking up)
-6. Extract: battery, resolution, orientation, video connections, night vision
+6. Extract: battery percentage, Wi-Fi strength, resolution, orientation
 7. Output: JSON to stdout (backend consumes this), progress log to stderr (backend streams as SSE)
-8. Optional `--update-frigate`: write new camera entries to `frigate/config.yml`
+8. Optional `--update-frigate`: write new entries to **both** the `cameras:` and the `go2rtc.streams:` section of `frigate/config.yml`
 
 Camera name format: `cam_{ip_with_dots_replaced_by_underscores}` — e.g. `cam_192_168_0_100`.
 
@@ -195,7 +197,7 @@ Single-page app (SPA) built with React 18 + TypeScript + Vite. Served by nginx.
 User clicks "Scan" in dashboard
   → POST /api/discover/stream (SSE)
   → Backend spawns discovery.py subprocess
-  → discovery.py: TCP scan → /status.json fingerprint
+  → discovery.py: TCP scan → /info.json fingerprint (HTTPS)
   → stderr lines → backend SSE → dashboard log display
   → discovery.py stdout: JSON camera list
   → Backend: state._last_cameras updated
@@ -210,11 +212,10 @@ Backend startup → asyncio.create_task(health_loop())
 
 Every 5 seconds:
   for each camera in state._last_cameras:
-    GET http://{ip}:{port}/status.json (timeout 2s)
-    → parse battery, charging, temp, free space,
-         video_connections, night_vision, quality
+    GET https://{ip}:{port}/info.json (timeout 2s)
+    → parse battery percentage, Wi-Fi strength, orientation
+         (from the active camera's lensSettings.rotate)
     → update state._health_cache[ip]
-    → if charging state changed: broadcast alert via WebSocket
 
   Broadcast to all WebSocket clients:
     {"type": "status", "cameras": [...health data...]}
@@ -223,26 +224,42 @@ Dashboard WebSocket handler:
   → updates camera card health indicators in real-time
 ```
 
-### 3. Live Video (MJPEG)
+### 3. Live Video (go2rtc MSE)
 
 ```
-User opens camera card → clicks LIVE button
-  → <img src="/api/cameras/{name}/stream">
+User opens camera card
+  → <video> + MediaSource, WebSocket to /ws/cameras/{name}/mse
 
-nginx → proxy_pass → Backend GET /api/cameras/{name}/stream
-  → find camera in state._last_cameras → get ip, port
-  → GET http://{ip}:{port}/videofeed (blocking, streamed)
-  → StreamingResponse: yield 8192-byte chunks
-  → Browser <img> renders MJPEG frames natively
+nginx (/ws/ location — the only one that passes the Upgrade header)
+  → Backend WebSocket /ws/cameras/{name}/mse
+  → relays to go2rtc ws://localhost:1984/api/ws?src={name}
+  → go2rtc repackages the phone's H.264 into fMP4 segments (no re-encode)
+  → Browser appends segments to a SourceBuffer, native H.264 decode
 
-Latency: ~0.1s (no transcoding, no buffering, direct proxy)
+Latency: 0.03–0.07s measured, at the phone's native resolution
 ```
 
-Why MJPEG and not WebRTC (which go2rtc supports)?
-- WebRTC requires ICE negotiation, STUN/TURN setup, signaling server
-- MJPEG over HTTP works with a plain `<img>` tag — zero client-side complexity
-- For a local network at 15 FPS / 720p, MJPEG bandwidth (~2–5 Mbps) is acceptable
-- Latency difference is imperceptible for security monitoring use cases
+Why MSE and not the Frigate MJPEG feed it replaced?
+
+The old path proxied Frigate's `/api/<camera>` debug feed, which re-encodes
+*detect* frames to JPEG on the CPU. That tied live view to the detect
+resolution and detect fps, and cost a JPEG encoder per viewer:
+
+| | MJPEG (old) | MSE (current) |
+|---|---|---|
+| Resolution | detect size (640x360) | phone native (1280x720) |
+| Frame rate | 3.5 fps | phone rate (light-limited, see below) |
+| Frigate CPU per viewer | +26 percentage points | +2 percentage points |
+
+Why MSE and not WebRTC (which go2rtc also supports)? WebRTC needs ICE
+negotiation and a UDP candidate port; MSE runs over the WebSocket that
+already passes through the existing nginx and backend auth path, with the
+same H.264 passthrough and no measurable latency penalty on a LAN.
+
+**The frame rate ceiling is the phone, not the server.** Android
+auto-exposure lengthens exposure time in low light, which drops the sensor
+frame rate. Measured on one node by toggling its torch: 0.9 fps dark,
+16.6 fps lit. No server-side change affects this.
 
 ### 4. AI Detection Event Flow
 
@@ -281,16 +298,52 @@ The backend maintains **two independent auth sessions**:
 1. The user's JWT (passed through from frontend, decoded for role check)
 2. The backend's own admin session (used for health polling, config reads, etc.)
 
+### 6. Camera Rotation
+
+The phone's own `rotate=` setting does **not** rotate `/video/h264`. The frame
+keeps its original size and orientation; the app merely scales the picture down
+and pillarboxes it into that frame, costing resolution and adding black bars.
+Rotation is therefore applied **in the go2rtc pipeline**, and the backend pushes
+`rotate=0` to the phone whenever it sets an orientation, so the two never stack.
+
+```
+Rotation off (default) — no transcoding:
+  go2rtc: cam_x → https://{ip}:4444/video/h264
+
+Rotation on (90/180/270):
+  go2rtc: cam_x_raw → https://{ip}:4444/video/h264
+          cam_x     → ffmpeg:cam_x_raw#video=h264#rotate=90#hardware
+                      (nvenc transpose; go2rtc cannot read the phone's
+                       self-signed HTTPS stream directly, so it chains
+                       off the raw stream)
+
+Frigate consumes rtsp://127.0.0.1:8554/cam_x either way, so detect,
+recordings, snapshots, the Frigate UI and the dashboard's live view all
+inherit the rotation from one place.
+```
+
+- The rotation lives in the `#rotate=N` fragment of the go2rtc source string —
+  `docker/frigate/config.yml` is the single source of truth, no extra state file.
+- `POST /api/cameras/{name}/settings` with `orientation` writes the config and
+  restarts Frigate (Frigate re-reads `config.yml` only at startup).
+- A rotated camera gets **no** `detect.width`/`height` — both are optional and
+  Frigate reads the real resolution off the stream. Writing a fixed size there
+  would letterbox the picture, because the phone's resolution is not known ahead
+  of time (`streamRes: auto`) and no longer matches once the axes swap.
+- `discovery.py` writes the phone URL into `cam_x_raw` when that stream exists,
+  so re-running discovery does not drop the rotation.
+
 ---
 
 ## Design Decisions
 
 | Decision | Choice | Alternative | Reason |
 |---|---|---|---|
-| Live video | MJPEG proxy | WebRTC (go2rtc) | Zero client setup, `<img>` tag works natively, sufficient for LAN |
+| Live video | go2rtc MSE over WebSocket | WebRTC; Frigate MJPEG feed | H.264 passthrough with no re-encode, decoupled from detect resolution/fps; no ICE or UDP port needed |
 | State storage | In-memory | SQLite / Redis | Single-node, small scale, Frigate owns persistent data |
 | Frontend routing | State-based `useState` | React Router | Local admin UI, no deep linking needed, simpler bundle |
 | Backend-Frigate auth | Persistent session | Pass user token through | Backend needs auth for health/stats polling without user involvement |
 | Discovery | Subprocess SSE | Library / in-process | `discovery.py` runs as standalone script (testable, portable); SSE gives live log streaming |
 | CPU detector default | `cpu` type in Frigate | `nvidia` / `coral` | Maximizes portability — works on any machine, GPU optional |
+| Camera rotation | go2rtc `#rotate` transcode | Frigate `output_args` transpose | One transcode feeds every consumer; Frigate's own UI live view reads go2rtc, so a Frigate-side filter would miss it |
 | Camera naming | `cam_{ip_underscored}` | UUID / sequential | Deterministic — same camera always gets same name, survives restarts |

@@ -4,16 +4,16 @@ A distributed security camera system built on an Android device sensor swarm and
 
 ## What is this?
 
-SwarmCam turns old Android phones into security cameras. Each phone runs the **IP Webcam APK**, which exposes an RTSP video stream and an HTTP status/control API. The system automatically discovers these cameras on the local network, registers them with the **Frigate NVR** (AI detection, recording), and presents everything in a custom dashboard.
+SwarmCam turns old Android phones into security cameras. Each phone runs the open-source **Android IP Camera** app from F-Droid, which exposes an H.264 video stream and an HTTPS status/control API. The system automatically discovers these cameras on the local network, registers them with the **Frigate NVR** (AI detection, recording), and presents everything in a custom dashboard.
 
 **No cloud, no subscription.** Every component runs locally in Docker containers.
 
 ```
-Android phones (IP Webcam APK)
-        │ RTSP stream + HTTP API
+Android phones (Android IP Camera, port 4444)
+        │ HTTPS: /video/h264 + /info.json
         ▼
 Frigate NVR ──── go2rtc
-(AI detection,          │ WebRTC / MJPEG
+(AI detection,          │ restreams H.264 as RTSP
  recording)             │
         │ MQTT events
         ▼
@@ -149,9 +149,8 @@ Szakdoga/
 │       ├── mqtt.py              # aiomqtt client, frigate/events subscribe, WS broadcast
 │       └── setup.py             # Auto-creates default Frigate user on startup if needed
 ├── discovery/
-│   └── discovery.py             # Network scan + IP Webcam fingerprinting, Frigate config update
-├── frontend/
-│   └── index.html               # Single-page dashboard (vanilla JS, no framework)
+│   └── discovery.py             # Network scan + /info.json fingerprinting, Frigate config update
+├── frontend/                    # React + Vite + TypeScript dashboard (see frontend/src/)
 └── docs/
     ├── ARCHITECTURE.md          # Detailed system architecture and design decisions
     ├── API.md                   # Full REST + WebSocket API reference

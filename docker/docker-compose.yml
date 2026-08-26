@@ -1,12 +1,13 @@
 services:
   frigate:
     container_name: frigate
-    image: ghcr.io/blakeblackshear/frigate:stable
+    image: ghcr.io/blakeblackshear/frigate:stable-tensorrt
     restart: unless-stopped
     shm_size: 256mb
     volumes:
     - ./frigate/config.yml:/config/config.yml
     - frigate_db:/config
+    - ./frigate/model_cache:/config/model_cache
     - ./media:/media/frigate
     - /etc/localtime:/etc/localtime:ro
     network_mode: host

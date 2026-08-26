@@ -1,4 +1,4 @@
-import { apiFetch, apiUrl } from '@/lib/api'
+import { apiFetch, apiUrl, wsUrl } from '@/lib/api'
 import type { Camera, CameraStats } from '@/types/camera'
 
 export function listCameras(token: string) {
@@ -24,6 +24,10 @@ export function cameraSnapshotUrl(name: string, timestamp = Date.now()) {
 
 export function cameraStreamUrl(name: string) {
   return apiUrl(`/api/cameras/${encodeURIComponent(name)}/stream`)
+}
+
+export function cameraMseUrl(name: string) {
+  return wsUrl(`/ws/cameras/${encodeURIComponent(name)}/mse`)
 }
 
 export type CameraSettingsPayload = {

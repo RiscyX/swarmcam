@@ -37,7 +37,7 @@ export function Topbar({
       : cameraLayout === '3x3'
         ? Math.min(cameraCount, 9)
         : cameraCount
-  const streamLabel = breakpoint === 'mobile' ? '1 STREAM ACTIVE' : `${visibleCameras} MJPEG STREAMS`
+  const streamLabel = breakpoint === 'mobile' ? '1 STREAM ACTIVE' : `${visibleCameras} H.264 STREAMS`
 
   return (
     <header className="flex h-14 shrink-0 items-center gap-3 border-b border-[var(--border-row)] bg-[var(--bg-chrome)] px-4">

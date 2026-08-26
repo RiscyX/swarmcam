@@ -9,6 +9,82 @@ from pydantic import BaseModel
 from settings import COMPOSE_FILE
 
 
+RAW_SUFFIX = "_raw"
+_ROTATE_RE = re.compile(r"#rotate=(\d+)")
+
+
+def _streams(config: dict) -> dict:
+    return (config.get("go2rtc") or {}).get("streams") or {}
+
+
+def _urls(entry) -> list[str]:
+    return [entry] if isinstance(entry, str) else [str(u) for u in (entry or [])]
+
+
+def camera_rotation(config: dict, name: str) -> int:
+    """A go2rtc pipeline-ban ténylegesen alkalmazott forgatás (0/90/180/270)."""
+    for url in _urls(_streams(config).get(name)):
+        m = _ROTATE_RE.search(url)
+        if m:
+            return int(m.group(1))
+    return 0
+
+
+def camera_source_url(config: dict, name: str) -> str | None:
+    """A telefon H.264 URL-je, akárhol is áll épp: a nyers vagy a _raw streamben."""
+    streams = _streams(config)
+    for key in (name + RAW_SUFFIX, name):
+        for url in _urls(streams.get(key)):
+            if url.startswith(("http://", "https://")):
+                return url
+    return None
+
+
+def auto_detect_size(detect: dict) -> dict:
+    """
+    Kiveszi a detect fix méretét, hogy a Frigate a streamből olvassa ki
+    (a `width`/`height` opcionális). Forgatott kameránál muszáj: a telefon
+    felbontása változhat (`streamRes: auto`), a configba írt méret pedig a
+    forgatás után nem stimmelne, és a Frigate fekete sávokkal tölti ki a
+    különbséget.
+    """
+    detect = dict(detect)
+    detect.pop("width", None)
+    detect.pop("height", None)
+    return detect
+
+
+def set_camera_rotation(config: dict, name: str, rotation: int) -> dict:
+    """
+    A forgatást a go2rtc-ben végezzük, nem a telefonon: a /video/h264 stream
+    figyelmen kívül hagyja a rotate paramétert, csak az MJPEG-et forgatja.
+    Forgatáskor a nyers telefon-URL a `{name}_raw` streambe kerül, a kamera
+    nevén pedig egy ffmpeg transpose forrás áll — így a Frigate detect/record,
+    a Frigate UI élő képe és a dashboard is ugyanazt a képállást kapja.
+    rotation == 0 esetén visszaáll az újrakódolás nélküli passthrough.
+    """
+    src = camera_source_url(config, name)
+    if src is None:
+        raise KeyError(name)
+
+    go2rtc = config.get("go2rtc") or {}
+    streams = go2rtc.get("streams") or {}
+    raw = name + RAW_SUFFIX
+    if rotation:
+        streams[raw] = [src]
+        streams[name] = [f"ffmpeg:{raw}#video=h264#rotate={rotation}#hardware"]
+    else:
+        streams.pop(raw, None)
+        streams[name] = [src]
+    go2rtc["streams"] = streams
+    config["go2rtc"] = go2rtc
+
+    cam = (config.get("cameras") or {}).get(name)
+    if cam:
+        cam["detect"] = auto_detect_size(cam.get("detect") or {"enabled": True})
+    return config
+
+
 class ConfigSettings(BaseModel):
     decoder: Literal["cpu", "nvidia", "intel", "coral"] = "cpu"
     detection_fps: int = 5
@@ -39,15 +115,20 @@ def extract_settings(config: dict) -> ConfigSettings:
 
     detection_fps, detection_width, detection_height = 5, 1920, 1080
     rtsp_transport = "tcp"
-    for cam in (config.get("cameras") or {}).values():
-        d = cam.get("detect", {})
-        detection_fps    = d.get("fps", detection_fps)
-        detection_width  = d.get("width", detection_width)
-        detection_height = d.get("height", detection_height)
-        for inp in cam.get("ffmpeg", {}).get("inputs", []):
+    cams = list((config.get("cameras") or {}).values())
+    if cams:
+        d = cams[0].get("detect", {})
+        detection_fps = d.get("fps", detection_fps)
+        for inp in cams[0].get("ffmpeg", {}).get("inputs", []):
             args = str(inp.get("input_args", ""))
             rtsp_transport = "udp" if "udp" in args else "tcp"
-        break
+    # Forgatott kamerán nincs kiírt méret (a Frigate detektálja) — a globális
+    # beállítás értékét az első olyan kameráról vesszük, amelyiken van.
+    for cam in cams:
+        d = cam.get("detect", {})
+        if "width" in d and "height" in d:
+            detection_width, detection_height = d["width"], d["height"]
+            break
 
     rec = config.get("record", {})
     record_motion_days = (rec.get("motion") or {}).get("days", 7)
@@ -82,13 +163,16 @@ def apply_settings(config: dict, s: ConfigSettings) -> dict:
     config["record"].setdefault("detections", {}).setdefault("retain", {})["days"] = s.record_event_days
     config["record"].setdefault("alerts",     {}).setdefault("retain", {})["days"] = s.record_event_days
 
-    for cam in (config.get("cameras") or {}).values():
-        cam["detect"] = {
+    for cam_name, cam in (config.get("cameras") or {}).items():
+        detect = {
             "enabled": True,
             "width":   s.detection_width,
             "height":  s.detection_height,
             "fps":     s.detection_fps,
         }
+        if camera_rotation(config, cam_name):
+            detect = auto_detect_size(detect)
+        cam["detect"] = detect
         ffmpeg = cam.setdefault("ffmpeg", {})
         ffmpeg.pop("hwaccel_args", None)
         for inp in ffmpeg.get("inputs", []):

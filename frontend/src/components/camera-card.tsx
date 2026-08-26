@@ -4,6 +4,7 @@ import { CameraOff, Flashlight, Maximize2, Pencil } from 'lucide-react'
 import { useBreakpoint } from '@/hooks/use-breakpoint'
 import { useAuth } from '@/hooks/use-auth'
 import { useCameraStream } from '@/hooks/use-camera-stream'
+import { useMseStream } from '@/hooks/use-mse-stream'
 import {
   batteryLevelColor,
   cameraStreamUrl,
@@ -44,6 +45,7 @@ export function CameraCard({
   const { token } = useAuth()
   const breakpoint = useBreakpoint()
   const imageRef = useRef<HTMLImageElement | null>(null)
+  const videoRef = useRef<HTMLVideoElement | null>(null)
   const inputRef = useRef<HTMLInputElement | null>(null)
   const [hasSignal, setHasSignal] = useState(true)
   const [stats, setStats] = useState<CameraStats | null>(null)
@@ -58,6 +60,10 @@ export function CameraCard({
     paused: isPaused,
     preferred: isFlashing,
   })
+  // Élő kép a go2rtc H.264 streamjéből; ha az MSE elbukik (régi böngésző,
+  // lezárt WebSocket), visszaesünk a korábbi MJPEG proxyra.
+  const mseFailed = useMseStream(videoRef, camera.name, mode === 'stream')
+  const useMse = mode === 'stream' && !mseFailed
   const src = mode === 'stream' ? cameraStreamUrl(camera.name) : (snapshotSrc ?? '')
   const hideOnIdle = overlayVisibility === 'hover' && breakpoint !== 'mobile'
 
@@ -133,7 +139,7 @@ export function CameraCard({
       </span>,
     )
   }
-  const showNoSignal = !isOnline || (!hasSignal && !isPaused)
+  const showNoSignal = !isOnline || (!isPaused && !useMse && !hasSignal)
   const overlayVisibilityClass = hideOnIdle
     ? 'opacity-0 transition-opacity duration-200 focus-within:opacity-100 group-hover:opacity-100'
     : ''
@@ -149,14 +155,24 @@ export function CameraCard({
         outlineOffset: -2,
       }}
     >
-      <img
-        alt={`${displayName} stream`}
-        className="h-full w-full object-cover"
-        onError={() => setHasSignal(false)}
-        onLoad={() => setHasSignal(true)}
-        ref={imageRef}
-        src={src}
-      />
+      {useMse ? (
+        <video
+          autoPlay
+          className="h-full w-full object-cover"
+          muted
+          playsInline
+          ref={videoRef}
+        />
+      ) : (
+        <img
+          alt={`${displayName} stream`}
+          className="h-full w-full object-cover"
+          onError={() => setHasSignal(false)}
+          onLoad={() => setHasSignal(true)}
+          ref={imageRef}
+          src={src}
+        />
+      )}
 
       {showNoSignal && (
         <div

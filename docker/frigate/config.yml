@@ -5,9 +5,16 @@ mqtt:
   host: localhost
   port: 1883
 detectors:
-  cpu1:
-    type: cpu
-    num_threads: 3
+  onnx_0:
+    type: onnx
+model:
+  model_type: yolo-generic
+  width: 320
+  height: 320
+  input_tensor: nchw
+  input_dtype: float
+  path: /config/model_cache/yolo.onnx
+  labelmap_path: /labelmap/coco-80.txt
 objects:
   track:
   - person
@@ -16,8 +23,9 @@ objects:
   - dog
   filters:
     person:
-      min_score: 0.4
-      threshold: 0.5
+      min_area: 2000
+      min_score: 0.6
+      threshold: 0.7
 record:
   enabled: true
   alerts:
@@ -38,21 +46,34 @@ snapshots:
     default: 14
 go2rtc:
   streams:
-    cam_192_168_1_15:
-    - "https://192.168.1.15:4444/video/h264"
+    cam_192_168_1_10:
+    - https://192.168.1.10:4444/video/h264
+    cam_192_168_1_8:
+    - ffmpeg:cam_192_168_1_8_raw#video=h264#rotate=270#hardware
+    cam_192_168_1_8_raw:
+    - https://192.168.1.8:4444/video/h264
 cameras:
-  cam_192_168_1_15:
+  cam_192_168_1_10:
     ffmpeg:
       inputs:
-      - path: rtsp://127.0.0.1:8554/cam_192_168_1_15
+      - path: rtsp://127.0.0.1:8554/cam_192_168_1_10
+        input_args: -rtsp_transport tcp
         roles:
         - detect
         - record
-        input_args: preset-rtsp-restream
     detect:
       enabled: true
-      width: 1920
-      height: 1080
+      fps: 5
+  cam_192_168_1_8:
+    ffmpeg:
+      inputs:
+      - path: rtsp://127.0.0.1:8554/cam_192_168_1_8
+        input_args: -rtsp_transport tcp
+        roles:
+        - detect
+        - record
+    detect:
+      enabled: true
       fps: 5
 version: 0.17-0
 semantic_search:
