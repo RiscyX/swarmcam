@@ -120,6 +120,32 @@ The older MJPEG proxy (`GET /api/cameras/{name}/stream`, proxying Frigate's `/ap
 
 **Live frame rate is capped by the phone, not the server.** Android auto-exposure drops the sensor frame rate in low light — measured 0.9 fps dark vs 16.6 fps with the torch on. Don't chase this server-side.
 
+**Rotated cameras need `preset-rtsp-generic`, not `preset-rtsp-restream`:**
+Rotation happens in go2rtc (`ffmpeg:<name>_raw#video=h264#rotate=N#hardware=cuda`), because the
+phone's `/video/h264` ignores its own rotate setting. That re-encode drops the timestamps — the
+restream arrives with `90k tbr` and every frame carries a near-zero PTS. Frigate's record role
+(`-c:v copy`) still works, so the symptom looks fine from the outside, but the detect role's
+`-vf fps=5` filter selects on PTS and emits *nothing*: `Output file is empty, nothing was encoded`,
+camera_fps 0, and `/tmp/cache` fills with unprocessed segments. `preset-rtsp-generic` adds
+`-fflags +genpts -use_wallclock_as_timestamps 1` and fixes it. Passthrough (unrotated) cameras keep
+`preset-rtsp-restream` — they carry their own timestamps. `apply_settings()` picks the preset per
+camera based on `camera_rotation()`.
+
+Whatever preset is used, `input_args` must be *exactly* the preset name. Frigate only substitutes a
+preset on an exact match; anything like `-rtsp_transport tcp preset-rtsp-restream` is passed through
+verbatim, ffmpeg then reads the preset name as an output filename and every camera crash-loops.
+
+**Rotation encodes on NVENC:** `#hardware=cuda` makes go2rtc decode on NVDEC and encode with
+`h264_nvenc` (the transpose stays on CPU — this ffmpeg build has no `transpose_npp`). Measured on
+720p25: libx264 44% of a core vs NVENC 6%, output pixel-identical to the software transpose
+(PSNR 44.7 dB / SSIM 0.993). With three rotated cameras this is the difference between ~590% and
+~130% container CPU.
+
+**Detect resolution is not free:** Frigate runs motion detection on full detect-resolution frames in
+Python. A camera left at `detect: 4096x3072` cost 290% CPU in `frigate.process:<cam>` alone while its
+stream was really 720p (H.264 level 3.1 caps at 1280x720). The settings-page dropdown only offers
+640x360 / 1280x720 / 1920x1080; anything else in `config.yml` is stale and worth checking.
+
 **Camera naming convention:**
 `cam_{ip_with_dots_as_underscores}` — e.g. `cam_192_168_0_100`. Deterministic so the same phone always gets the same name across restarts (and across the IP Webcam → Android IP Camera protocol swap, so `aliases.json` needed no migration). The `display_name` overlay (stored in `aliases.json`) is separate from this internal key.
 

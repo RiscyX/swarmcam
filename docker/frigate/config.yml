@@ -47,12 +47,66 @@ snapshots:
 go2rtc:
   streams:
     cam_192_168_1_10:
-    - ffmpeg:cam_192_168_1_10_raw#video=h264#rotate=270
+    - ffmpeg:cam_192_168_1_10_raw#video=h264#rotate=270#hardware=cuda
     cam_192_168_1_8:
     - https://192.168.1.8:4444/video/h264
     cam_192_168_1_10_raw:
     - https://192.168.1.10:4444/video/h264
-cameras: {}
+    cam_192_168_1_17:
+    - ffmpeg:cam_192_168_1_17_raw#video=h264#rotate=270#hardware=cuda
+    cam_192_168_1_18:
+    - ffmpeg:cam_192_168_1_18_raw#video=h264#rotate=270#hardware=cuda
+    cam_192_168_1_17_raw:
+    - https://192.168.1.17:4444/video/h264
+    cam_192_168_1_18_raw:
+    - https://192.168.1.18:4444/video/h264
+cameras:
+  cam_192_168_1_17:
+    ffmpeg:
+      inputs:
+      - path: rtsp://127.0.0.1:8554/cam_192_168_1_17
+        input_args: preset-rtsp-generic
+        roles:
+        - detect
+        - record
+    detect:
+      enabled: true
+      fps: 5
+  cam_192_168_1_8:
+    ffmpeg:
+      inputs:
+      - path: rtsp://127.0.0.1:8554/cam_192_168_1_8
+        input_args: preset-rtsp-restream
+        roles:
+        - detect
+        - record
+    detect:
+      enabled: true
+      width: 1280
+      height: 720
+      fps: 5
+  cam_192_168_1_18:
+    ffmpeg:
+      inputs:
+      - path: rtsp://127.0.0.1:8554/cam_192_168_1_18
+        input_args: preset-rtsp-generic
+        roles:
+        - detect
+        - record
+    detect:
+      enabled: true
+      fps: 5
+  cam_192_168_1_10:
+    ffmpeg:
+      inputs:
+      - path: rtsp://127.0.0.1:8554/cam_192_168_1_10
+        input_args: preset-rtsp-generic
+        roles:
+        - detect
+        - record
+    detect:
+      enabled: true
+      fps: 5
 version: 0.17-0
 semantic_search:
   enabled: false
