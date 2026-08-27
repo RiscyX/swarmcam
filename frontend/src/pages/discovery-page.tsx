@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label'
 import { PulseDot } from '@/components/ui/pulse-dot'
 import { useAuth } from '@/hooks/use-auth'
 import { startDiscoveryStream } from '@/hooks/use-discovery-stream'
-import { clearRecordings, getNetworks, resetCameras, type NetworkInfo } from '@/lib/discovery'
+import { getNetworks, resetCameras, type NetworkInfo } from '@/lib/discovery'
 import type { Camera } from '@/types/camera'
 
 type LogLine = { message: string; kind: 'live' | 'idle' | 'cmd' | 'muted' }
@@ -33,7 +33,7 @@ export function DiscoveryPage({ onCamerasFound }: DiscoveryPageProps) {
   const { token } = useAuth()
   const [networks, setNetworks]         = useState<NetworkInfo[]>([])
   const [subnet, setSubnet]             = useState('')
-  const [port, setPort]                 = useState(8080)
+  const [port, setPort]                 = useState(4444)
   const [timeout, setTimeoutValue]      = useState(1)
   const [updateFrigate, setUpdateFrigate] = useState(false)
   const [logLines, setLogLines]         = useState<LogLine[]>([])
@@ -94,7 +94,7 @@ export function DiscoveryPage({ onCamerasFound }: DiscoveryPageProps) {
         body: { port, timeout, update_frigate: updateFrigate, ...(subnet ? { subnet } : {}) },
         onEvent: (e) => {
           if (e.type === 'progress') appendLog(e.message)
-          if (e.type === 'result')   { onCamerasFound(e.cameras); setStatus(`${e.cameras.length} IP Webcam camera${e.cameras.length === 1 ? '' : 's'} found`) }
+          if (e.type === 'result')   { onCamerasFound(e.cameras); setStatus(`${e.cameras.length} Android IP Camera node${e.cameras.length === 1 ? '' : 's'} found`) }
           if (e.type === 'done')     setIsScanning(false)
         },
       })
@@ -116,12 +116,6 @@ export function DiscoveryPage({ onCamerasFound }: DiscoveryPageProps) {
     await resetCameras(token)
     onCamerasFound([])
     setStatus('Cameras reset')
-  }
-
-  async function handleClearRecordings() {
-    if (!token || !window.confirm('Delete all Frigate recordings and clips?')) return
-    const result = await clearRecordings(token)
-    setStatus(`Recordings deleted: ${result.cleared_mb} MB`)
   }
 
   return (
@@ -188,7 +182,7 @@ export function DiscoveryPage({ onCamerasFound }: DiscoveryPageProps) {
         <Button
           className={
             isScanning
-              ? 'h-12 w-full border border-[var(--accent)] bg-transparent text-[var(--accent)] hover:bg-[color-mix(in_srgb,var(--accent)_15%,transparent)]'
+              ? 'h-12 w-full border border-[var(--accent)] bg-transparent text-[var(--accent-text)] hover:bg-[color-mix(in_srgb,var(--accent)_15%,transparent)]'
               : 'h-12 w-full'
           }
           type="submit"
@@ -204,14 +198,9 @@ export function DiscoveryPage({ onCamerasFound }: DiscoveryPageProps) {
           <div className="font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--fg-dim)]">
             Maintenance
           </div>
-          <div className="flex gap-2">
-            <Button disabled={isScanning} onClick={handleReset} size="sm" type="button" variant="outline">
-              Reset Cameras
-            </Button>
-            <Button disabled={isScanning} onClick={handleClearRecordings} size="sm" type="button" variant="destructive">
-              Delete Recordings
-            </Button>
-          </div>
+          <Button className="w-full" disabled={isScanning} onClick={handleReset} size="sm" type="button" variant="outline">
+            Reset Cameras
+          </Button>
           {status ? <div className="text-xs text-[var(--fg-muted)]">{status}</div> : null}
         </div>
       </form>
