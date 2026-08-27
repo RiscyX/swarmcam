@@ -85,10 +85,13 @@ class Camera:
         If config is passed, it reads the existing detect settings and
         hwaccel args from it instead of hardcoding.
         """
-        # Detect settings: from config, otherwise phone resolution, otherwise 1080p
+        # Detect settings: from config, otherwise the phone's stream resolution.
+        # Ha egyik sem ismert, a width/height kimarad és a Frigate olvassa ki a
+        # streamből — tippelni rosszabb, mint nem írni semmit.
         detect_fps = 5
-        detect_w, detect_h = self.resolution or (1920, 1080)
+        size = self.resolution
         hwaccel_args = None
+        rotation = rotation_of(config, self.name) if config else 0
 
         if config:
             # Read sample from existing camera entry, or from the first camera
@@ -97,28 +100,33 @@ class Camera:
             if sample:
                 d = sample.get("detect", {})
                 detect_fps = d.get("fps", detect_fps)
-                detect_w   = d.get("width", detect_w)
-                detect_h   = d.get("height", detect_h)
+                if "width" in d and "height" in d:
+                    size = (d["width"], d["height"])
                 hwaccel_args = sample.get("ffmpeg", {}).get("hwaccel_args")
             # A detect méret a saját forgatásához igazodik (90/270 → álló kép);
             # a minta másik kameráé is lehet, ezért itt kell visszaigazítani.
-            if (rotation_of(config, self.name) in (90, 270)) != (detect_h > detect_w):
-                detect_w, detect_h = detect_h, detect_w
+            if size and (rotation in (90, 270)) != (size[1] > size[0]):
+                size = (size[1], size[0])
+
+        # A forgatott kamera go2rtc-ben újrakódolva jön, és a transzkód elveszti
+        # az időbélyegeket; a detect ág `fps=N` szűrője emiatt nulla frame-et ad.
+        # A generic preset `+genpts` és `-use_wallclock_as_timestamps 1` kapcsolói
+        # pótolják — lásd `backend/services/frigate_config.py::apply_settings`.
+        input_args = "preset-rtsp-generic" if rotation else "preset-rtsp-restream"
+
+        detect: dict = {"enabled": True, "fps": detect_fps}
+        if size:
+            detect["width"], detect["height"] = size
 
         entry: dict = {
             "ffmpeg": {
                 "inputs": [{
                     "path": f"rtsp://127.0.0.1:8554/{self.name}",
-                    "input_args": "preset-rtsp-restream",
+                    "input_args": input_args,
                     "roles": ["detect", "record"],
                 }]
             },
-            "detect": {
-                "enabled": True,
-                "width": detect_w,
-                "height": detect_h,
-                "fps": detect_fps,
-            },
+            "detect": detect,
         }
 
         if hwaccel_args:
@@ -185,6 +193,15 @@ def _active_camera(info: dict) -> dict | None:
 
 
 def _parse_resolution(info: dict) -> tuple[int, int] | None:
+    """
+    A *stream* felbontása, vagy None ha a telefon nem mondja meg.
+
+    Nincs fallback a `cameras[].sizes` legnagyobb elemére: az a szenzor
+    legnagyobb fotómérete, soha nem a videóstreamé — `streamRes: auto`
+    mellett egy 800x600-as streamre 3840x2160-at adna vissza. Ez a szám
+    korábban a Frigate `detect` méretébe került, és a felskálázott
+    mozgásdetektálás önmagában 290% CPU-t evett.
+    """
     try:
         res_str = info["settings"]["streamRes"]     # e.g. "1280x720", "auto", "max"
         if "x" in res_str:
@@ -192,14 +209,7 @@ def _parse_resolution(info: dict) -> tuple[int, int] | None:
             return int(w), int(h)
     except Exception:
         pass
-    # Fall back to the largest supported size of the active camera
-    try:
-        cam = _active_camera(info)
-        sizes = cam["sizes"]
-        best = max(sizes, key=lambda s: s["w"] * s["h"])
-        return int(best["w"]), int(best["h"])
-    except Exception:
-        return None
+    return None
 
 
 def _parse_orientation(info: dict) -> str | None:
@@ -262,7 +272,7 @@ def scan_network(subnet: str, port: int, workers: int = MAX_WORKERS) -> list[Cam
             if result:
                 cameras.append(result)
                 print(f"[+] Found: {result.ip}  battery={result.battery_level}%  "
-                      f"res={result.resolution}  orient={result.orientation}", file=sys.stderr)
+                      f"res={result.resolution or 'auto'}  orient={result.orientation}", file=sys.stderr)
 
     return cameras
 
