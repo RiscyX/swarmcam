@@ -143,7 +143,7 @@ pages/             — One component per sidebar section
 hooks/
   use-auth.tsx     — AuthContext: token, user, login/logout
   use-camera-socket.ts — WebSocket /ws/cameras: status/event/alert dispatch
-  use-mse-stream.ts — go2rtc MSE player: fMP4 → MediaSource, buffer trim + live-edge seek
+  use-mse-stream.ts — go2rtc MSE player: fMP4 → MediaSource, buffer trim + live-edge seek; also reports the live stream fps
   use-cameras.ts   — REST fetch + socket merge for camera list
   use-discovery-stream.ts — SSE consumer for discovery progress
 lib/
