@@ -160,7 +160,7 @@ export function CameraCard({
       {useMse ? (
         <video
           autoPlay
-          className="h-full w-full object-cover"
+          className={`h-full w-full ${isHero ? 'object-contain' : 'object-cover'}`}
           muted
           playsInline
           ref={videoRef}
@@ -168,7 +168,7 @@ export function CameraCard({
       ) : (
         <img
           alt={`${displayName} stream`}
-          className="h-full w-full object-cover"
+          className={`h-full w-full ${isHero ? 'object-contain' : 'object-cover'}`}
           onError={() => setHasSignal(false)}
           onLoad={() => setHasSignal(true)}
           ref={imageRef}
