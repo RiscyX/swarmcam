@@ -73,9 +73,6 @@ export function Topbar({
             {liveEventCount > 0 ? `Events (${liveEventCount})` : 'Events'}
           </Button>
         ) : null}
-        {user ? (
-          <span className="hidden font-mono text-xs text-[var(--fg-muted)] md:inline">{user.username}</span>
-        ) : null}
         <Button
           aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
           aria-pressed={theme === 'light'}
@@ -86,6 +83,9 @@ export function Topbar({
         >
           {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
         </Button>
+        {user ? (
+          <span className="hidden font-mono text-xs text-[var(--fg-muted)] md:inline">{user.username}</span>
+        ) : null}
         <Button onClick={logout} variant="outline" size="sm" className="h-7 text-xs">
           Logout
         </Button>
