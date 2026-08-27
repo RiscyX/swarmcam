@@ -115,18 +115,27 @@ export function CameraSpotlight({
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       {/* key: promotáláskor a CameraCard cleanupja kinullázná az <img> src-jét — remount kell, mint a gridben */}
-      <div className={`bg-[var(--bg-tile)] ${isMobile ? 'aspect-video w-full shrink-0' : 'min-h-0 flex-1'}`}>
-        <CameraCard
-          camera={hero}
-          isFlashing={eventCamera === hero.name}
-          isPaused={isPaused}
-          key={hero.name}
-          onOpenFullscreen={onOpenFullscreen}
-          onRename={onRenameCamera}
-          onToggleTorch={onToggleTorch}
-          torchEnabled={Boolean(torchStates[hero.name])}
-          variant="hero"
-        />
+      <div
+        className={isMobile ? 'w-full shrink-0' : 'flex min-h-0 flex-1 items-center justify-center overflow-hidden'}
+        style={isMobile ? undefined : { containerType: 'size' }}
+      >
+        {/* A hero mindig 16:9, a rendelkezésre álló helyre skálázva (cqw/cqh a fenti size-containerből) */}
+        <div
+          className="aspect-video bg-[var(--bg-tile)]"
+          style={{ width: isMobile ? '100%' : 'min(100cqw, calc(100cqh * 16 / 9))' }}
+        >
+          <CameraCard
+            camera={hero}
+            isFlashing={eventCamera === hero.name}
+            isPaused={isPaused}
+            key={hero.name}
+            onOpenFullscreen={onOpenFullscreen}
+            onRename={onRenameCamera}
+            onToggleTorch={onToggleTorch}
+            torchEnabled={Boolean(torchStates[hero.name])}
+            variant="hero"
+          />
+        </div>
       </div>
 
       {strip.length > 0 ? (

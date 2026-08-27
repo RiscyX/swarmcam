@@ -81,13 +81,19 @@ export function FullscreenView({ camera, onClose, onToggleTorch, torchEnabled }:
           <X className="h-5 w-5" />
         </button>
       </div>
-      <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden">
-        <img
-          alt={`${getCameraDisplayName(camera)} fullscreen stream`}
-          className="h-full w-full object-contain"
-          ref={imageRef}
-          src={cameraStreamUrl(camera.name)}
-        />
+      <div
+        className="flex min-h-0 flex-1 items-center justify-center overflow-hidden"
+        style={{ containerType: 'size' }}
+      >
+        {/* Fix 16:9 keret, a rendelkezésre álló helyre skálázva */}
+        <div className="aspect-video" style={{ width: 'min(100cqw, calc(100cqh * 16 / 9))' }}>
+          <img
+            alt={`${getCameraDisplayName(camera)} fullscreen stream`}
+            className="h-full w-full object-contain"
+            ref={imageRef}
+            src={cameraStreamUrl(camera.name)}
+          />
+        </div>
       </div>
       <div className="flex items-center gap-4 bg-gradient-to-t from-black/80 via-black/50 to-transparent px-4 pb-3 pt-6">
         <dl className="flex min-w-0 flex-1 flex-wrap items-center gap-x-5 gap-y-1 font-mono text-xs">
