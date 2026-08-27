@@ -38,3 +38,10 @@ cloudflared.deb
 
 # Obsidian illékony UI-állapot (a jegyzetek maradnak)
 SwarmCAM/.obsidian/workspace.json
+
+# Szemelyes / kulso anyagok — a gepen maradnak, de nem a repoban
+feladatkiiras.pdf
+velemeny.pdf
+opencode.md
+zavrsni rad_sablon_HU_09_02_2023.docx
+SwarmCAM/
