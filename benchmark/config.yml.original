@@ -1,0 +1,89 @@
+auth:
+  enabled: true
+mqtt:
+  enabled: true
+  host: localhost
+  port: 1883
+detectors:
+  onnx_0:
+    type: onnx
+model:
+  model_type: yolo-generic
+  width: 320
+  height: 320
+  input_tensor: nchw
+  input_dtype: float
+  path: /config/model_cache/yolo.onnx
+  labelmap_path: /labelmap/coco-80.txt
+objects:
+  track:
+  - person
+  - car
+  - cat
+  - dog
+  filters:
+    person:
+      min_area: 2000
+      min_score: 0.6
+      threshold: 0.7
+record:
+  enabled: true
+  alerts:
+    retain:
+      days: 14
+  detections:
+    retain:
+      days: 14
+  continuous:
+    days: 0
+  motion:
+    days: 7
+snapshots:
+  enabled: true
+  timestamp: true
+  bounding_box: false
+  retain:
+    default: 14
+go2rtc:
+  streams:
+    cam_192_168_1_10:
+    - https://192.168.1.10:4444/video/h264
+    cam_192_168_1_8:
+    - https://192.168.1.8:4444/video/h264
+cameras:
+  cam_192_168_1_10:
+    ffmpeg:
+      inputs:
+      - path: rtsp://127.0.0.1:8554/cam_192_168_1_10
+        input_args: -rtsp_transport tcp
+        roles:
+        - detect
+        - record
+    detect:
+      enabled: true
+      fps: 5
+  cam_192_168_1_8:
+    ffmpeg:
+      inputs:
+      - path: rtsp://127.0.0.1:8554/cam_192_168_1_8
+        input_args: -rtsp_transport tcp
+        roles:
+        - detect
+        - record
+    detect:
+      enabled: true
+      width: 640
+      height: 360
+      fps: 5
+version: 0.17-0
+semantic_search:
+  enabled: false
+  model_size: small
+face_recognition:
+  enabled: true
+  model_size: small
+lpr:
+  enabled: false
+classification:
+  bird:
+    enabled: false

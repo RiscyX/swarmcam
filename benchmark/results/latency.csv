@@ -1,0 +1,2 @@
+timestamp,duration_s,health_interval_samples,health_interval_mean_s,health_interval_stdev_s,mqtt_events_seen,matched_events,relay_latency_mean_ms,relay_latency_p95_ms
+2026-08-27T05:13:28,120.0,22,5.38,0.444,30,30,0.7,0.9

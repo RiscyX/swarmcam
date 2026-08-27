@@ -66,3 +66,66 @@ Eredmény: `results/detection.csv` — a két `label` sor közvetlenül
 A `results/*.csv` fájlokat küldd vissza (vagy a tartalmukat írd be a
 beszélgetésbe) — ezekből írom meg a szakdolgozat 3.5. fejezetének végleges
 szövegét, a jelenlegi placeholder helyére.
+
+---
+
+## Automatizált futtatás (`run_all.py`)
+
+A teljes mérési sorozat kézi beavatkozás nélkül is végigfuttatható:
+
+```bash
+../backend/venv/bin/python3 run_all.py              # mindhárom fázis
+../backend/venv/bin/python3 run_all.py detection    # csak egy fázis
+```
+
+A szkript a `docker/frigate/config.yml`-t írja át fázisonként, újraindítja a
+frigate konténert, megvárja a stabilizálódást, majd meghívja a `measure.py`
+megfelelő alparancsát. **A futás végén (`finally` ágban) visszaállítja az
+eredeti configot** — ez a `benchmark/config.yml.original` fájlba mentődik az
+első futáskor.
+
+### Mérési bemenet
+
+A kameraszám-skálázás és a GPU/CPU összehasonlítás azonos bemenetet kíván
+minden mérési ponton, különben a különbség nem a vizsgált változóból ered.
+Ezért a bemenet egy korábban a telefonokról rögzített, valós H.264 felvétel
+(`/media/frigate/bench_source.mp4`, 1280×720, 10 fps, ~24 perc), amit a
+Frigate `-re -stream_loop -1` input_args-szal olvas, N különálló kameraként.
+
+A fájl előállítása (a frigate konténerből, a saját felvételekből):
+
+```bash
+docker exec frigate sh -c 'D=/media/frigate/recordings/<nap>/<ora>/<kamera>; \
+  ls $D/*.mp4 | sort | head -24 | sed "s|^|file |" > /tmp/c1.txt; \
+  /usr/lib/ffmpeg/7.0/bin/ffmpeg -y -f concat -safe 0 -i /tmp/c1.txt -c copy -an /tmp/seg.mp4; \
+  /usr/lib/ffmpeg/7.0/bin/ffmpeg -y -i /tmp/seg.mp4 -an -vf "fps=10,scale=1280:720" \
+    -c:v libx264 -preset veryfast -crf 24 -g 50 -sc_threshold 0 /tmp/clean.mp4'
+```
+
+A `-c copy` konkatenálás önmagában **nem elég**: a szegmenshatárokon törött
+időbélyegeket hagy, amitől a Frigate ffmpeg-folyamatai újraindulási hurokba
+kerülnek, és a mért CPU nagyságrendekkel torzul. Ezért kell az újrakódolás.
+
+### Miért nem a go2rtc-n keresztül?
+
+A Frigate a go2rtc konfigurációjában elutasítja a `{input}` és `{output}`
+helyettesítéseket („Invalid substitution found”), így sem `ffmpeg:…#input=`,
+sem `exec:…{output}` formában nem adható meg hurkolt fájlforrás. A `#video=copy`
+fájlforrás pedig több párhuzamos kamera esetén nem tartja a névleges
+képsebességet. A mérés ezért a go2rtc-t kihagyva, közvetlen fájlbemenettel
+készül — a go2rtc újracsomagolása kicsi és állandó hozzájárulás.
+
+### Detektor telítése
+
+A `detection` fázis a config-ba `motion.threshold: 10` / `contour_area: 5`
+értékeket ír, hogy a detektor gyakorlatilag minden képkockán lefusson.
+Alapbeállítás mellett a mozgásmaszk annyira jól szűr, hogy a detektor túl
+ritkán szólal meg a megbízható méréshez.
+
+### Esemény-injektálás
+
+Az `inject_events.py` a Frigate formátumával megegyező, szintetikus
+eseményeket publikál a `frigate/events` topicra, hogy a `latency` fázis
+akkor is tudja mérni az MQTT → backend → WebSocket relay késleltetést,
+ha éppen nincs valódi mozgás a kamerák előtt. A backend ezeket nem írja
+adatbázisba, csak továbbítja.
