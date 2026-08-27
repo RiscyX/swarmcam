@@ -105,7 +105,7 @@ semantic_search:
   enabled: false
   model_size: small
 face_recognition:
-  enabled: true
+  enabled: false
   model_size: small
 lpr:
   enabled: false

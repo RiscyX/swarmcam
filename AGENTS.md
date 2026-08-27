@@ -6,8 +6,7 @@
 - Frigate UI is not part of the product flow; use Frigate REST API and MQTT output only.
 - Backend entrypoint is `backend/main.py`; routers live in `backend/routers/`, background loops in `backend/services/`.
 - Discovery entrypoint is `discovery/discovery.py`; it scans Android IP Camera `/info.json` (port 4444) and can update `docker/frigate/config.yml` (`cameras:` + `go2rtc.streams:`).
-- Current dashboard is legacy static vanilla JS in `dashboard/`; keep it as an archive while the React migration is in progress.
-- Planned new frontend goes in `/frontend`, TypeScript + React + shadcn/ui + Tailwind, using `pnpm` only.
+- The dashboard is the React app in `/frontend`: TypeScript + React + shadcn/ui + Tailwind, using `pnpm` only. The legacy vanilla-JS `dashboard/` archive has been removed.
 
 ## Commands
 - Start infra: `cd docker && docker compose up -d`
@@ -18,12 +17,11 @@
 - No repo-level test/lint/CI config is currently present; use focused manual verification unless adding project tooling.
 
 ## Frontend Migration Rules
-- Do not put the React app under `dashboard/`; use `/frontend`.
+- The React app lives in `/frontend`.
 - Use `pnpm`, not `npm`.
 - Commit `pnpm-lock.yaml`.
 - Docker/CI builds must install with `pnpm install --frozen-lockfile`; do not let builds rewrite the lockfile.
 - Production frontend image should serve built static files only; no `node_modules`, npm, pnpm, or build toolchain in runtime.
-- Keep `dashboard/` available until the new `/frontend` fully matches existing functionality.
 
 ## Backend / Infra Gotchas
 - `backend/settings.py` points to repo-local `docker/frigate/config.yml`, `docker/docker-compose.yml`, and `docker/media`.

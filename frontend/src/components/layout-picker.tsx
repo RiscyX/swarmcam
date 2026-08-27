@@ -10,10 +10,10 @@ type LayoutPickerProps = {
 }
 
 const LAYOUTS: Array<{ id: CameraLayout; label: string; icon: LucideIcon; title: string }> = [
-  { icon: LayoutGrid, id: 'auto', label: 'AUTO', title: 'Auto – minden kamera belefér a viewportba' },
-  { icon: Grid2X2, id: '2x2', label: '2×2', title: '2×2 – első 4 kamera' },
-  { icon: Grid3X3, id: '3x3', label: '3×3', title: '3×3 – első 9 kamera' },
-  { icon: GalleryThumbnails, id: 'spotlight', label: 'FOCUS', title: 'Focus – egy nagy kamera, alatta filmstrip' },
+  { icon: LayoutGrid, id: 'auto', label: 'AUTO', title: 'Auto – fit every camera into the viewport' },
+  { icon: Grid2X2, id: '2x2', label: '2×2', title: '2×2 – first 4 cameras' },
+  { icon: Grid3X3, id: '3x3', label: '3×3', title: '3×3 – first 9 cameras' },
+  { icon: GalleryThumbnails, id: 'spotlight', label: 'FOCUS', title: 'Focus – one large camera with a filmstrip below' },
 ]
 
 const baseButton =

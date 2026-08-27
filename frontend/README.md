@@ -1,6 +1,6 @@
 # SwarmCam Frontend
 
-React + TypeScript frontend for SwarmCam. This app is built separately from the legacy `dashboard/` archive.
+React + TypeScript frontend for SwarmCam.
 
 ## Commands
 

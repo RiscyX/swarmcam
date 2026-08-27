@@ -58,7 +58,7 @@ function FilmstripTile({ camera, isFlashing, isPaused, onSelect, width }: Filmst
         outline: isFlashing ? '2px solid var(--accent)' : undefined,
         outlineOffset: -2,
       }}
-      title={`Fókusz: ${getCameraDisplayName(camera)}`}
+      title={`Focus: ${getCameraDisplayName(camera)}`}
       type="button"
     >
       <img alt={`${getCameraDisplayName(camera)} thumbnail`} className="h-full w-full object-cover" src={src} />

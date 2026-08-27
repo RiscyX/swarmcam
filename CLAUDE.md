@@ -89,7 +89,6 @@ routers/         — FastAPI routers (one per domain)
   discovery.py   — SSE endpoint that spawns discovery.py subprocess
   events.py      — Frigate events/thumbnails proxy
   recordings.py  — Clip streaming + download proxy
-  faces.py       — Face recognition proxy
   users.py       — Frigate user management proxy
   config.py      — Frigate config.yml read/write API
   system.py      — Network interfaces, GPU/docker info

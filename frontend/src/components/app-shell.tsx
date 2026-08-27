@@ -17,7 +17,6 @@ import { CameraSettingsPage } from '@/pages/camera-settings-page'
 import { CamerasPage } from '@/pages/cameras-page'
 import { DiscoveryPage } from '@/pages/discovery-page'
 import { EventsPage } from '@/pages/events-page'
-import { FacesPage } from '@/pages/faces-page'
 import { HealthPage } from '@/pages/health-page'
 import { PlaceholderPage } from '@/pages/placeholder-page'
 import { RecordingsPage } from '@/pages/recordings-page'
@@ -168,8 +167,6 @@ export function AppShell() {
       <EventsPage cameras={cameras} />
     ) : activeSection === 'recordings' ? (
       <RecordingsPage cameras={cameras} />
-    ) : activeSection === 'faces' ? (
-      <FacesPage />
     ) : activeSection === 'users' ? (
       <UsersPage />
     ) : activeSection === 'settings' ? (

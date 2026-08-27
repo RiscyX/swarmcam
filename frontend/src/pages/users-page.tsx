@@ -12,7 +12,7 @@ import { StatusPill } from '@/components/ui/status-pill'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useAuth } from '@/hooks/use-auth'
 import { ApiError } from '@/lib/api'
-import { changePassword, createUser, deleteUser, getUsers, type FrigateUser } from '@/lib/faces'
+import { changePassword, createUser, deleteUser, getUsers, type FrigateUser } from '@/lib/users'
 
 function roleTone(role: string): 'admin' | 'offline' {
   return role === 'admin' ? 'admin' : 'offline'

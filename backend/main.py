@@ -7,7 +7,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
 import state
-from routers import auth, cameras, config, discovery, events, faces, recordings, system, users
+from routers import auth, cameras, config, discovery, events, recordings, system, users
 from services.frigate_config import RAW_SUFFIX, read_yaml
 from services.health import health_loop
 from services.mqtt import mqtt_loop
@@ -27,7 +27,6 @@ app.include_router(auth.router)
 app.include_router(cameras.router)
 app.include_router(events.router)
 app.include_router(recordings.router)
-app.include_router(faces.router)
 app.include_router(users.router)
 app.include_router(discovery.router)
 app.include_router(config.router)
