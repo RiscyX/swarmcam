@@ -22,3 +22,19 @@ venv/
 .vscode/
 .claude/
 *.swp
+
+# Nagy binárisok — letölthetők, ne hízlalják a repót
+docker/frigate/model_cache/
+fire-detector/models/*.pt
+cloudflared.deb
+
+# Teszt- és fejlesztési artifactok (a docs/screenshots/ NEM ide tartozik)
+.playwright-mcp/
+/*.png
+
+# Backup fájlok
+*.bak
+*.bak.[0-9]*
+
+# Obsidian illékony UI-állapot (a jegyzetek maradnak)
+SwarmCAM/.obsidian/workspace.json
