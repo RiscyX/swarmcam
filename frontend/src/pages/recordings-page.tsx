@@ -10,6 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useAuth } from '@/hooks/use-auth'
 import { getCameraDisplayName } from '@/lib/cameras'
+import { clearRecordings } from '@/lib/discovery'
 import { type FrigateEvent, deleteRecordingEvent, formatDuration, formatEventTime, getRecordingEvents, recordingClipUrl } from '@/lib/events'
 import type { Camera } from '@/types/camera'
 
@@ -56,6 +57,9 @@ export function RecordingsPage({ cameras }: RecordingsPageProps) {
   const [selected, setSelected] = useState<FrigateEvent | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<FrigateEvent | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [purgeOpen, setPurgeOpen] = useState(false)
+  const [purging, setPurging] = useState(false)
+  const [purgeError, setPurgeError] = useState<string | null>(null)
   const [videoError, setVideoError] = useState(false)
   const [realDuration, setRealDuration] = useState<number | null>(null)
   const videoRef = useRef<HTMLVideoElement | null>(null)
@@ -101,12 +105,29 @@ export function RecordingsPage({ cameras }: RecordingsPageProps) {
     }
   }
 
+  async function confirmPurge() {
+    if (!token) return
+    setPurgeError(null)
+    setPurging(true)
+    try {
+      await clearRecordings(token)
+      setEvents([])
+      closePlayer()
+      setPurgeOpen(false)
+    } catch {
+      setPurgeError('Failed to delete recordings. Please try again later.')
+    } finally {
+      setPurging(false)
+    }
+  }
+
   useEffect(() => {
     if (!didLoad.current) {
       didLoad.current = true
       void load()
     }
-  })
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- initial load only, guarded by didLoad
+  }, [])
 
   function getCamDisplay(name: string) {
     const cam = cameras.find((c) => c.name === name)
@@ -119,6 +140,25 @@ export function RecordingsPage({ cameras }: RecordingsPageProps) {
 
   return (
     <div className="flex flex-col gap-3">
+      {/* Maintenance */}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--fg-dim)]">
+          Maintenance
+        </div>
+        <Button
+          className="w-full shrink-0 sm:w-auto"
+          disabled={purging}
+          onClick={() => {
+            setPurgeError(null)
+            setPurgeOpen(true)
+          }}
+          size="sm"
+          variant="destructive"
+        >
+          {purging ? 'Deleting…' : 'Delete all recordings'}
+        </Button>
+      </div>
+
       {/* Filter bar */}
       <div className="flex flex-wrap items-end gap-3 border-b border-[var(--border)] pb-3">
         <div className="w-full sm:w-52">
@@ -159,7 +199,7 @@ export function RecordingsPage({ cameras }: RecordingsPageProps) {
       ) : (
         <>
           {/* Desktop — table */}
-          <div className="overflow-hidden rounded-sm border border-[var(--border)]">
+          <div className="hidden overflow-hidden rounded-sm border border-[var(--border)] md:block">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -221,10 +261,20 @@ export function RecordingsPage({ cameras }: RecordingsPageProps) {
                     <div className="font-mono text-xs text-[var(--fg-secondary)]">—</div>
                   </div>
                 </div>
-                <div className="px-3 pb-3">
+                <div className="flex flex-col gap-2 px-3 pb-3">
                   <Button className="w-full" onClick={() => openPlayer(ev)}>
                     Play
                   </Button>
+                  <div className="flex gap-2">
+                    <Button asChild className="flex-1" size="sm" variant="outline">
+                      <a download href={recordingClipUrl(ev.id)}>
+                        Download
+                      </a>
+                    </Button>
+                    <Button className="flex-1" onClick={() => setDeleteTarget(ev)} size="sm" variant="destructive">
+                      Delete
+                    </Button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -299,6 +349,30 @@ export function RecordingsPage({ cameras }: RecordingsPageProps) {
               </p>
             ) : null}
           </>
+        ) : null}
+      </Dialog>
+
+      {/* Purge confirmation */}
+      <Dialog
+        confirmLabel={purging ? 'Deleting…' : 'Delete everything'}
+        onClose={() => {
+          setPurgeError(null)
+          setPurgeOpen(false)
+        }}
+        onConfirm={() => void confirmPurge()}
+        open={purgeOpen}
+        title="Delete all recordings"
+        variant="destructive"
+      >
+        <p className="text-sm text-[var(--fg-secondary)]">
+          All Frigate recordings and clips will be permanently deleted from disk —{' '}
+          <span className="font-bold text-[var(--fg)]">not just the ones matching the current filter</span>. This cannot be
+          undone.
+        </p>
+        {purgeError ? (
+          <p className="mt-3 font-mono text-xs text-[var(--status-error)]" role="alert">
+            {purgeError}
+          </p>
         ) : null}
       </Dialog>
     </div>
