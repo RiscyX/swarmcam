@@ -14,11 +14,14 @@ from pydantic import BaseModel
 import state
 from services.frigate_client import frigate_get, frigate_get_stream, frigate_post
 from services.frigate_config import (
+    RAW_SUFFIX,
     camera_rotation,
+    camera_source_url,
     read_yaml,
     set_camera_rotation,
     write_yaml,
 )
+from services.go2rtc_client import go2rtc_delete_stream, go2rtc_is_available, go2rtc_put_stream
 from settings import FRIGATE_CONFIG, GO2RTC_WS_URL
 
 # The camera app serves HTTPS with a self-signed certificate by default;
@@ -237,8 +240,9 @@ async def _clear_phone_rotation(ip: str, port: int) -> None:
 
 async def _apply_rotation(name: str, orientation: str, ip: str, port: int) -> tuple[bool, bool]:
     """
-    Beírja a forgatást a go2rtc streamekbe és újraindítja a Frigate-et.
-    Restart kell, mert a detect mérete is változik.
+    Beírja a forgatást a go2rtc streamekbe.
+    Először megpróbálja a go2rtc API-t (Frigrate restart nélkül),
+    ha az nem működik, visszaesik a Frigate restart-ra.
     Visszatérés: (érvényben van-e a kért forgatás, újraindult-e a Frigate).
     """
     try:
@@ -253,16 +257,61 @@ async def _apply_rotation(name: str, orientation: str, ip: str, port: int) -> tu
     config = read_yaml(FRIGATE_CONFIG)
     if camera_rotation(config, name) == rotation:
         return True, False
+
+    # Config dict módosítás (mindig szükséges a persistáláshoz)
     try:
-        write_yaml(FRIGATE_CONFIG, set_camera_rotation(config, name, rotation))
+        modified_config = set_camera_rotation(config, name, rotation)
     except KeyError:
         return False, False
 
+    # Dinamikus go2rtc módosítás (Frigrate restart nélkül)
+    go2rtc_ok = False
+    if await go2rtc_is_available():
+        go2rtc_ok = await _apply_go2rtc_rotation(name, rotation, modified_config)
+
+    # Config fájl írás (mindig — persistálás Frigate restart esetére)
+    write_yaml(FRIGATE_CONFIG, modified_config)
+
+    # Frigate restart csak ha a go2rtc API nem működött
+    if not go2rtc_ok:
+        try:
+            await frigate_post("/api/restart", timeout=10)
+        except Exception:
+            pass
+        return True, True
+
+    return True, False
+
+
+async def _apply_go2rtc_rotation(name: str, rotation: int, config: dict) -> bool:
+    """Elküldi a rotációs módosítást a go2rtc HTTP API-nak.
+
+    A go2rtc API azonnal módosítja a stream forrását a futó folyamatban.
+    A config dict-et a hívó fél már módosította (a write_yaml előtt hívjuk).
+    """
+    streams = (config.get("go2rtc") or {}).get("streams") or {}
+    raw = name + RAW_SUFFIX
+
     try:
-        await frigate_post("/api/restart", timeout=10)
+        if rotation:
+            # _raw stream létrehozása a telefon URL-jével
+            raw_src = streams.get(raw, [None])[0]
+            if raw_src:
+                await go2rtc_put_stream(raw, raw_src)
+            # Fő stream cseréje ffmpeg transpose szűrőre
+            main_src = streams.get(name, [None])[0]
+            if main_src:
+                await go2rtc_put_stream(name, main_src)
+        else:
+            # Fő stream visszaállítása közvetlen telefon URL-re
+            main_src = streams.get(name, [None])[0]
+            if main_src:
+                await go2rtc_put_stream(name, main_src)
+            # _raw stream törlése
+            await go2rtc_delete_stream(raw)
+        return True
     except Exception:
-        pass
-    return True, True
+        return False
 
 
 @router.get("/api/cameras/{name}/settings")

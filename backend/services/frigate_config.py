@@ -117,12 +117,25 @@ def write_yaml(path: Path, data: dict) -> None:
         yaml.dump(data, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
 
 
+def _nvidia_compose_enabled() -> bool:
+    """Ellenőrzi, hogy a docker-compose-ben nvidia runtime van-e beállítva."""
+    if not COMPOSE_FILE.exists():
+        return False
+    try:
+        compose = read_yaml(COMPOSE_FILE)
+        return compose.get("services", {}).get("frigate", {}).get("runtime") == "nvidia"
+    except Exception:
+        return False
+
+
 def extract_settings(config: dict) -> ConfigSettings:
     decoder = "cpu"
     for _, det in (config.get("detectors") or {}).items():
         t = det.get("type", "cpu")
         decoder = {"tensorrt": "nvidia", "edgetpu": "coral", "openvino": "intel"}.get(t, "cpu")
         break
+    if decoder == "cpu" and _nvidia_compose_enabled():
+        decoder = "nvidia"
 
     detection_fps, detection_width, detection_height = 5, 1920, 1080
     rtsp_transport = "tcp"
@@ -159,12 +172,12 @@ def extract_settings(config: dict) -> ConfigSettings:
 
 def apply_settings(config: dict, s: ConfigSettings) -> dict:
     detector_map = {
-        "nvidia": {"cpu1":     {"type": "cpu",      "num_threads": 3}},
         "coral":  {"coral":    {"type": "edgetpu",  "device": "usb"}},
         "intel":  {"openvino": {"type": "openvino", "device": "GPU"}},
         "cpu":    {"cpu1":     {"type": "cpu",      "num_threads": 3}},
     }
-    config["detectors"] = detector_map[s.decoder]
+    if s.decoder in detector_map:
+        config["detectors"] = detector_map[s.decoder]
     config["objects"] = {
         "track": s.objects,
         "filters": {"person": {"min_area": 2000, "min_score": 0.6, "threshold": 0.7}},
