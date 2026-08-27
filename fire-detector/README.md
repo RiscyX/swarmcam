@@ -27,5 +27,5 @@ docker run -e MQTT_HOST=mosquitto -e BACKEND_URL=http://backend:8000 swarmcam-fi
 - `MQTT_PORT`: Az MQTT broker portja (default: 1883)
 - `BACKEND_URL`: A backend címe, ahonnan a kameralistát lekérdezi (default: http://localhost:8000)
 - `SCAN_INTERVAL`: Hány másodpercenként ellenőrizze a kamerákat (default: 5)
-- `CONFIDENCE`: Mi az a legkisebb bizonyosság (0.0 - 1.0), ami felett riasztást küld (default: 0.5)
+- `CONFIDENCE`: Mi az a legkisebb bizonyosság (0.0 - 1.0), ami felett riasztást küld (default: 0.8)
 - `MODEL_PATH`: A modell fájl elérési útja (default: models/fire_smoke.pt)
