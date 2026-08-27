@@ -312,8 +312,8 @@ Rotation off (default) — no transcoding:
 
 Rotation on (90/180/270):
   go2rtc: cam_x_raw → https://{ip}:4444/video/h264
-          cam_x     → ffmpeg:cam_x_raw#video=h264#rotate=90#hardware
-                      (nvenc transpose; go2rtc cannot read the phone's
+          cam_x     → ffmpeg:cam_x_raw#video=h264#rotate=90
+                      (libx264 transpose; go2rtc cannot read the phone's
                        self-signed HTTPS stream directly, so it chains
                        off the raw stream)
 
@@ -332,6 +332,21 @@ inherit the rotation from one place.
   of time (`streamRes: auto`) and no longer matches once the axes swap.
 - `discovery.py` writes the phone URL into `cam_x_raw` when that stream exists,
   so re-running discovery does not drop the rotation.
+- **No `#hardware` flag.** With it, go2rtc builds
+  `-hwaccel cuda -hwaccel_output_format nv12 … -vf transpose=N,hwupload` and
+  `h264_nvenc`, and that chain does not rotate at all — it scales the source to
+  the rotated frame size and pads the rest black. The same `transpose=N` in
+  software is correct, so a rotated camera re-encodes with libx264. Only
+  cameras that actually need rotation pay for it.
+
+**Rotation cannot fix a portrait-oriented phone.** The app encodes at the
+configured `streamRes` and fits the *device's current screen orientation* into
+that frame — a phone whose screen rotation is locked to portrait produces
+portrait content pillarboxed into 1280x720, measured at 68% of the frame lost to
+black bars. Rotating that in go2rtc only turns pillarbox into letterbox; the
+pixels are already gone. The fix is on the phone: let the app render landscape
+(unlock screen rotation), then leave the camera at rotation 0 and get the full
+frame with no transcode at all.
 
 ---
 

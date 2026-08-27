@@ -62,6 +62,13 @@ def set_camera_rotation(config: dict, name: str, rotation: int) -> dict:
     nevén pedig egy ffmpeg transpose forrás áll — így a Frigate detect/record,
     a Frigate UI élő képe és a dashboard is ugyanazt a képállást kapja.
     rotation == 0 esetén visszaáll az újrakódolás nélküli passthrough.
+
+    Szándékosan nincs `#hardware`: azzal a go2rtc
+    `-hwaccel cuda -hwaccel_output_format nv12 ... -vf transpose=N,hwupload`
+    láncot épít, ami nem forgat, hanem a forrást a forgatott méretre skálázza
+    és fekete sávokkal kitölti. Ugyanaz a transpose szoftveresen helyes képet
+    ad, ezért a forgatott kamera libx264-gyel kódol újra. Ez csak azokat a
+    kamerákat érinti, ahol tényleg kell forgatás.
     """
     src = camera_source_url(config, name)
     if src is None:
@@ -72,16 +79,20 @@ def set_camera_rotation(config: dict, name: str, rotation: int) -> dict:
     raw = name + RAW_SUFFIX
     if rotation:
         streams[raw] = [src]
-        streams[name] = [f"ffmpeg:{raw}#video=h264#rotate={rotation}#hardware"]
+        streams[name] = [f"ffmpeg:{raw}#video=h264#rotate={rotation}"]
     else:
         streams.pop(raw, None)
         streams[name] = [src]
     go2rtc["streams"] = streams
     config["go2rtc"] = go2rtc
 
+    # A fix detect-méretet csak forgatáskor kell elengedni; 0-ra visszaállva
+    # a beállított méret maradjon meg, különben minden forgatás-kapcsolgatás
+    # némán elveszítené a Settings oldalon megadott detect felbontást.
     cam = (config.get("cameras") or {}).get(name)
     if cam:
-        cam["detect"] = auto_detect_size(cam.get("detect") or {"enabled": True})
+        detect = cam.get("detect") or {"enabled": True}
+        cam["detect"] = auto_detect_size(detect) if rotation else detect
     return config
 
 

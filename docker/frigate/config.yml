@@ -49,8 +49,6 @@ go2rtc:
     cam_192_168_1_10:
     - https://192.168.1.10:4444/video/h264
     cam_192_168_1_8:
-    - ffmpeg:cam_192_168_1_8_raw#video=h264#rotate=270#hardware
-    cam_192_168_1_8_raw:
     - https://192.168.1.8:4444/video/h264
 cameras:
   cam_192_168_1_10:
@@ -74,6 +72,8 @@ cameras:
         - record
     detect:
       enabled: true
+      width: 640
+      height: 360
       fps: 5
 version: 0.17-0
 semantic_search:
