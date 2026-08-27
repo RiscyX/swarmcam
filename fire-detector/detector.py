@@ -18,7 +18,7 @@ MQTT_HOST = os.getenv("MQTT_HOST", "localhost")
 MQTT_PORT = int(os.getenv("MQTT_PORT", 1883))
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 SCAN_INTERVAL = int(os.getenv("SCAN_INTERVAL", 5))
-CONFIDENCE = float(os.getenv("CONFIDENCE", 0.5))
+CONFIDENCE = float(os.getenv("CONFIDENCE", 0.8))
 MODEL_PATH = os.getenv("MODEL_PATH", "models/fire_smoke.pt")
 
 # Setup logging
