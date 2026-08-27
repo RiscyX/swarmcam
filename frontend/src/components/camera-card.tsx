@@ -127,7 +127,7 @@ export function CameraCard({
       <span className="inline-flex items-center gap-1" key="bat">
         <span
           aria-hidden
-          className="inline-block h-[7px] w-[34px] border border-white/25 p-px"
+          className="inline-block h-[7px] w-[34px] border border-[var(--on-video-border)] p-px"
         >
           <span
             className="block h-full"
@@ -179,11 +179,11 @@ export function CameraCard({
       {showNoSignal && (
         <div
           className="absolute inset-0 z-10 grid place-items-center"
-          style={{ backgroundColor: 'rgba(10,10,10,0.72)' }}
+          style={{ backgroundColor: 'var(--video-scrim)' }}
         >
           <div className="flex flex-col items-center gap-2">
-            <CameraOff className="h-6 w-6 text-[var(--fg-dim)]" />
-            <span className="font-mono text-[10px] tracking-[0.2em] text-[var(--fg-muted)]">NO SIGNAL</span>
+            <CameraOff className="h-6 w-6 text-[var(--on-video-dim)]" />
+            <span className="font-mono text-[10px] tracking-[0.2em] text-[var(--on-video-muted)]">NO SIGNAL</span>
           </div>
         </div>
       )}
@@ -196,7 +196,7 @@ export function CameraCard({
           {isEditing ? (
             <input
               autoFocus
-              className="w-40 border-b border-white/40 bg-transparent text-[13px] font-extrabold text-[var(--fg)] outline-none"
+              className="w-40 border-b border-[var(--on-video-border)] bg-transparent text-[13px] font-extrabold text-[var(--on-video)] outline-none"
               onBlur={() => void commitEdit()}
               onChange={(e) => setEditValue(e.target.value)}
               onKeyDown={handleKeyDown}
@@ -208,14 +208,14 @@ export function CameraCard({
           ) : (
             <>
               <span
-                className={`truncate font-extrabold leading-tight text-[var(--fg)] ${isHero ? 'text-[16px]' : 'text-[13px]'}`}
+                className={`truncate font-extrabold leading-tight text-[var(--on-video)] ${isHero ? 'text-[16px]' : 'text-[13px]'}`}
                 style={{ textShadow: isHero ? '0 1px 4px #000' : '0 1px 3px rgba(0,0,0,0.8)' }}
               >
                 {displayName}
               </span>
               {isHero ? (
                 <span
-                  className="shrink-0 font-mono text-[10px] text-[var(--fg-muted)]"
+                  className="shrink-0 font-mono text-[10px] text-[var(--on-video-muted)]"
                   style={{ textShadow: '0 1px 4px #000' }}
                 >
                   {camera.ip}
@@ -226,17 +226,17 @@ export function CameraCard({
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
           {isFlashing && (
-            <span className="bg-[var(--accent)] px-1.5 py-0.5 font-mono text-[9px] font-bold tracking-widest text-black">
+            <span className="bg-[var(--accent)] px-1.5 py-0.5 font-mono text-[9px] font-bold tracking-widest text-[var(--accent-fg)]">
               EVENT
             </span>
           )}
           {(isPaused || mode === 'snapshot') && isOnline && (
-            <span className="bg-black/70 px-1.5 py-0.5 font-mono text-[9px] tracking-widest text-[var(--fg-secondary)]">
+            <span className="bg-[var(--video-chip)] px-1.5 py-0.5 font-mono text-[9px] tracking-widest text-[var(--on-video-secondary)]">
               SNAPSHOT
             </span>
           )}
           <button
-            className={`flex h-8 w-8 items-center justify-center bg-black/70 transition-colors hover:bg-black/90 ${torchEnabled ? 'text-swarm-amber' : 'text-[var(--fg-secondary)] hover:text-[var(--fg)]'}`}
+            className={`flex h-8 w-8 items-center justify-center bg-[var(--video-chip)] transition-colors hover:bg-[var(--video-chip-hover)] ${torchEnabled ? 'text-[var(--video-amber)]' : 'text-[var(--on-video-secondary)] hover:text-[var(--on-video)]'}`}
             onClick={(e) => { e.stopPropagation(); onToggleTorch(camera) }}
             title="Toggle torch"
           >
@@ -248,16 +248,16 @@ export function CameraCard({
       <div
         className={`absolute inset-x-0 bottom-0 z-20 flex items-end justify-between gap-2 bg-gradient-to-t from-black/85 via-black/40 to-transparent px-2.5 pb-2 pt-8 ${overlayVisibilityClass}`}
       >
-        <div className="min-w-0 flex-1 font-mono text-[10px] text-[var(--fg-secondary)]" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.8)' }}>
+        <div className="min-w-0 flex-1 font-mono text-[10px] text-[var(--on-video-secondary)]" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.8)' }}>
           {telemetryParts.length > 0 ? (
-            <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 [&>*+*]:before:content-['·'] [&>*+*]:before:mr-1.5 [&>*+*]:before:text-white/50">
+            <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 [&>*+*]:before:content-['·'] [&>*+*]:before:mr-1.5 [&>*+*]:before:text-[var(--on-video-dim)]">
               {telemetryParts}
             </div>
           ) : null}
         </div>
         <div className="flex shrink-0 items-center gap-1">
           <button
-            className="flex h-8 items-center gap-1.5 bg-black/70 px-2 font-mono text-[10px] tracking-widest text-[var(--fg-secondary)] transition-colors hover:bg-black/90 hover:text-[var(--fg)]"
+            className="flex h-8 items-center gap-1.5 bg-[var(--video-chip)] px-2 font-mono text-[10px] tracking-widest text-[var(--on-video-secondary)] transition-colors hover:bg-[var(--video-chip-hover)] hover:text-[var(--on-video)]"
             onClick={(e) => { e.stopPropagation(); startEdit(e) }}
             title="Rename camera"
           >
@@ -265,7 +265,7 @@ export function CameraCard({
             RENAME
           </button>
           <button
-            className="flex h-8 w-8 items-center justify-center bg-black/70 text-[var(--fg-secondary)] transition-colors hover:bg-black/90 hover:text-[var(--fg)]"
+            className="flex h-8 w-8 items-center justify-center bg-[var(--video-chip)] text-[var(--on-video-secondary)] transition-colors hover:bg-[var(--video-chip-hover)] hover:text-[var(--on-video)]"
             onClick={(e) => { e.stopPropagation(); onOpenFullscreen(camera) }}
             title="Open fullscreen"
           >

@@ -10,7 +10,7 @@ const dialogConfirmVariants = cva('', {
   variants: {
     variant: {
       default: '',
-      destructive: 'border-transparent bg-[var(--accent)] text-white hover:bg-[var(--accent)]/90',
+      destructive: 'border-transparent bg-[var(--accent)] text-[var(--accent-fg)] hover:bg-[var(--accent)]/90',
     },
   },
   defaultVariants: {
@@ -86,7 +86,7 @@ const Dialog = React.forwardRef<HTMLDivElement, DialogProps>(
 
     return createPortal(
       <div
-        className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-4 backdrop-blur-sm sm:items-center"
+        className="fixed inset-0 z-50 flex items-end justify-center bg-[var(--scrim)] p-4 backdrop-blur-sm sm:items-center"
         onClick={onClose}
         onKeyDown={handleKeyDown}
       >
@@ -113,14 +113,14 @@ const Dialog = React.forwardRef<HTMLDivElement, DialogProps>(
                 {title}
               </h2>
               {description ? (
-                <p className={cn('mt-1 font-mono text-xs', variant === 'destructive' ? 'text-[var(--accent)]' : 'text-[var(--fg-muted)]')}>
+                <p className={cn('mt-1 font-mono text-xs', variant === 'destructive' ? 'text-[var(--accent-text)]' : 'text-[var(--fg-muted)]')}>
                   {description}
                 </p>
               ) : null}
             </div>
             <button
               aria-label="Close dialog"
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-sm text-[var(--fg-muted)] transition-colors hover:bg-white/[0.04] hover:text-[var(--fg)]"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-sm text-[var(--fg-muted)] transition-colors hover:bg-[var(--hover-overlay)] hover:text-[var(--fg)]"
               onClick={onClose}
               type="button"
             >

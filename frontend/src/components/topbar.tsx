@@ -1,8 +1,11 @@
+import { Moon, Sun } from 'lucide-react'
+
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { LayoutPicker } from '@/components/layout-picker'
 import { useAuth } from '@/hooks/use-auth'
 import { useBreakpoint } from '@/hooks/use-breakpoint'
+import { useTheme } from '@/hooks/use-theme'
 import { sectionLabels, type SectionId } from '@/lib/sections'
 import type { CameraLayout } from '@/types/camera'
 import type { CameraSocketStatus } from '@/types/events'
@@ -31,6 +34,7 @@ export function Topbar({
 }: TopbarProps) {
   const { logout, user } = useAuth()
   const breakpoint = useBreakpoint()
+  const { theme, toggleTheme } = useTheme()
   const visibleCameras =
     cameraLayout === '2x2'
       ? Math.min(cameraCount, 4)
@@ -72,6 +76,16 @@ export function Topbar({
         {user ? (
           <span className="hidden font-mono text-xs text-[var(--fg-muted)] md:inline">{user.username}</span>
         ) : null}
+        <Button
+          aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+          aria-pressed={theme === 'light'}
+          className="h-7 w-7"
+          onClick={toggleTheme}
+          size="icon"
+          variant="ghost"
+        >
+          {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+        </Button>
         <Button onClick={logout} variant="outline" size="sm" className="h-7 text-xs">
           Logout
         </Button>

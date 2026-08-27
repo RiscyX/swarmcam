@@ -1,7 +1,8 @@
 import * as React from 'react'
 import { createPortal } from 'react-dom'
-import { Activity, Bell, Camera, Clapperboard, HeartPulse, Menu, Radar } from 'lucide-react'
+import { Activity, Bell, Camera, Clapperboard, HeartPulse, Menu, Moon, Radar, Sun } from 'lucide-react'
 
+import { useTheme } from '@/hooks/use-theme'
 import { cn } from '@/lib/utils'
 import { sectionLabels, type SectionId } from '@/lib/sections'
 
@@ -17,34 +18,48 @@ type MobileHeaderProps = {
 }
 
 export function MobileHeader({ cameraCount, camerasUp, liveEventCount, showEventFeed, onToggleEventFeed }: MobileHeaderProps) {
+  const { theme, toggleTheme } = useTheme()
+
   return (
     <header className="flex h-[52px] shrink-0 items-center gap-2.5 border-b border-[var(--border-row)] bg-[var(--bg-chrome)] px-3">
       <span className="h-[14px] w-[14px] shrink-0 bg-[var(--accent)]" />
       <span className="text-sm font-extrabold uppercase tracking-[0.14em] text-[var(--fg)]">SwarmCam</span>
-      <span className="ml-auto rounded-sm border border-[var(--border)] px-1.5 py-0.5 font-mono text-[11px] text-[var(--fg-muted)]">
-        <span className={camerasUp > 0 ? 'text-[var(--status-live)]' : ''}>
-          {camerasUp}/{cameraCount} up
-        </span>
-      </span>
-      <button
-        aria-label={showEventFeed ? 'Close event feed' : 'Open event feed'}
-        aria-pressed={showEventFeed}
-        className={cn(
-          'relative flex h-11 w-11 shrink-0 items-center justify-center rounded-sm transition-colors',
-          showEventFeed
-            ? 'bg-[var(--bg-surface)] text-[var(--fg)]'
-            : 'text-[var(--fg-muted)] hover:bg-white/[0.04] hover:text-[var(--fg)]',
-        )}
-        onClick={onToggleEventFeed}
-        type="button"
-      >
-        <Bell className="h-5 w-5" />
-        {liveEventCount > 0 ? (
-          <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center bg-[var(--accent)] px-0.5 font-mono text-[10px] font-bold leading-none text-white">
-            {liveEventCount}
+      <div className="ml-auto flex shrink-0 items-center gap-2.5">
+        {/* 360px alatt a chip esik ki — a témagomb sosem */}
+        <span className="hidden rounded-sm border border-[var(--border)] px-1.5 py-0.5 font-mono text-[11px] text-[var(--fg-muted)] min-[360px]:inline">
+          <span className={camerasUp > 0 ? 'text-[var(--status-live)]' : ''}>
+            {camerasUp}/{cameraCount} up
           </span>
-        ) : null}
-      </button>
+        </span>
+        <button
+          aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+          aria-pressed={theme === 'light'}
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-sm text-[var(--fg-muted)] transition-colors hover:bg-[var(--hover-overlay)] hover:text-[var(--fg)]"
+          onClick={toggleTheme}
+          type="button"
+        >
+          {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+        </button>
+        <button
+          aria-label={showEventFeed ? 'Close event feed' : 'Open event feed'}
+          aria-pressed={showEventFeed}
+          className={cn(
+            'relative flex h-11 w-11 shrink-0 items-center justify-center rounded-sm transition-colors',
+            showEventFeed
+              ? 'bg-[var(--bg-surface)] text-[var(--fg)]'
+              : 'text-[var(--fg-muted)] hover:bg-[var(--hover-overlay)] hover:text-[var(--fg)]',
+          )}
+          onClick={onToggleEventFeed}
+          type="button"
+        >
+          <Bell className="h-5 w-5" />
+          {liveEventCount > 0 ? (
+            <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center bg-[var(--accent)] px-0.5 font-mono text-[10px] font-bold leading-none text-[var(--accent-fg)]">
+              {liveEventCount}
+            </span>
+          ) : null}
+        </button>
+      </div>
     </header>
   )
 }
@@ -161,7 +176,7 @@ function MoreDrawer({ activeSection, open, onClose, onSectionChange }: MoreDrawe
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex flex-col justify-end bg-black/70 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex flex-col justify-end bg-[var(--scrim)] backdrop-blur-sm"
       onClick={onClose}
       onKeyDown={handleKeyDown}
     >
@@ -192,7 +207,7 @@ function MoreDrawer({ activeSection, open, onClose, onSectionChange }: MoreDrawe
                   'flex h-[52px] w-full items-center px-4 text-left text-sm transition-colors',
                   active
                     ? 'bg-[var(--bg-chrome)] font-extrabold text-[var(--fg)]'
-                    : 'text-[var(--fg-secondary)] hover:bg-white/[0.04] hover:text-[var(--fg)]',
+                    : 'text-[var(--fg-secondary)] hover:bg-[var(--hover-overlay)] hover:text-[var(--fg)]',
                 )}
                 key={id}
                 onClick={() => {

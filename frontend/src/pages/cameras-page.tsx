@@ -85,7 +85,7 @@ export function CamerasPage({
       <div className="flex min-h-[420px] flex-col items-center justify-center gap-3 p-8 text-center">
         <CameraOff className="h-8 w-8 text-muted-foreground" />
         <div className="text-sm font-medium text-foreground">No cameras</div>
-        <p className="text-xs text-muted-foreground">Run a network scan on the Discovery page to detect IP Webcam devices.</p>
+        <p className="text-xs text-muted-foreground">Run a network scan on the Discovery page to detect Android IP Camera devices.</p>
       </div>
     )
   }

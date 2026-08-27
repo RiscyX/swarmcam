@@ -42,7 +42,7 @@ export function LoginOverlay() {
 
           <div className="mt-4 border-t border-border pt-3 text-xs text-muted-foreground">
             Authentication via Frigate NVR. Create a user at{' '}
-            <span className="text-swarm-blue">http://localhost:5000</span> before first login.
+            <span className="text-[var(--accent-text)]">http://localhost:5000</span> before first login.
           </div>
         </CardContent>
       </Card>

@@ -159,8 +159,8 @@ function NodeList({
           <button
             className={`flex w-full items-center gap-3 rounded-sm border-l-[3px] px-3 text-left transition-colors ${
               active
-                ? 'border-l-[var(--accent)] bg-[var(--accent-soft)]'
-                : 'border-l-transparent hover:bg-white/[0.04]'
+                ? 'border-l-[var(--accent)] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)]'
+                : 'border-l-transparent hover:bg-[var(--hover-overlay)]'
             } ${mobile ? 'h-[52px]' : 'py-2'}`}
             key={cam.name}
             onClick={() => onSelect(cam.name)}
@@ -316,10 +316,10 @@ function DetailPanel({
         ) : null}
       </section>
 
-      {/* IP Webcam settings */}
+      {/* Android IP Camera settings */}
       <section className="rounded-sm border border-[var(--border)] bg-[var(--bg-surface)] p-4">
         <div className="mb-3 font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--fg-muted)]">
-          IP Webcam settings
+          Android IP Camera settings
         </div>
 
         {loading ? (
@@ -397,7 +397,7 @@ function DetailPanel({
             <span className="font-bold text-[var(--fg)]">Recordings are kept.</span>
           </p>
           <Button
-            className="shrink-0 border-[var(--danger-border)] text-[var(--status-error)] hover:border-[var(--status-error)] hover:bg-white/[0.04] hover:text-[var(--status-error)]"
+            className="shrink-0 border-[var(--danger-border)] text-[var(--status-error)] hover:border-[var(--status-error)] hover:bg-[var(--hover-overlay)] hover:text-[var(--status-error)]"
             onClick={() => {
               setDeleteError(null)
               setConfirmDelete(true)

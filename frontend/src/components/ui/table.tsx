@@ -29,7 +29,7 @@ TableBody.displayName = 'TableBody'
 const TableRow = React.forwardRef<HTMLTableRowElement, React.HTMLAttributes<HTMLTableRowElement>>(
   ({ className, ...props }, ref) => (
     <tr
-      className={cn('border-b border-[var(--border-row)] transition-colors hover:bg-white/[0.02]', className)}
+      className={cn('border-b border-[var(--border-row)] transition-colors hover:bg-[var(--hover-overlay-subtle)]', className)}
       ref={ref}
       {...props}
     />
@@ -78,11 +78,11 @@ const TableCell = React.forwardRef<HTMLTableCellElement, TableCellProps>(
     return (
       <td className={cn(tableCellVariants({ variant }), className)} ref={ref} {...props}>
         {variant === 'badge' ? (
-          <span className="inline-flex items-center rounded-sm border border-[var(--border-raised)] bg-white/[0.04] px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--fg-muted)]">
+          <span className="inline-flex items-center rounded-sm border border-[var(--border-raised)] bg-[var(--hover-overlay)] px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--fg-muted)]">
             {children}
           </span>
         ) : variant === 'bar' ? (
-          <div aria-hidden="true" className="h-1.5 w-full min-w-[80px] max-w-[160px] overflow-hidden rounded-full bg-white/[0.06]">
+          <div aria-hidden="true" className="h-1.5 w-full min-w-[80px] max-w-[160px] overflow-hidden rounded-full bg-[var(--track)]">
             <div
               className="h-full bg-[var(--status-live)] transition-all"
               style={{ width: `${Math.min(100, Math.max(0, value ?? 0))}%` }}

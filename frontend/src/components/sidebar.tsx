@@ -70,11 +70,11 @@ export function Sidebar({ activeSection, liveEventCount, onSectionChange, socket
               aria-current={active ? 'page' : undefined}
               className={`group relative flex shrink-0 items-center transition-colors ${
                 isRail
-                  ? `h-12 w-full justify-center ${active ? 'bg-[var(--bg-surface)] text-[var(--fg)]' : 'text-[var(--fg-muted)] hover:bg-white/[0.04] hover:text-[var(--fg)]'}`
+                  ? `h-12 w-full justify-center ${active ? 'bg-[var(--bg-surface)] text-[var(--fg)]' : 'text-[var(--fg-muted)] hover:bg-[var(--hover-overlay)] hover:text-[var(--fg)]'}`
                   : `h-11 gap-2.5 px-4 text-left text-sm ${
                       active
                         ? 'bg-[var(--bg-chrome)] font-extrabold text-[var(--fg)] before:absolute before:inset-y-0 before:left-0 before:w-[3px] before:bg-[var(--accent)]'
-                        : 'text-[var(--fg-muted)] hover:bg-white/[0.04] hover:text-[var(--fg)]'
+                        : 'text-[var(--fg-muted)] hover:bg-[var(--hover-overlay)] hover:text-[var(--fg)]'
                     }`
               }`}
               key={item.id}

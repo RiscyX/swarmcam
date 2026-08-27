@@ -1,11 +1,14 @@
 import { AppShell } from '@/components/app-shell'
 import { AuthProvider } from '@/hooks/use-auth'
+import { ThemeProvider } from '@/hooks/use-theme'
 
 function App() {
   return (
-    <AuthProvider>
-      <AppShell />
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <AppShell />
+      </AuthProvider>
+    </ThemeProvider>
   )
 }
 
