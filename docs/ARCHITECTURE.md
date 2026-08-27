@@ -54,7 +54,6 @@ SwarmCam is a self-hosted, distributed security camera system. Old Android phone
 │    discovery   — network scan SSE endpoint             │
 │    events      — Frigate events proxy                  │
 │    recordings  — clip streaming proxy                  │
-│    faces       — face recognition proxy                │
 │    users       — Frigate user management proxy         │
 │    config      — Frigate config.yml read/write         │
 │    system      — network interfaces, GPU info          │
@@ -76,7 +75,6 @@ SwarmCam is a self-hosted, distributed security camera system. Old Android phone
 │    Camera Sett.— query params (?key=val), rename     │
 │    Events      — Frigate detection event browser     │
 │    Recordings  — clip playback, download             │
-│    Faces       — face registration, recognition log  │
 │    Users       — Frigate user management             │
 │    Settings    — Frigate config (decoder, FPS, …)    │
 └─────────────────────────────────────────────────────┘

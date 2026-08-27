@@ -27,7 +27,7 @@ FastAPI backend  ←──── Discovery script
         ▼
 SwarmCam Dashboard
 (live view, discovery, events,
- recordings, face recognition, settings)
+ recordings, settings)
 ```
 
 ## Quick Start
@@ -138,7 +138,6 @@ Szakdoga/
 │   │   ├── config.py            # Frigate config.yml read/write, decoder switching
 │   │   ├── discovery.py         # Discovery SSE endpoint, camera reset
 │   │   ├── events.py            # Frigate events proxy (list, stats, thumbnail)
-│   │   ├── faces.py             # Face recognition proxy (list, register, delete, thumbnail)
 │   │   ├── recordings.py        # Recordings list, MP4 clip streaming proxy
 │   │   ├── system.py            # Network interfaces, GPU detection, debug health dump
 │   │   └── users.py             # Frigate user management proxy (list, create, password, delete)

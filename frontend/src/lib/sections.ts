@@ -6,7 +6,6 @@ export type SectionId =
   | 'camera-settings'
   | 'events'
   | 'recordings'
-  | 'faces'
   | 'users'
 
 export const sectionLabels: Record<SectionId, string> = {
@@ -17,6 +16,5 @@ export const sectionLabels: Record<SectionId, string> = {
   'camera-settings': 'Camera Settings',
   events: 'Events',
   recordings: 'Recordings',
-  faces: 'Faces',
   users: 'Users',
 }

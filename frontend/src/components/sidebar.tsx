@@ -1,4 +1,4 @@
-import { Activity, Camera, Clapperboard, Radar, Settings, SlidersHorizontal, Smile, Users } from 'lucide-react'
+import { Activity, Camera, Clapperboard, Radar, Settings, SlidersHorizontal, Users } from 'lucide-react'
 
 import { PulseDot } from '@/components/ui/pulse-dot'
 import { useAuth } from '@/hooks/use-auth'
@@ -13,7 +13,6 @@ const navItems: Array<{ id: SectionId; label: string; icon: typeof Camera }> = [
   { id: 'camera-settings', label: 'Cam Settings', icon: SlidersHorizontal },
   { id: 'events', label: 'Events', icon: Activity },
   { id: 'recordings', label: 'Recordings', icon: Clapperboard },
-  { id: 'faces', label: 'Faces', icon: Smile },
   { id: 'users', label: 'Users', icon: Users },
   { id: 'settings', label: 'Settings', icon: Settings },
 ]
