@@ -68,15 +68,15 @@ services:
     restart: unless-stopped
     network_mode: host
     volumes:
-      - ../fire-detector/models:/app/models
+    - ../fire-detector/models:/app/models
     environment:
       MQTT_HOST: localhost
       BACKEND_URL: http://localhost:8000
-      SCAN_INTERVAL: "5"
-      CONFIDENCE: "0.5"
+      SCAN_INTERVAL: '5'
+      CONFIDENCE: '0.5'
     depends_on:
-      - backend
-      - mosquitto
+    - backend
+    - mosquitto
 volumes:
   frigate_db: null
 networks:

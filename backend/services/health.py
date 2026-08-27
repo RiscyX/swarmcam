@@ -5,7 +5,7 @@ import requests as http
 import urllib3
 
 import state
-from settings import FRIGATE_URL, HEALTH_INTERVAL
+from settings import FRIGATE_CONFIG, FRIGATE_URL, HEALTH_INTERVAL
 
 # The camera app serves HTTPS with a self-signed certificate by default;
 # accepting it without verification is an intentional LAN-only decision.
@@ -43,17 +43,35 @@ def _orientation_label(angle) -> str | None:
     return "portrait" if a in (0, 180) else "landscape"
 
 
-def _parse_info(info: dict) -> dict:
+def _pipeline_orientation(camera_name: str | None) -> str | None:
+    """A kamera tényleges orientációja a go2rtc pipeline alapján."""
+    if not camera_name or not FRIGATE_CONFIG.exists():
+        return None
+    try:
+        from services.frigate_config import camera_rotation, read_yaml
+        rotation = camera_rotation(read_yaml(FRIGATE_CONFIG), camera_name)
+        if rotation in (0, 180):
+            return "portrait"
+        if rotation in (90, 270):
+            return "landscape"
+    except Exception:
+        pass
+    return None
+
+
+def _parse_info(info: dict, camera_name: str | None = None) -> dict:
     settings = info.get("settings", {})
     cams = info.get("cameras") or []
     active = _find_active(cams, settings.get("cameraId"))
     # User-set rotation lives in lensSettings.rotate; sensorOrientation is the
     # constant hardware mounting angle, not meaningful to display.
     lens = (active or {}).get("lensSettings", {}) if active else {}
+    # Pipeline orientáció (go2rtc config)优先, ha elérhető
+    pipeline_orient = _pipeline_orientation(camera_name)
     return {
         "battery_level":  int(info["batteryPercent"]) if "batteryPercent" in info else None,
         "wifi_strength":  int(info["wifiStrength"])   if "wifiStrength"   in info else None,
-        "orientation":    _orientation_label(lens.get("rotate")),
+        "orientation":    pipeline_orient or _orientation_label(lens.get("rotate")),
     }
 
 
@@ -66,7 +84,7 @@ async def health_loop() -> None:
                 status = await poll_status(ip, port)
                 entry: dict = {"ip": ip, "port": port, "name": cam["name"]}
                 if status:
-                    entry.update({"online": True, **_parse_info(status)})
+                    entry.update({"online": True, **_parse_info(status, cam["name"])})
                 else:
                     entry["online"] = False
                 state._health_cache[ip] = entry
