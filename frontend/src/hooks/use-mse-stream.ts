@@ -13,6 +13,9 @@ const MAX_DRIFT_S = 1.5
 // wifije rendszeresen megbicsaklik; csak tartós hiba esetén esünk vissza.
 const RETRY_DELAY_MS = 2000
 const MAX_ATTEMPTS = 3
+// Ekkora ablakon atlagoljuk a kepkockaszamot. Rovidebb ablaknal a kijelzett
+// szam lathatoan ugral, mert a telefon kepkockasebessege fenyfuggoen ingadozik.
+const FPS_WINDOW_MS = 3000
 
 const MSE_SUPPORTED = typeof MediaSource !== 'undefined'
 
@@ -25,12 +28,20 @@ const MSE_SUPPORTED = typeof MediaSource !== 'undefined'
  * A visszatérési érték akkor igaz, ha az MSE tartósan nem működik — ilyenkor
  * a hívó az MJPEG proxyra eshet vissza.
  */
+export type MseStream = {
+  /** Az MSE tartosan nem mukodik — a hivo az MJPEG proxyra eshet vissza. */
+  failed: boolean
+  /** A stream tenyleges kepkockasebessege, vagy null, ha meg nem merheto. */
+  fps: number | null
+}
+
 export function useMseStream(
   videoRef: RefObject<HTMLVideoElement | null>,
   name: string,
   enabled: boolean,
-): boolean {
+): MseStream {
   const [failedFor, setFailedFor] = useState<string | null>(null)
+  const [fps, setFps] = useState<number | null>(null)
 
   useEffect(() => {
     const video = videoRef.current
@@ -161,5 +172,34 @@ export function useMseStream(
     }
   }, [name, enabled, videoRef])
 
-  return failedFor === name || !MSE_SUPPORTED
+  // A dekodolt kepkockak szamlalojanak novekmenye — ez a kamera altal
+  // ténylegesen szallitott sebesseg, nem a Frigate detect fps-e. Az eldobott
+  // kockak is beleszamitanak, mert azokat is elkuldte a kamera.
+  useEffect(() => {
+    const video = videoRef.current
+    if (!enabled || !video || !MSE_SUPPORTED) return undefined
+    if (typeof video.getVideoPlaybackQuality !== 'function') return undefined
+
+    let lastFrames = video.getVideoPlaybackQuality().totalVideoFrames
+    let lastAt = performance.now()
+
+    const intervalId = window.setInterval(() => {
+      const target = videoRef.current
+      if (!target || typeof target.getVideoPlaybackQuality !== 'function') return
+      const frames = target.getVideoPlaybackQuality().totalVideoFrames
+      const now = performance.now()
+      const elapsed = (now - lastAt) / 1000
+      // Ujracsatlakozaskor a szamlalo nullazodik, olyankor csak ujraindulunk.
+      setFps(frames >= lastFrames && elapsed > 0 ? (frames - lastFrames) / elapsed : null)
+      lastFrames = frames
+      lastAt = now
+    }, FPS_WINDOW_MS)
+
+    return () => {
+      window.clearInterval(intervalId)
+      setFps(null)
+    }
+  }, [name, enabled, videoRef])
+
+  return { failed: failedFor === name || !MSE_SUPPORTED, fps }
 }

@@ -62,7 +62,7 @@ export function CameraCard({
   })
   // Élő kép a go2rtc H.264 streamjéből; ha az MSE elbukik (régi böngésző,
   // lezárt WebSocket), visszaesünk a korábbi MJPEG proxyra.
-  const mseFailed = useMseStream(videoRef, camera.name, mode === 'stream')
+  const { failed: mseFailed, fps: liveFps } = useMseStream(videoRef, camera.name, mode === 'stream')
   const useMse = mode === 'stream' && !mseFailed
   const src = mode === 'stream' ? cameraStreamUrl(camera.name) : (snapshotSrc ?? '')
   const hideOnIdle = overlayVisibility === 'hover' && breakpoint !== 'mobile'
@@ -115,7 +115,9 @@ export function CameraCard({
     if (e.key === 'Escape') setIsEditing(false)
   }
 
-  const fps = stats?.camera_fps ?? null
+  // Az elo streambol mert sebesseg; amig az nincs meg (MJPEG fallback, szunet,
+  // snapshot mod), a Frigate detect fps-ere esunk vissza.
+  const fps = liveFps ?? stats?.camera_fps ?? null
   const batteryLevel = camera.battery_level ?? null
 
   const telemetryParts: React.ReactNode[] = []
