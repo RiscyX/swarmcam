@@ -24,12 +24,12 @@ export function PlaceholderPage({ section, title }: PlaceholderPageProps) {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid min-h-[360px] place-items-center rounded-sm border border-dashed border-border bg-[#030507]">
+          <div className="grid min-h-[360px] place-items-center rounded-sm border border-dashed border-border bg-[var(--bg-canvas)]">
             <div className="max-w-md text-center">
-              <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full border border-swarm-amber/30 bg-swarm-amber/10 text-swarm-amber shadow-[0_0_60px_rgba(232,165,0,0.18)]">
+              <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full border border-[var(--accent)]/30 bg-[var(--accent)]/10 text-[var(--accent-text)]">
                 <ShieldCheck className="h-8 w-8" />
               </div>
-              <h1 className="font-ui text-4xl font-black uppercase tracking-[0.18em] text-swarm-amber">SwarmCam</h1>
+              <h1 className="font-ui text-4xl font-black uppercase tracking-[0.18em] text-[var(--accent-text)]">SwarmCam</h1>
               <p className="mt-3 font-mono text-xs leading-6 text-muted-foreground">
                 The app shell and auth layer are ready. In the next iterations, this placeholder will receive the real
                 camera, health, discovery, and settings functions.

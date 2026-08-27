@@ -66,7 +66,7 @@ function FilmstripTile({ camera, isFlashing, isPaused, onSelect, width }: Filmst
       <div className="absolute inset-x-0 top-0 flex items-center gap-1 bg-gradient-to-b from-black/80 to-transparent px-1.5 pb-4 pt-1">
         {!isOnline ? <PulseDot animated={false} size={5} speed={2.6} tone="offline" /> : null}
         <span
-          className="min-w-0 truncate font-mono text-[9px] tracking-wider text-[var(--fg-secondary)]"
+          className="min-w-0 truncate font-mono text-[9px] tracking-wider text-[var(--on-video-secondary)]"
           style={{ textShadow: '0 1px 4px #000' }}
         >
           {getCameraDisplayName(camera)}
@@ -74,7 +74,7 @@ function FilmstripTile({ camera, isFlashing, isPaused, onSelect, width }: Filmst
       </div>
 
       <div
-        className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-1 bg-gradient-to-t from-black/85 to-transparent px-1.5 pb-1 pt-4 font-mono text-[9px] text-[var(--fg-muted)]"
+        className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-1 bg-gradient-to-t from-black/85 to-transparent px-1.5 pb-1 pt-4 font-mono text-[9px] text-[var(--on-video-muted)]"
         style={{ textShadow: '0 1px 4px #000' }}
       >
         <span>{fps !== null && fps > 0 ? `${fps.toFixed(1)} FPS` : '—'}</span>

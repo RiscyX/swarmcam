@@ -51,13 +51,17 @@ export function FullscreenView({ camera, onClose, onToggleTorch, torchEnabled }:
       <div className="flex items-center gap-3 bg-gradient-to-b from-black/80 via-black/50 to-transparent px-4 pb-6 pt-3">
         <PulseDot size={8} speed={1.6} tone={camera.online === false ? 'offline' : 'live'} />
         <div className="min-w-0 flex-1">
-          <span className="block truncate text-lg font-extrabold leading-tight text-[var(--fg)]">
+          <span className="block truncate text-lg font-extrabold leading-tight text-[var(--on-video)]">
             {getCameraDisplayName(camera)}
           </span>
-          <span className="font-mono text-xs text-[var(--fg-muted)]">{camera.ip}</span>
+          <span className="font-mono text-xs text-[var(--on-video-muted)]">{camera.ip}</span>
         </div>
         <Button
-          className={torchEnabled ? 'border-swarm-amber/50 bg-swarm-amber/10 text-swarm-amber' : ''}
+          className={
+            torchEnabled
+              ? 'border-[var(--video-amber)]/50 bg-[var(--video-amber)]/10 text-[var(--video-amber)]'
+              : 'border-[var(--on-video-border)] text-[var(--on-video-secondary)] hover:border-[var(--on-video-muted)] hover:text-[var(--on-video)]'
+          }
           onClick={() => onToggleTorch(camera)}
           size="sm"
           variant="outline"
@@ -65,12 +69,12 @@ export function FullscreenView({ camera, onClose, onToggleTorch, torchEnabled }:
           <Flashlight className="mr-1.5 h-3.5 w-3.5" />
           Torch
         </Button>
-        <span className="hidden shrink-0 border border-[var(--border-raised)] px-2 py-1 font-mono text-[10px] tracking-[0.12em] text-[var(--fg-muted)] sm:inline">
+        <span className="hidden shrink-0 border border-[var(--on-video-border)] px-2 py-1 font-mono text-[10px] tracking-[0.12em] text-[var(--on-video-muted)] sm:inline">
           BACKGROUND STREAMS PAUSED
         </span>
         <button
           aria-label="Close fullscreen"
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-sm text-[var(--fg-secondary)] transition-colors hover:bg-white/[0.06] hover:text-[var(--fg)]"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-sm text-[var(--on-video-secondary)] transition-colors hover:bg-white/[0.06] hover:text-[var(--on-video)]"
           onClick={onClose}
           type="button"
         >
@@ -89,12 +93,12 @@ export function FullscreenView({ camera, onClose, onToggleTorch, torchEnabled }:
         <dl className="flex min-w-0 flex-1 flex-wrap items-center gap-x-5 gap-y-1 font-mono text-xs">
           {telemetry.map(([label, value]) => (
             <div className="flex min-w-0 items-baseline gap-1.5" key={label}>
-              <dt className="text-[10px] uppercase tracking-[0.12em] text-[var(--fg-dim)]">{label}</dt>
-              <dd className="tabular-nums text-[var(--fg-secondary)]">{value}</dd>
+              <dt className="text-[10px] uppercase tracking-[0.12em] text-[var(--on-video-dim)]">{label}</dt>
+              <dd className="tabular-nums text-[var(--on-video-secondary)]">{value}</dd>
             </div>
           ))}
         </dl>
-        <span className="shrink-0 font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--fg-dim)]">ESC to close</span>
+        <span className="shrink-0 font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--on-video-dim)]">ESC to close</span>
       </div>
     </div>
   )

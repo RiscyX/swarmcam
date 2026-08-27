@@ -192,7 +192,11 @@ export function AppShell() {
   return (
     <div
       className={`flex bg-background text-foreground ${
-        isMobile ? 'h-dvh flex-col overflow-hidden' : 'min-h-screen'
+        isMobile
+          ? 'h-dvh flex-col overflow-hidden'
+          : activeSection === 'cameras'
+            ? 'h-screen overflow-hidden'
+            : 'min-h-screen'
       }`}
     >
       {isMobile ? (

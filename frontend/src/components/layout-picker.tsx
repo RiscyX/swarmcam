@@ -19,7 +19,7 @@ const LAYOUTS: Array<{ id: CameraLayout; label: string; icon: LucideIcon; title:
 const baseButton =
   'inline-flex shrink-0 cursor-pointer items-center justify-center gap-1.5 border-transparent font-medium transition-colors'
 const inactive = 'bg-transparent text-[var(--fg-muted)] hover:text-[var(--fg)]'
-const active = 'bg-[var(--accent)] text-[var(--bg-canvas)] hover:bg-[var(--accent-hover)]'
+const active = 'bg-[var(--accent)] text-[var(--accent-fg)] hover:bg-[var(--accent-hover)]'
 
 export function LayoutPicker({ layout, onChange, variant = 'bar' }: LayoutPickerProps) {
   if (variant === 'chips') {

@@ -81,7 +81,7 @@ function Chip({
     <label
       className={`flex h-10 cursor-pointer items-center gap-2 rounded-sm border px-3 font-mono text-xs transition-colors ${
         checked
-          ? 'border-[var(--accent)] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] text-[var(--accent)]'
+          ? 'border-[var(--accent)] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] text-[var(--accent-text)]'
           : 'border-[var(--border)] text-[var(--fg-secondary)] hover:border-[var(--fg-muted)]'
       } has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-40`}
     >

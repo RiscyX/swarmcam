@@ -41,7 +41,7 @@ export function EventFeedPanel({ cameras, events, onClose, onClear }: EventFeedP
 
   return (
     <aside
-      className="absolute inset-x-0 bottom-0 z-[52] flex max-h-[70%] flex-col overflow-hidden border-t-2 border-t-[var(--accent)] bg-[var(--bg-surface)] text-[var(--fg)] shadow-[0_-12px_28px_rgba(0,0,0,0.45)] animate-in slide-in-from-bottom fade-in duration-200 md:inset-y-0 md:left-auto md:right-0 md:z-[45] md:max-h-none md:w-[312px] md:border-l-2 md:border-l-[var(--accent)] md:border-t-0 md:shadow-[-12px_0_28px_rgba(0,0,0,0.45)] md:slide-in-from-bottom-0"
+      className="absolute inset-x-0 bottom-0 z-[52] flex max-h-[70%] flex-col overflow-hidden border-t-2 border-t-[var(--accent)] bg-[var(--bg-surface)] text-[var(--fg)] shadow-[0_-12px_28px_var(--shadow-panel)] animate-in slide-in-from-bottom fade-in duration-200 md:inset-y-0 md:left-auto md:right-0 md:z-[45] md:max-h-none md:w-[312px] md:border-l-2 md:border-l-[var(--accent)] md:border-t-0 md:shadow-[-12px_0_28px_var(--shadow-panel)] md:slide-in-from-bottom-0"
     >
       <div className="flex h-10 shrink-0 items-center gap-2 border-b border-[var(--border-row)] px-3">
         <PulseDot size={7} speed={1.6} tone="accent" />
@@ -57,7 +57,7 @@ export function EventFeedPanel({ cameras, events, onClose, onClear }: EventFeedP
         ) : null}
         <button
           aria-label="Close event feed"
-          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-sm text-[var(--fg-muted)] transition-colors hover:bg-white/[0.04] hover:text-[var(--fg)] ${
+          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-sm text-[var(--fg-muted)] transition-colors hover:bg-[var(--hover-overlay)] hover:text-[var(--fg)] ${
             events.length > 0 ? '' : 'ml-auto'
           }`}
           onClick={onClose}
@@ -77,7 +77,7 @@ export function EventFeedPanel({ cameras, events, onClose, onClear }: EventFeedP
             {events.map((ev) => (
               <li key={`${ev.id ?? ''}-${ev.receivedAt}`}>
                 <button
-                  className="flex min-h-[44px] w-full items-center gap-2.5 p-2.5 text-left transition-colors hover:bg-white/[0.04]"
+                  className="flex min-h-[44px] w-full items-center gap-2.5 p-2.5 text-left transition-colors hover:bg-[var(--hover-overlay)]"
                   onClick={() => setSelected(ev)}
                   type="button"
                 >

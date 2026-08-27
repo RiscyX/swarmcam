@@ -86,7 +86,7 @@ export function HealthPage({ cameras, isLoading, onOpenStream, onReload }: Healt
                       DIM_DASH
                     ) : (
                       <div className="flex items-center gap-2">
-                        <div aria-hidden="true" className="h-2 w-16 shrink-0 overflow-hidden rounded-full bg-white/[0.06]">
+                        <div aria-hidden="true" className="h-2 w-16 shrink-0 overflow-hidden rounded-full bg-[var(--track)]">
                           <div
                             className={`h-full transition-all ${batteryBarClass(pct)}`}
                             style={{ width: `${pct}%` }}
