@@ -63,12 +63,11 @@ def set_camera_rotation(config: dict, name: str, rotation: int) -> dict:
     a Frigate UI élő képe és a dashboard is ugyanazt a képállást kapja.
     rotation == 0 esetén visszaáll az újrakódolás nélküli passthrough.
 
-    Szándékosan nincs `#hardware`: azzal a go2rtc
-    `-hwaccel cuda -hwaccel_output_format nv12 ... -vf transpose=N,hwupload`
-    láncot épít, ami nem forgat, hanem a forrást a forgatott méretre skálázza
-    és fekete sávokkal kitölti. Ugyanaz a transpose szoftveresen helyes képet
-    ad, ezért a forgatott kamera libx264-gyel kódol újra. Ez csak azokat a
-    kamerákat érinti, ahol tényleg kell forgatás.
+    A `#hardware=cuda` az NVDEC-en dekódol és NVENC-cel kódol vissza
+    (`-hwaccel cuda -hwaccel_output_format nv12 ... -vf transpose=N,hwupload`),
+    a transpose marad a CPU-n. Mérve 720p25-ön: libx264 44%, NVENC 6% egy
+    magból — kb. 7x olcsóbb, és a kimenet pixelre egyezik a szoftveres
+    transpose-zal (PSNR 44,7 dB / SSIM 0,993), tehát tényleg forgat.
     """
     src = camera_source_url(config, name)
     if src is None:
@@ -79,7 +78,7 @@ def set_camera_rotation(config: dict, name: str, rotation: int) -> dict:
     raw = name + RAW_SUFFIX
     if rotation:
         streams[raw] = [src]
-        streams[name] = [f"ffmpeg:{raw}#video=h264#rotate={rotation}"]
+        streams[name] = [f"ffmpeg:{raw}#video=h264#rotate={rotation}#hardware=cuda"]
     else:
         streams.pop(raw, None)
         streams[name] = [src]
@@ -192,11 +191,23 @@ def apply_settings(config: dict, s: ConfigSettings) -> dict:
         cam["detect"] = detect
         ffmpeg = cam.setdefault("ffmpeg", {})
         ffmpeg.pop("hwaccel_args", None)
+        # A Frigate csak akkor cseréli ki a presetet, ha az input_args pontosan
+        # a preset neve — nyers kapcsolót nem szabad mellé fűzni, mert akkor
+        # az ffmpeg a preset nevét kimeneti fájlnak veszi és elszáll.
+        #
+        # Forgatott kameránál a go2rtc újrakódol, és a transzkód elveszti az
+        # időbélyegeket (a stream 90k tbr-rel jön). A detect ág `fps=5` szűrője
+        # PTS alapján válogat, így nulla frame-et adna — a record ág (`-c:v
+        # copy`) közben látszólag működik. A generic preset `+genpts` és
+        # `-use_wallclock_as_timestamps 1` kapcsolói pótolják a bélyegeket.
+        if s.rtsp_transport == "udp":
+            preset = "preset-rtsp-udp"
+        elif camera_rotation(config, cam_name):
+            preset = "preset-rtsp-generic"
+        else:
+            preset = "preset-rtsp-restream"
         for inp in ffmpeg.get("inputs", []):
-            current = inp.get("input_args", "")
-            cleaned = re.sub(r"-rtsp_transport\s+\S+", "", current).strip()
-            transport = f"-rtsp_transport {s.rtsp_transport}"
-            inp["input_args"] = f"{transport} {cleaned}".strip() if cleaned else transport
+            inp["input_args"] = preset
 
     return config
 
