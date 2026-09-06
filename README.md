@@ -178,3 +178,19 @@ docker compose up frigate mosquitto -d
 - [Architecture](docs/ARCHITECTURE.md) — how the components fit together and why
 - [API Reference](docs/API.md) — every REST endpoint and WebSocket message
 - [Development Plan](docs/FEJLESZTESI_TERV.md) — planned features and implementation notes
+
+## License
+
+The SwarmCam source code is released under the [MIT License](LICENSE).
+
+Third-party components keep their own licenses. Two are worth calling out:
+
+- **`fire-detector/`** imports [Ultralytics](https://github.com/ultralytics/ultralytics)
+  YOLOv8, which is **AGPL-3.0**. If you redistribute this service or run it as a
+  network service for others, the AGPL terms apply to that combined work — the MIT
+  license above covers the SwarmCam code itself, not the Ultralytics dependency.
+- **Model weights** (`fire-detector/models/*.pt`) are not distributed with this
+  repository and carry the license of whoever published them.
+
+The camera nodes run the [Android IP Camera](https://f-droid.org/packages/com.github.digitallyrefined.androidipcamera/)
+app (MIT), which is a separate project and is not vendored here.

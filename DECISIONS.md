@@ -12,7 +12,7 @@ A kamera-node-ok eredetileg a Pavel Khlebovich féle **IP Webcam** APK-t futtatt
 
 ### Döntés
 
-Teljes csere, nem párhuzamos támogatás: minden IP Webcam kód-útvonal megszűnik, a rendszer az nyílt forrású (**GPL**, F-Droid-on is elérhető) [Android IP Camera](https://github.com/DigitallyRefined/android-ip-camera) appra áll át (alap port: **4444**).
+Teljes csere, nem párhuzamos támogatás: minden IP Webcam kód-útvonal megszűnik, a rendszer az nyílt forrású (**MIT**, F-Droid-on is elérhető) [Android IP Camera](https://github.com/DigitallyRefined/android-ip-camera) appra áll át (alap port: **4444**).
 
 A teljes csere mellett szólt:
 
