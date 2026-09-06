@@ -7,6 +7,7 @@ import requests
 import base64
 import urllib3
 import cv2
+import torch
 from PIL import Image
 from paho.mqtt import client as mqtt_client
 from ultralytics import YOLO
@@ -20,6 +21,8 @@ BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 SCAN_INTERVAL = int(os.getenv("SCAN_INTERVAL", 5))
 CONFIDENCE = float(os.getenv("CONFIDENCE", 0.8))
 MODEL_PATH = os.getenv("MODEL_PATH", "models/fire_smoke.pt")
+# A YOLO inference az NVIDIA GPU-ra megy, ha van; a CPU-t nem terheljuk vele.
+DEVICE = os.getenv("DEVICE") or ("cuda:0" if torch.cuda.is_available() else "cpu")
 
 # Setup logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -62,7 +65,8 @@ def main():
     # Load model
     try:
         model = YOLO(MODEL_PATH)
-        logger.info(f"Model loaded successfully from {MODEL_PATH}")
+        model.to(DEVICE)
+        logger.info(f"Model loaded successfully from {MODEL_PATH} on {DEVICE}")
     except Exception as e:
         logger.error(f"Failed to load model: {e}")
         return
@@ -105,7 +109,7 @@ def main():
                 img = Image.open(io.BytesIO(img_bytes))
                 
                 # Run inference
-                results = model(img, verbose=False)
+                results = model(img, verbose=False, device=DEVICE)
                 
                 for r in results:
                     for box in r.boxes:

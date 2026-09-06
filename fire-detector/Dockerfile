@@ -9,11 +9,12 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
-# CPU-only torch/torchvision, hogy ultralytics ne a CUDA-s (GPU) buildet
-# húzza le - ezen a szerveren nincs GPU, a CUDA csomagok csak feleslegesen
-# növelnék az image méretét és a build idejét.
-RUN pip install --no-cache-dir --extra-index-url https://download.pytorch.org/whl/cpu torch torchvision \
-    && pip install --no-cache-dir --extra-index-url https://download.pytorch.org/whl/cpu -r requirements.txt
+# CUDA-s torch/torchvision: a YOLOv8 inference az NVIDIA GPU-n fut, nem a CPU-n.
+# A PyPI alapértelmezett linuxos torch wheel hozza magával a CUDA runtime-ot
+# (nvidia-* csomagok), a hoszton csak a driver kell. Cserébe az image ~2 GB-ról
+# ~6 GB-ra hízik - ezt a CPU-tehermentesítés megéri.
+RUN pip install --no-cache-dir torch torchvision \
+    && pip install --no-cache-dir -r requirements.txt
 
 COPY detector.py .
 CMD ["python", "detector.py"]
