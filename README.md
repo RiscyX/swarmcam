@@ -175,6 +175,7 @@ docker compose up frigate mosquitto -d
 
 ## Related documentation
 
+- [User Guide](docs/USER_GUIDE.md) — how to set up a camera phone and use the dashboard
 - [Architecture](docs/ARCHITECTURE.md) — how the components fit together and why
 - [API Reference](docs/API.md) — every REST endpoint and WebSocket message
 - [Development Plan](docs/FEJLESZTESI_TERV.md) — planned features and implementation notes
