@@ -86,7 +86,7 @@ SwarmCam is a self-hosted, distributed security camera system. Old Android phone
 
 ### Android IP Camera app
 
-- Open-source (GPL) Android app, distributed on F-Droid as `com.github.digitallyrefined.androidipcamera`. Runs a mini HTTP server on the phone.
+- Open-source (MIT) Android app, distributed on F-Droid as `com.github.digitallyrefined.androidipcamera`. Runs a mini HTTP server on the phone.
 - Port 4444 (default), **HTTPS with a self-signed certificate** — TLS is on out of the box (the `tls_version` preference defaults to `1.3`). SwarmCam accepts the certificate without verification; see `DECISIONS.md`.
 - Requires Android 7.0 or newer.
 - Key endpoints used by SwarmCam:
