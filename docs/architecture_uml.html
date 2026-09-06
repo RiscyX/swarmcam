@@ -1,0 +1,160 @@
+<meta charset="utf-8">
+<style>
+  html,body{margin:0;padding:0;background:#fff}
+  svg{display:block}
+  .nodeTitle{font:600 23px 'Inter','Segoe UI','DejaVu Sans',Arial,sans-serif;fill:#16181d}
+  .stereo{font:italic 17px 'Inter','Segoe UI','DejaVu Sans',Arial,sans-serif;fill:#6b7280}
+  .artName{font:600 22px 'Inter','Segoe UI','DejaVu Sans',Arial,sans-serif;fill:#16181d}
+  .artSub{font:18px 'Inter','Segoe UI','DejaVu Sans',Arial,sans-serif;fill:#4b515a}
+  .edge{font:18px 'Inter','Segoe UI','DejaVu Sans',Arial,sans-serif;fill:#22262c}
+  .mult{font:600 18px 'Inter','Segoe UI','DejaVu Sans',Arial,sans-serif;fill:#16181d}
+  .ln{stroke:#33383f;stroke-width:2;fill:none}
+  .lnDash{stroke:#33383f;stroke-width:2;fill:none;stroke-dasharray:8 6}
+</style>
+<svg xmlns="http://www.w3.org/2000/svg" width="1140" height="1275" viewBox="0 0 1140 1275">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#33383f"/>
+    </marker>
+    <marker id="arrOpen" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10" fill="none" stroke="#33383f" stroke-width="1.6"/>
+    </marker>
+  </defs>
+  <rect width="1140" height="1275" fill="#ffffff"/>
+
+  <!-- ================= NODE: kamera-node ================= -->
+  <g>
+    <path class="ln" d="M70,25 L96,3 L626,3 L600,25 Z" fill="#eceae7"/>
+    <path class="ln" d="M600,25 L626,3 L626,193 L600,215 Z" fill="#e2dfda"/>
+    <rect class="ln" x="70" y="25" width="530" height="190" fill="#f7f6f4"/>
+    <text class="stereo" x="90" y="50">«device»</text>
+    <text class="nodeTitle" x="90" y="76">:Kamera-node — Android okostelefon</text>
+    <text class="mult" x="580" y="50" text-anchor="end">1..*</text>
+    <rect class="ln" x="88" y="92" width="494" height="108" fill="#ffffff" stroke-dasharray="7 5"/>
+    <text class="stereo" x="102" y="115">«executionEnvironment» Android</text>
+    <rect x="104" y="126" width="462" height="64" fill="#f4f3f1" stroke="#575c66" stroke-width="1.6"/>
+    <rect x="104" y="126" width="5" height="64" fill="#8a9099"/>
+    <text class="artName" x="120" y="153">Android IP Camera (F-Droid)</text>
+    <text class="artSub" x="120" y="178">:4444 · HTTPS, önaláírt tanúsítvány</text>
+  </g>
+
+  <!-- ================= JELMAGYARÁZAT ================= -->
+  <g>
+    <rect x="660" y="40" width="450" height="175" fill="#ffffff" stroke="#575c66" stroke-width="1.6"/>
+    <text class="artName" x="680" y="72">Jelmagyarázat</text>
+    <rect x="680" y="90" width="24" height="20" fill="#fdf3f0" stroke="#575c66" stroke-width="1.4"/>
+    <rect x="680" y="90" width="4" height="20" fill="#d94a2b"/>
+    <text class="artSub" x="716" y="107">saját fejlesztésű komponens</text>
+    <rect x="680" y="124" width="24" height="20" fill="#f4f3f1" stroke="#575c66" stroke-width="1.4"/>
+    <rect x="680" y="124" width="4" height="20" fill="#8a9099"/>
+    <text class="artSub" x="716" y="141">kész, nyílt forráskódú komponens</text>
+    <path class="ln" d="M680,166 L706,166" marker-end="url(#arr)"/>
+    <text class="artSub" x="716" y="172">adatfolyam iránya</text>
+    <path class="lnDash" d="M680,196 L706,196" marker-end="url(#arr)"/>
+    <text class="artSub" x="716" y="202">lekérdezés / vezérlés</text>
+  </g>
+
+  <!-- ================= NODE: szerver ================= -->
+  <g>
+    <path class="ln" d="M70,265 L96,243 L1136,243 L1110,265 Z" fill="#eceae7"/>
+    <path class="ln" d="M1110,265 L1136,243 L1136,1053 L1110,1075 Z" fill="#e2dfda"/>
+    <rect class="ln" x="70" y="265" width="1040" height="810" fill="#f7f6f4"/>
+
+    <rect class="ln" x="95" y="335" width="990" height="715" fill="#ffffff" stroke-dasharray="7 5"/>
+
+    <!-- frigate -->
+    <rect x="120" y="375" width="470" height="170" fill="#f4f3f1" stroke="#575c66" stroke-width="1.6"/>
+    <rect x="120" y="375" width="5" height="170" fill="#8a9099"/>
+    <text class="stereo" x="138" y="400">«artifact»</text>
+    <text class="artName" x="138" y="428">frigate</text>
+    <text class="artSub" x="138" y="456">NVR · beágyazott go2rtc</text>
+    <text class="artSub" x="138" y="481">ONNX objektumdetektor (CUDA)</text>
+    <text class="artSub" x="138" y="506">felvételek, pillanatképek</text>
+    <text class="artSub" x="138" y="531">:5000 REST · :8554 RTSP · :1984</text>
+
+    <!-- fire-detector -->
+    <rect x="615" y="375" width="445" height="170" fill="#fdf3f0" stroke="#575c66" stroke-width="1.6"/>
+    <rect x="615" y="375" width="5" height="170" fill="#d94a2b"/>
+    <text class="stereo" x="633" y="400">«artifact»</text>
+    <text class="artName" x="633" y="428">swarmcam-fire-detector</text>
+    <text class="artSub" x="633" y="456">YOLOv8 tűz/füst modell (CUDA)</text>
+    <text class="artSub" x="633" y="481">5 s-onkénti mintavétel node-onként</text>
+    <text class="artSub" x="633" y="506">riasztási küszöb: 0,8</text>
+    <text class="artSub" x="633" y="531">SQLite eseménynapló</text>
+
+    <!-- mosquitto -->
+    <rect x="340" y="605" width="500" height="95" fill="#f4f3f1" stroke="#575c66" stroke-width="1.6"/>
+    <rect x="340" y="605" width="5" height="95" fill="#8a9099"/>
+    <text class="stereo" x="358" y="630">«artifact»</text>
+    <text class="artName" x="358" y="658">mosquitto</text>
+    <text class="artSub" x="358" y="686">MQTT üzenetközvetítő · :1883</text>
+
+    <!-- backend -->
+    <rect x="340" y="760" width="500" height="165" fill="#fdf3f0" stroke="#575c66" stroke-width="1.6"/>
+    <rect x="340" y="760" width="5" height="165" fill="#d94a2b"/>
+    <text class="stereo" x="358" y="785">«artifact»</text>
+    <text class="artName" x="358" y="813">swarmcam-backend</text>
+    <text class="artSub" x="358" y="841">FastAPI · :8000 · REST + WebSocket</text>
+    <text class="artSub" x="358" y="866">állapotfigyelő hurok (5 s) · felderítés</text>
+    <text class="artSub" x="358" y="891">MSE-átjátszás · eseményszórás</text>
+
+    <!-- dashboard -->
+    <rect x="340" y="975" width="500" height="65" fill="#fdf3f0" stroke="#575c66" stroke-width="1.6"/>
+    <rect x="340" y="975" width="5" height="65" fill="#d94a2b"/>
+    <text class="artName" x="358" y="1003">swarmcam-dashboard</text>
+    <text class="artSub" x="358" y="1028">React SPA nginx mögött · :80</text>
+  </g>
+
+  <!-- ================= NODE: kliens ================= -->
+  <g>
+    <path class="ln" d="M340,1125 L366,1103 L866,1103 L840,1125 Z" fill="#eceae7"/>
+    <path class="ln" d="M840,1125 L866,1103 L866,1243 L840,1265 Z" fill="#e2dfda"/>
+    <rect class="ln" x="340" y="1125" width="500" height="140" fill="#f7f6f4"/>
+    <text class="stereo" x="358" y="1150">«device»</text>
+    <text class="nodeTitle" x="358" y="1176">:Kliens — böngésző</text>
+    <rect x="358" y="1192" width="464" height="60" fill="#ffffff" stroke="#575c66" stroke-width="1.6"/>
+    <text class="artName" x="374" y="1218">SwarmCam kezelőfelület</text>
+    <text class="artSub" x="374" y="1242">MSE-lejátszó · WebSocket-kliens</text>
+  </g>
+
+  <!-- ================= kommunikációs útvonalak ================= -->
+  <path class="ln" marker-end="url(#arr)" d="M190,215 L190,375"/>
+  <text class="edge" x="204" y="230">«HTTPS» H.264 folyam</text>
+  <text class="edge" x="204" y="252">/video/h264</text>
+
+  <path class="ln" marker-end="url(#arr)" d="M500,215 L500,250 L830,250 L830,375"/>
+  <text class="edge" x="524" y="240">«HTTPS» MJPEG képkocka</text>
+
+  <path class="lnDash" marker-end="url(#arr)" d="M340,890 L35,890 L35,150 L70,150"/>
+
+  <path class="ln" marker-end="url(#arr)" d="M340,545 L340,575 L490,575 L490,605"/>
+  <text class="edge" x="356" y="568">«MQTT» frigate/events</text>
+
+  <path class="ln" marker-end="url(#arr)" d="M830,545 L830,575 L690,575 L690,605"/>
+  <text class="edge" x="844" y="568">«MQTT» swarmcam/fire/#</text>
+
+  <path class="ln" marker-end="url(#arr)" d="M590,700 L590,760"/>
+  <text class="edge" x="604" y="736">«MQTT» feliratkozás</text>
+
+  <path class="ln" marker-end="url(#arr)" d="M590,925 L590,975"/>
+  <text class="edge" x="604" y="957">«HTTP» nginx proxy: /api, /ws</text>
+
+  <path class="ln" marker-start="url(#arrOpen)" marker-end="url(#arr)" d="M590,1040 L590,1125"/>
+  <text class="edge" x="604" y="1090">«HTTP» · «WebSocket» :80</text>
+
+  <path class="ln" marker-start="url(#arrOpen)" marker-end="url(#arr)" d="M340,840 L240,840 L240,545"/>
+
+  <path class="lnDash" marker-end="url(#arr)" d="M940,545 L940,840 L840,840"/>
+
+  <!-- forgatott feliratok fehér háttérsávval, a vonalak fölött -->
+  <g transform="rotate(-90,228,700)"><rect x="110" y="686" width="250" height="22" fill="#ffffff"/><text class="edge" x="228" y="702" text-anchor="middle">«REST» :5000 · «WebSocket» :1984</text></g>
+  <g transform="rotate(-90,956,700)"><rect x="866" y="686" width="180" height="22" fill="#ffffff"/><text class="edge" x="956" y="702" text-anchor="middle">«REST» kameralista</text></g>
+  <g transform="rotate(-90,25,560)"><rect x="-140" y="546" width="330" height="22" fill="#ffffff"/><text class="edge" x="25" y="562" text-anchor="middle">«HTTPS» /info.json · /control/torch</text></g>
+
+  <!-- csomópontcím és futtatókörnyezet felirata a nyilak fölött -->
+  <rect x="86" y="278" width="700" height="62" fill="#f7f6f4"/>
+  <text class="stereo" x="92" y="298">«device»</text>
+  <text class="nodeTitle" x="92" y="326">:Szerver — ASUS ROG Strix laptop · Ubuntu · NVIDIA GPU</text>
+  <rect x="106" y="342" width="640" height="26" fill="#ffffff"/>
+  <text class="stereo" x="110" y="362">«executionEnvironment» Docker Engine — network_mode: host</text>
+</svg>
