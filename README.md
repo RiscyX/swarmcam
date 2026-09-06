@@ -41,8 +41,8 @@ SwarmCam Dashboard
 ### 1. Clone the repo
 
 ```bash
-git clone <repo-url>
-cd Szakdoga
+git clone https://github.com/RiscyX/swarmcam.git
+cd swarmcam
 ```
 
 ### 2. Start with Docker
@@ -120,7 +120,7 @@ docker logs frigate -f
 ## Repository layout
 
 ```
-Szakdoga/
+swarmcam/
 ├── docker/
 │   ├── docker-compose.yml       # All service definitions
 │   ├── frigate/
@@ -151,6 +151,7 @@ Szakdoga/
 │   └── discovery.py             # Network scan + /info.json fingerprinting, Frigate config update
 ├── frontend/                    # React + Vite + TypeScript dashboard (see frontend/src/)
 └── docs/
+    ├── USER_GUIDE.md            # How to set up a camera phone and use the dashboard
     ├── ARCHITECTURE.md          # Detailed system architecture and design decisions
     ├── API.md                   # Full REST + WebSocket API reference
     └── FEJLESZTESI_TERV.md      # Development plan (Hungarian)
