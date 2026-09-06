@@ -45,3 +45,14 @@ velemeny.pdf
 opencode.md
 zavrsni rad_sablon_HU_09_02_2023.docx
 SwarmCAM/
+
+# Szakdolgozat-építő pipeline — csak a fejlesztői gépen, nem a repóban
+docs/build_all.sh
+docs/build_thesis.py
+docs/finalize_docx.py
+docs/gen_measurements.py
+docs/optimize_images.py
+docs/patch_rest.py
+docs/rebuild_toc.py
+docs/strip_unused_media.py
+docs/thesis_ch*.txt
