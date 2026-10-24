@@ -2,6 +2,11 @@
 backend/aliases.json
 backend/fire_snapshots/
 backend/fire_events.db
+/fire_events.db
+
+# Telepítésfüggő Frigate config — a sablon a config.example.yml
+docker/frigate/config.yml
+benchmark/config.yml.original
 
 # Docker volumes (runtime data, ne kerüljön gitbe)
 docker/media/
@@ -28,13 +33,16 @@ docker/frigate/model_cache/
 fire-detector/models/*.pt
 cloudflared.deb
 
-# Teszt- és fejlesztési artifactok (a docs/screenshots/ NEM ide tartozik)
+# Teszt- és fejlesztési artifactok
 .playwright-mcp/
 /*.png
 
+# Képernyőképek — a lakás/kamerák képe nem publikus
+docs/screenshots/
+
 # Backup fájlok
 *.bak
-*.bak.[0-9]*
+*.bak.*
 
 # Obsidian illékony UI-állapot (a jegyzetek maradnak)
 SwarmCAM/.obsidian/workspace.json
@@ -45,6 +53,11 @@ velemeny.pdf
 opencode.md
 zavrsni rad_sablon_HU_09_02_2023.docx
 SwarmCAM/
+/*.pdf
+/*.docx
+/*.pptx
+docs/VEDES_BESZEDVAZLAT.md
+brag-output*/
 
 # Szakdolgozat-építő pipeline — csak a fejlesztői gépen, nem a repóban
 docs/build_all.sh

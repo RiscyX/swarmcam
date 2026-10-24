@@ -49,8 +49,13 @@ cd swarmcam
 
 ```bash
 cd docker
+cp frigate/config.example.yml frigate/config.yml
 docker compose up -d
 ```
+
+`frigate/config.yml` is your local, deployment-specific config (cameras, IPs) and is
+git-ignored. Create it before the first `up`: otherwise Docker creates a directory in
+its place and Frigate fails to start.
 
 This starts four containers:
 
@@ -124,7 +129,7 @@ swarmcam/
 ├── docker/
 │   ├── docker-compose.yml       # All service definitions
 │   ├── frigate/
-│   │   └── config.yml           # Frigate camera + detector config (auto-updated by discovery)
+│   │   └── config.example.yml   # Frigate config template → copy to config.yml (git-ignored, updated by discovery)
 │   └── mosquitto/
 │       └── mosquitto.conf       # MQTT broker config
 ├── backend/
@@ -181,18 +186,44 @@ docker compose up frigate mosquitto -d
 - [API Reference](docs/API.md) — every REST endpoint and WebSocket message
 - [Development Plan](docs/FEJLESZTESI_TERV.md) — planned features and implementation notes
 
+## Security and responsibility
+
+SwarmCam is a thesis prototype, not a certified security or safety product. Do not
+rely on it to protect life or property, and do not expose it to the internet. The
+defaults are meant for a trusted LAN only:
+
+- the backend falls back to `admin / admin` — change the password on first login;
+- Mosquitto allows anonymous clients on ports 1883 and 9001;
+- the backend container has access to the Docker socket;
+- camera certificates are not verified (the phones use self-signed certificates).
+
+Whoever deploys it is responsible for using cameras lawfully, including data
+protection rules (e.g. GDPR) and not recording neighbours or public areas without a
+legal basis.
+
 ## License
 
-The SwarmCam source code is released under the [MIT License](LICENSE).
+Copyright (c) 2026 Vass Richárd. As of 2026-10-24, the SwarmCam source code is
+released under the **GNU Affero General Public License, version 3 only
+(AGPL-3.0-only)**; see [LICENSE](LICENSE). It is free and open-source software,
+provided without warranty. This choice covers the application together with its
+AGPL-licensed Ultralytics integration. Third-party software, model weights and
+media retain their own terms; they are not relicensed by this notice.
 
-Third-party components keep their own licenses. Two are worth calling out:
+If you distribute a build, provide the corresponding source under the license's
+terms. If you modify the program and let users interact with it over a network,
+prominently offer those users the corresponding source of that version at no
+charge (AGPL section 13). The dashboard links to this project's source; forks and
+modified deployments must update that link to the source they actually run.
 
-- **`fire-detector/`** imports [Ultralytics](https://github.com/ultralytics/ultralytics)
-  YOLOv8, which is **AGPL-3.0**. If you redistribute this service or run it as a
-  network service for others, the AGPL terms apply to that combined work — the MIT
-  license above covers the SwarmCam code itself, not the Ultralytics dependency.
-- **Model weights** (`fire-detector/models/*.pt`) are not distributed with this
-  repository and carry the license of whoever published them.
+Earlier versions released under MIT retain that grant. Their copyright and
+permission notice is preserved in [licenses/MIT-legacy.txt](licenses/MIT-legacy.txt).
 
-The camera nodes run the [Android IP Camera](https://f-droid.org/packages/com.github.digitallyrefined.androidipcamera/)
-app (MIT), which is a separate project and is not vendored here.
+The fire detector uses a third-party **YOLO26s** checkpoint: its publisher's MIT
+declaration and attribution are retained alongside the upstream Ultralytics
+AGPL-3.0 obligations. The Frigate ONNX weights were numerically identified as
+**WongKinYiu YOLOv9-s**, whose upstream project uses GPL-3.0. These notices are
+compatible with the application's AGPL licensing; no MIT-only claim is made for
+the combined fire detector. Weights are not tracked in Git. See
+[third-party licenses and reproducible model provenance](docs/THIRD_PARTY_LICENSES.md)
+for the original notices, checksums, verification and video asset terms.

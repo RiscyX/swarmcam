@@ -170,7 +170,7 @@ live views drop for a few seconds.
 
 ## 9. Fire and smoke detection
 
-A separate service polls each camera every few seconds and runs a YOLOv8
+A separate service polls each camera every few seconds and runs a pretrained YOLO26s
 fire/smoke model on the frame. Above the confidence threshold it records an event
 and pushes an alert, which appears as a toast in the dashboard and as a `fire` or
 `smoke` row on the Events page.

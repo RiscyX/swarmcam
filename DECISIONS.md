@@ -4,6 +4,26 @@ Tervezési döntések és azok indoklása — szakdolgozati szöveghez újrahasz
 
 ---
 
+## D-002: AGPL-3.0-only projektlicenc (2026-10-24)
+
+A cél a SwarmCam nyílt forrású kiadása a jelenlegi Ultralytics-integrációval.
+A korábbi, teljes projektre sugallt MIT-jelölés helyett a jelenlegi alkalmazáskód
+AGPL-3.0-only licencet kapott. A teljes szöveg a `LICENSE`, a korábbi MIT
+copyright- és engedélyszöveg a `licenses/MIT-legacy.txt` fájlban marad meg;
+a korábban kiadott MIT-jogok változatlanul érvényesek.
+
+Az AGPL forráskiadási feltételeit vállaljuk; zárt forrású kiadás vagy Enterprise
+licenc vásárlása nem cél. Az MIT önmagában továbbra is nyílt forrású licenc,
+de nem írja felül az integrált AGPL-függőség feltételeit.
+
+A külső komponensek és modellek licence nem változik ettől. A YOLO26s
+közzétevőjének MIT-nyilatkozatát megőrizzük, és az Ultralytics AGPL-feltételeit
+is teljesítjük; a két jelölés önmagában nem összeférhetetlenség. A Frigate helyi
+ONNX-súlyfájljának 371 tanult tenzorát numerikusan azonosítottuk az eredeti
+WongKinYiu YOLOv9-s checkpointtal; az upstream projekt GPL-3.0 licencét mellékeltük.
+Így egyik modellhez sem kell működést módosító csere a két feltárt kérdés miatt.
+Részletek: [külső licencek és modellforrások](docs/THIRD_PARTY_LICENSES.md).
+
 ## D-001: Kamera-protokoll csere — IP Webcam → Android IP Camera (2026-08, issue #80)
 
 ### Kontextus

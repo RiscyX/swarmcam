@@ -100,6 +100,15 @@ export function Sidebar({ activeSection, liveEventCount, onSectionChange, socket
           isRail ? 'flex flex-col items-center py-3' : 'px-4 py-3'
         }`}
       >
+        <a
+          aria-label="SwarmCam source code and AGPL-3.0 license"
+          className="block text-center hover:text-[var(--fg)]"
+          href="https://github.com/RiscyX/swarmcam"
+          rel="noreferrer"
+          target="_blank"
+        >
+          {isRail ? 'Source' : 'Source · AGPL-3.0'}
+        </a>
         {isRail ? (
           <>
             <WsStatus compact socketStatus={socketStatus} />

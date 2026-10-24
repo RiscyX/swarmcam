@@ -1,0 +1,26 @@
+YOLO26s fire/smoke model notices
+
+Model publisher: Salah AL-Haismawi
+Work: YOLOv26 Fire Detection (2026)
+Publisher repository: https://huggingface.co/SalahALHaismawi/yolov26-fire-detection
+Publisher revision: 5397b43994c39c2ed4ef81a6996c6334e2b7a5fa
+Publisher's declared license: MIT
+Original statement retained in: model-provenance/YOLO26s-model-card.md
+
+Local artifact: fire-detector/models/fire_smoke.pt
+Upstream artifact: best.pt
+SHA-256: 52684ddffd4797f1bc5ff1bd2b72af3ec34eabf0c1646c37f518bb766b27b79f
+Embedded license notice: AGPL-3.0 (https://ultralytics.com/license)
+Underlying implementation: Ultralytics YOLO26s, https://github.com/ultralytics/ultralytics
+Full AGPL-3.0 text: ../LICENSE
+
+SwarmCam retains the publisher's MIT declaration and attribution and complies
+with the underlying Ultralytics AGPL-3.0 terms for the combined application.
+The MIT declaration is not used to remove upstream AGPL obligations or to claim
+that the entire checkpoint/application is MIT-only. This notice does not grant
+additional rights to third-party work or change the checkpoint's contents.
+
+For any redistribution, preserve the original publisher notices and the
+applicable upstream license, and supply the corresponding source required by
+those terms. The model is obtained separately; its weights and training dataset
+are not tracked in this repository.

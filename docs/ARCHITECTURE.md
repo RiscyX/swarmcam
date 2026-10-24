@@ -103,7 +103,7 @@ SwarmCam is a self-hosted, distributed security camera system. Old Android phone
 
 ### Frigate NVR
 
-- Open-source NVR with AI object detection (YOLOv5 variants)
+- Open-source NVR; this deployment configures an ONNX `yolo-generic` detector with 320×320 model input. Its local weights were numerically identified as WongKinYiu YOLOv9-s (upstream GPL-3.0); see [model provenance and licenses](THIRD_PARTY_LICENSES.md).
 - Connects to cameras via RTSP, runs detection per frame
 - Stores clips (MP4) and snapshots (JPEG) locally
 - Exposes REST API on port 5000 for events, recordings, user management, stats

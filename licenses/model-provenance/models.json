@@ -1,0 +1,32 @@
+{
+  "checked_on": "2026-10-24",
+  "frigate": {
+    "identified_model": "WongKinYiu YOLOv9-s converted",
+    "local_path": "docker/frigate/model_cache/yolo.onnx",
+    "local_sha256": "f0558c02d5f7e01b9b83dfd4e2322e3f56721a77d70c2458cbd6a2d4a9cfaa9c",
+    "reference_url": "https://github.com/WongKinYiu/yolov9/releases/download/v0.1/yolov9-s-converted.pt",
+    "reference_sha256": "09bf9ca4adef37944f4406455b5b81b451c1e67307916e4702da68cda4d3e46d",
+    "source_revision": "5b1ea9a8b3f0ffe4fe0e203ec6232d788bb3fcff",
+    "source_url": "https://github.com/WongKinYiu/yolov9/tree/5b1ea9a8b3f0ffe4fe0e203ec6232d788bb3fcff",
+    "license_url": "https://github.com/WongKinYiu/yolov9/blob/5b1ea9a8b3f0ffe4fe0e203ec6232d788bb3fcff/LICENSE.md",
+    "license": "GPL-3.0",
+    "learned_tensors_verified": 371,
+    "learned_values_verified": 7105888,
+    "derived_export_constants_verified": 8,
+    "max_abs_difference": 1.9073486328125e-06,
+    "rtol": 2e-05,
+    "atol": 2e-06,
+    "method": "Safe checkpoint metadata/storage parsing; float32 Conv/BatchNorm and RepConvN fusion; compare all named learned tensors; verify all eight export constants.",
+    "scope": "Numerical weight provenance, not recovery of the original export command or the historical benchmark artifact."
+  },
+  "fire": {
+    "model": "SalahALHaismawi/yolov26-fire-detection",
+    "local_path": "fire-detector/models/fire_smoke.pt",
+    "sha256": "52684ddffd4797f1bc5ff1bd2b72af3ec34eabf0c1646c37f518bb766b27b79f",
+    "publisher_revision": "5397b43994c39c2ed4ef81a6996c6334e2b7a5fa",
+    "publisher_card_url": "https://huggingface.co/SalahALHaismawi/yolov26-fire-detection/blob/5397b43994c39c2ed4ef81a6996c6334e2b7a5fa/README.md",
+    "publisher_license_declaration": "MIT",
+    "checkpoint_embedded_license": "AGPL-3.0",
+    "application_policy": "Keep publisher attribution/MIT declaration and comply with upstream Ultralytics AGPL-3.0 for the combined application; no MIT-only relicensing claim."
+  }
+}

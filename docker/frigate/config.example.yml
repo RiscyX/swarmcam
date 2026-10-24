@@ -1,0 +1,62 @@
+auth:
+  enabled: true
+mqtt:
+  enabled: true
+  host: localhost
+  port: 1883
+detectors:
+  onnx_0:
+    type: onnx
+model:
+  model_type: yolo-generic
+  width: 320
+  height: 320
+  input_tensor: nchw
+  input_dtype: float
+  path: /config/model_cache/yolo.onnx
+  labelmap_path: /labelmap/coco-80.txt
+objects:
+  track:
+  - person
+  - car
+  - cat
+  - dog
+  filters:
+    person:
+      min_area: 2000
+      min_score: 0.6
+      threshold: 0.7
+record:
+  enabled: true
+  alerts:
+    retain:
+      days: 14
+  detections:
+    retain:
+      days: 14
+  continuous:
+    days: 0
+  motion:
+    days: 7
+snapshots:
+  enabled: true
+  timestamp: true
+  bounding_box: false
+  retain:
+    default: 14
+# A kamerákat a Discovery oldal (vagy `discovery.py --update-frigate`) veszi fel ide.
+go2rtc:
+  streams: {}
+cameras: {}
+version: 0.17-0
+semantic_search:
+  enabled: false
+  model_size: small
+face_recognition:
+  enabled: false
+  model_size: small
+lpr:
+  enabled: false
+classification:
+  bird:
+    enabled: false
