@@ -36,7 +36,9 @@ SwarmCam Dashboard
 
 - Docker + Docker Compose v2
 - Linux host (tested on Ubuntu 24.04)
-- Nvidia GPU optional (CPU detector also available)
+- NVIDIA GPU with the [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) — the compose file runs Frigate and the fire detector with `runtime: nvidia`
+- `curl` and `sha256sum` for downloading and verifying the fire detection model
+- At least 30 GB of free disk space for the images and model-export build cache
 
 ### 1. Clone the repo
 
@@ -45,19 +47,44 @@ git clone https://github.com/RiscyX/swarmcam.git
 cd swarmcam
 ```
 
-### 2. Start with Docker
+### 2. Prepare local files
+
+Run these steps once in a fresh clone. Do not repeat the config, credentials or
+aliases commands over an existing installation: they overwrite local settings.
+The runtime files and downloaded models are not tracked in Git.
+
+```bash
+# Frigate config (cameras are added to it later by Discovery) and credentials
+cp docker/frigate/config.example.yml docker/frigate/config.yml
+cp docker/.env.example docker/.env          # then set DEFAULT_PASSWORD (at least 12 characters)
+
+# Runtime files the backend container bind-mounts
+echo '{}' > backend/aliases.json
+touch backend/fire_events.db
+mkdir -p backend/fire_snapshots
+
+# Object detection model for Frigate (YOLOv9-s, 320x320) — builds an export image, takes a few minutes
+docker/frigate/export-yolov9.sh
+
+# Fire/smoke model for the fire detector, pinned to the verified revision
+curl --fail --location -o fire-detector/models/fire_smoke.pt \
+  https://huggingface.co/SalahALHaismawi/yolov26-fire-detection/resolve/5397b43994c39c2ed4ef81a6996c6334e2b7a5fa/best.pt
+echo "52684ddffd4797f1bc5ff1bd2b72af3ec34eabf0c1646c37f518bb766b27b79f  fire-detector/models/fire_smoke.pt" | sha256sum -c
+```
+
+Create the bind-mounted files before the first `up`: if one is missing, Docker creates a
+directory in its place and the container cannot use it. The models' sources and licenses
+are described in [THIRD_PARTY_LICENSES.md](docs/THIRD_PARTY_LICENSES.md).
+The Frigate export script follows the [official YOLOv9 export recipe](https://docs.frigate.video/configuration/object_detectors/).
+
+### 3. Start with Docker
 
 ```bash
 cd docker
-cp frigate/config.example.yml frigate/config.yml
-docker compose up -d
+docker compose up -d --build
 ```
 
-`frigate/config.yml` is your local, deployment-specific config (cameras, IPs) and is
-git-ignored. Create it before the first `up`: otherwise Docker creates a directory in
-its place and Frigate fails to start.
-
-This starts four containers:
+This starts five containers:
 
 | Container | Ports | Role |
 |---|---|---|
@@ -65,16 +92,45 @@ This starts four containers:
 | `mosquitto` | 1883 (MQTT), 9001 (WebSocket) | Event message broker |
 | `swarmcam-backend` | 8000 | FastAPI REST + WebSocket backend |
 | `swarmcam-dashboard` | 80 | Nginx serving the frontend SPA |
+| `swarmcam-fire-detector` | — | Fire/smoke detection, alerts over MQTT |
 
-### 3. First login
+### 4. First login
 
-1. Open `http://localhost:5000` → create a Frigate user account (sets up the auth system)
-2. Open `http://localhost` → SwarmCam dashboard
-3. Log in with the credentials you just created
+Frigate generates its own admin password on first startup. Once Frigate is ready
+(`curl --fail http://localhost:5000/api/version` succeeds), run this command from
+the `docker` directory **once** to initialize the account from `docker/.env`:
 
-> **Note:** If you skip the Frigate user setup step, the backend will try to authenticate with the default `admin / admin` credentials. If you chose different credentials, update `DEFAULT_USER` / `DEFAULT_PASSWORD` in `backend/settings.py`, or pass them as environment variables in `docker-compose.yml`.
+```bash
+docker compose exec -T backend python - <<'PY'
+from urllib.parse import quote
+import requests
+from settings import DEFAULT_PASSWORD, DEFAULT_USER, FRIGATE_URL
 
-### 4. Add cameras
+users = requests.get(f"{FRIGATE_URL}/api/users", timeout=10)
+users.raise_for_status()
+if any(user["username"] == DEFAULT_USER for user in users.json()):
+    response = requests.put(
+        f"{FRIGATE_URL}/api/users/{quote(DEFAULT_USER, safe='')}/password",
+        json={"password": DEFAULT_PASSWORD}, timeout=20,
+    )
+else:
+    response = requests.post(
+        f"{FRIGATE_URL}/api/users",
+        json={"username": DEFAULT_USER, "password": DEFAULT_PASSWORD, "role": "admin"},
+        timeout=20,
+    )
+response.raise_for_status()
+print("Login account initialized.")
+PY
+```
+
+This command sets the password even if the account already exists. Changing
+`docker/.env` alone later does not reset a user's password.
+
+1. Open `http://localhost` → SwarmCam dashboard
+2. Log in with `DEFAULT_USER` / `DEFAULT_PASSWORD` from `docker/.env`
+
+### 5. Add cameras
 
 Install **[Android IP Camera](https://f-droid.org/packages/com.github.digitallyrefined.androidipcamera/)** from F-Droid on each Android phone. In the app settings, turn **authentication off** (LAN-only), enable start-on-boot, then start the server (default port: 4444). TLS can stay on — the app serves HTTPS with a self-signed certificate by default and SwarmCam accepts it. Then in the dashboard:
 
@@ -119,7 +175,7 @@ docker logs frigate -f
 |---|---|
 | `http://localhost` | SwarmCam dashboard |
 | `http://localhost:8000/docs` | FastAPI Swagger UI — all endpoints documented |
-| `http://localhost:5000` | Frigate NVR (only needed for initial user setup) |
+| `http://localhost:5000` | Frigate internal API (used by the backend and first-login command) |
 | `http://localhost:1984` | go2rtc admin panel (RTSP / WebRTC stream info) |
 
 ## Repository layout
@@ -192,7 +248,10 @@ SwarmCam is a thesis prototype, not a certified security or safety product. Do n
 rely on it to protect life or property, and do not expose it to the internet. The
 defaults are meant for a trusted LAN only:
 
-- the backend falls back to `admin / admin` — change the password on first login;
+- without `docker/.env` the backend falls back to `admin / admin`, which Frigate 0.18+ rejects
+  (passwords need at least 12 characters) — always create `docker/.env` with your own password;
+- Frigate's internal API on port 5000 has no authentication, and with host networking it is
+  reachable from the whole LAN — firewall it if other devices on the network are untrusted;
 - Mosquitto allows anonymous clients on ports 1883 and 9001;
 - the backend container has access to the Docker socket;
 - camera certificates are not verified (the phones use self-signed certificates).

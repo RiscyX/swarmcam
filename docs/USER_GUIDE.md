@@ -36,14 +36,17 @@ its own charge is a node about to disappear.
 ## 2. First login
 
 Open the dashboard (`http://<server>` in Docker, `http://localhost:5173` in dev)
-and log in with the Frigate admin account — `admin` / `admin` by default, unless
-you set `DEFAULT_USER` / `DEFAULT_PASSWORD` before the first start.
+and log in with `DEFAULT_USER` / `DEFAULT_PASSWORD` from `docker/.env` (the README's
+first-login step sets this account up). The account is a Frigate admin; SwarmCam
+keeps no separate user database.
 
-**Change this password.** Go to **Users → Change password**. The account is the
-Frigate admin; SwarmCam keeps no separate user database.
+The backend logs in to Frigate with the same account. If you change its password
+under **Users → Change password**, put the new one in `docker/.env` too and restart
+the backend (`docker compose up -d backend`). For everyday use, create a separate
+user on the Users page instead.
 
 Your session lives in memory only, so reloading the page logs you out again. That
-is deliberate — see `DECISIONS.md`.
+is deliberate — see `docs/ARCHITECTURE.md`.
 
 ---
 

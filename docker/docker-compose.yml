@@ -49,8 +49,8 @@ services:
     environment:
       FRIGATE_URL: http://localhost:5000
       MQTT_HOST: localhost
-      DEFAULT_USER: ${DEFAULT_USER}
-      DEFAULT_PASSWORD: ${DEFAULT_PASSWORD}
+      DEFAULT_USER: ${DEFAULT_USER:-admin}
+      DEFAULT_PASSWORD: ${DEFAULT_PASSWORD:-admin}
     depends_on:
     - mosquitto
   dashboard:
