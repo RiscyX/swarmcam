@@ -132,7 +132,7 @@ This command sets the password even if the account already exists. Changing
 
 ### 5. Add cameras
 
-Install **[Android IP Camera](https://f-droid.org/packages/com.github.digitallyrefined.androidipcamera/)** from F-Droid on each Android phone. In the app settings, turn **authentication off** (LAN-only), enable start-on-boot, then start the server (default port: 4444). TLS can stay on — the app serves HTTPS with a self-signed certificate by default and SwarmCam accepts it. Then in the dashboard:
+Install **[Android IP Camera](https://f-droid.org/packages/com.github.digitallyrefined.androidipcamera/)** from F-Droid on each Android phone ([source on GitHub](https://github.com/DigitallyRefined/android-ip-camera), MIT). In the app settings, turn **authentication off** (LAN-only), enable start-on-boot, then start the server (default port: 4444). TLS can stay on — the app serves HTTPS with a self-signed certificate by default and SwarmCam accepts it. Then in the dashboard:
 
 1. Click the **"Discovery"** button in the sidebar
 2. Select the network interface to scan

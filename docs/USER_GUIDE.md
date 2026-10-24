@@ -12,7 +12,7 @@ pieces fit together see [ARCHITECTURE.md](ARCHITECTURE.md).
 
 Each camera node is an Android phone (7.0 or newer) running
 [Android IP Camera](https://f-droid.org/packages/com.github.digitallyrefined.androidipcamera/)
-from F-Droid.
+from F-Droid ([source on GitHub](https://github.com/DigitallyRefined/android-ip-camera)).
 
 In the app:
 
