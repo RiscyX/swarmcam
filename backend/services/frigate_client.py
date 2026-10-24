@@ -17,8 +17,8 @@ _token_expiry: float = 0
 def _login_sync() -> bool:
     """Authenticate with Frigate and store the session cookie. Returns True on success."""
     try:
-        # A Frigate jelszó-ellenőrzése (bcrypt) gyenge CPU-n 5s-nél tovább is
-        # tarthat, ezért ez hosszabb timeout-ot kap, mint a többi (gyors) hívás.
+        # Frigate's password check (bcrypt) can take longer than 5s on a weak CPU,
+        # so this gets a longer timeout than the other (fast) calls.
         r = _session.post(
             f"{FRIGATE_URL}/api/login",
             json={"user": DEFAULT_USER, "password": DEFAULT_PASSWORD},

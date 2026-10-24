@@ -34,8 +34,8 @@ async def save_config(settings: ConfigSettings):
     old = extract_settings(read_yaml(FRIGATE_CONFIG))
     decoder_changed = old.decoder != settings.decoder
 
-    # A decoder váltás a compose fájlt is írja. Ha az nem írható, itt állunk meg —
-    # a frigate config kiírása után elszállva félig alkalmazott állapot maradna.
+    # Switching the decoder also writes the compose file. If it is not writable, stop
+    # here — failing after the frigate config was written would leave a half-applied state.
     if decoder_changed and not compose_writable():
         raise HTTPException(
             500,

@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 """
-SwarmCam benchmark orchestrator (szakdolgozat 3.5. fejezet).
+SwarmCam benchmark orchestrator (thesis testing chapter).
 
-Automatikusan végigfuttatja a mérési sorozatot:
-  1) resources  – CPU/RAM N = 0,1,2,3,4 kameránál
-  2) detection  – GPU (ONNX/CUDA) vs CPU-only inferencia, azonos modellel
-  3) latency    – health_loop jitter + MQTT -> WebSocket relay késleltetés
+Runs the measurement series automatically:
+  1) resources  – CPU/RAM with N = 0,1,2,3,4 cameras
+  2) detection  – GPU (ONNX/CUDA) vs CPU-only inference, same model
+  3) latency    – health_loop jitter + MQTT -> WebSocket relay latency
 
-A kameraszám-skálázáshoz ugyanazt a fizikai telefonstreamet regisztrálja N
-külön Frigate kameraként: a szerveroldali erőforrásigény szempontjából a forrás
-azonossága közömbös, minden kamera saját ffmpeg dekóder- és detect-folyamattal
-fut. A futás végén az eredeti config.yml visszaáll.
+For camera-count scaling it registers the same physical phone stream as N
+separate Frigate cameras: for server-side resource usage the identity of the
+source does not matter, every camera runs its own ffmpeg decoder and detect
+process. The original config.yml is restored at the end of the run.
 """
 import os
 import shutil
@@ -30,7 +30,7 @@ MEASURE = os.path.join(HERE, "measure.py")
 
 
 def _env(key, default):
-    """A docker/.env-bol olvassa ki a Frigate belepesi adatait."""
+    """Reads the Frigate login credentials from docker/.env."""
     path = os.path.join(ROOT, "docker", ".env")
     if os.path.exists(path):
         for line in open(path, encoding="utf-8"):
@@ -43,8 +43,8 @@ FRIGATE_USER = _env("DEFAULT_USER", "admin")
 FRIGATE_PASS = _env("DEFAULT_PASSWORD", "admin")
 
 REAL_CAM = "bench_cam_1"
-# A meresi bemenet a telefonokrol korabban rogzitett, valos H.264 felvetel (1280x720),
-# ciklikusan visszajatszva. Igy minden meresi pont pontosan azonos bemenetet kap.
+# The measurement input is a real H.264 recording (1280x720) captured earlier from
+# the phones, played back in a loop, so every measurement point gets identical input.
 BENCH_FILE = "/media/frigate/bench_source.mp4"
 
 
@@ -123,10 +123,10 @@ def cam_names(n):
 
 
 def build_config(n_cams, cpu_only=False, force_detect=False):
-    """force_detect: a mozgasmaszk kuszobet minimumra veszi, igy a detektor
-    gyakorlatilag minden kepkockan lefut -- ez telíti a detektort, ami a
-    GPU/CPU osszehasonlitashoz kell (a mozgasfuggo alapbeallitas mellett a
-    detektor tul ritkan futna ahhoz, hogy merheto legyen)."""
+    """force_detect: lowers the motion-mask threshold to the minimum, so the detector
+    runs on practically every frame -- this saturates the detector, which the
+    GPU/CPU comparison needs (with the motion-dependent defaults the detector
+    would run too rarely to be measurable)."""
     device_line = "    device: CPU\n" if cpu_only else ""
     out = BASE_HEAD.format(device_line=device_line)
     if force_detect:
@@ -151,8 +151,8 @@ def build_config(n_cams, cpu_only=False, force_detect=False):
                 f"      fps: 5\n"
             )
     else:
-        # Frigate legalabb egy kamerat kovetel -> a detect kikapcsolasaval
-        # kapunk "0 aktiv kamera" alapvonalat (csak a stack overheadje).
+        # Frigate requires at least one camera -> disabling detect gives a
+        # "0 active cameras" baseline (just the stack's overhead).
         out += (
             f"cameras:\n"
             f"  {REAL_CAM}:\n"
@@ -202,39 +202,39 @@ def measure(*args):
 
 def phase_resources():
     for n in [0, 1, 2, 3, 4]:
-        log(f"=== resources: {n} kamera ===")
+        log(f"=== resources: {n} cameras ===")
         write_cfg(build_config(n))
         restart_frigate()
         if not wait_healthy():
-            log("  !! frigate nem allt fel, kihagyva")
+            log("  !! frigate did not come up, skipped")
             continue
-        log("  stabilizalas 60s...")
+        log("  settling 60s...")
         time.sleep(60)
         measure("resources", "--duration", "60", "--cameras", str(n))
 
 
 def phase_detection():
     for label, cpu_only, settle in [("gpu", False, 60), ("cpu", True, 90)]:
-        log(f"=== detection: {label} (3 kamera) ===")
+        log(f"=== detection: {label} (3 cameras) ===")
         write_cfg(build_config(3, cpu_only=cpu_only, force_detect=True))
         restart_frigate()
         if not wait_healthy(240):
-            log("  !! frigate nem allt fel, kihagyva")
+            log("  !! frigate did not come up, skipped")
             continue
-        log(f"  stabilizalas {settle}s...")
+        log(f"  settling {settle}s...")
         time.sleep(settle)
         measure("detection", "--label", label, "--duration", "60",
                 "--user", FRIGATE_USER, "--password", FRIGATE_PASS)
 
 
 def phase_latency():
-    log("=== latency (eredeti config) ===")
+    log("=== latency (original config) ===")
     shutil.copy(CFG_ORIG, CFG)
     restart_frigate()
     wait_healthy()
-    log("  stabilizalas 45s...")
+    log("  settling 45s...")
     time.sleep(45)
-    # szintetikus esemenyinjektor a relay-keslelteteshez
+    # synthetic event injector for the relay latency
     inj = subprocess.Popen([PY, os.path.join(HERE, "inject_events.py"), "30", "3"],
                            cwd=HERE, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     measure("latency", "--duration", "120")
@@ -245,7 +245,7 @@ def main():
     only = sys.argv[1:] or ["resources", "detection", "latency"]
     if not os.path.exists(CFG_ORIG):
         shutil.copy(CFG, CFG_ORIG)
-        log(f"eredeti config elmentve: {CFG_ORIG}")
+        log(f"original config saved: {CFG_ORIG}")
     try:
         if "resources" in only:
             phase_resources()
@@ -254,11 +254,11 @@ def main():
         if "latency" in only:
             phase_latency()
     finally:
-        log("=== visszaallitas ===")
+        log("=== restoring ===")
         shutil.copy(CFG_ORIG, CFG)
         restart_frigate()
         ok = wait_healthy()
-        log(f"eredeti config visszaallitva, frigate healthy={ok}")
+        log(f"original config restored, frigate healthy={ok}")
 
 
 if __name__ == "__main__":

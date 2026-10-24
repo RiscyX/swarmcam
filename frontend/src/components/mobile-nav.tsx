@@ -25,7 +25,7 @@ export function MobileHeader({ cameraCount, camerasUp, liveEventCount, showEvent
       <span className="h-[14px] w-[14px] shrink-0 bg-[var(--accent)]" />
       <span className="text-sm font-extrabold uppercase tracking-[0.14em] text-[var(--fg)]">SwarmCam</span>
       <div className="ml-auto flex shrink-0 items-center gap-2.5">
-        {/* 360px alatt a chip esik ki — a témagomb sosem */}
+        {/* Below 360px the chip is dropped — the theme button never is */}
         <span className="hidden rounded-sm border border-[var(--border)] px-1.5 py-0.5 font-mono text-[11px] text-[var(--fg-muted)] min-[360px]:inline">
           <span className={camerasUp > 0 ? 'text-[var(--status-live)]' : ''}>
             {camerasUp}/{cameraCount} up

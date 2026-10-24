@@ -9,10 +9,10 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
-# CUDA-s torch/torchvision: a YOLO inference az NVIDIA GPU-n fut, nem a CPU-n.
-# A PyPI alapértelmezett linuxos torch wheel hozza magával a CUDA runtime-ot
-# (nvidia-* csomagok), a hoszton csak a driver kell. Cserébe az image ~2 GB-ról
-# ~6 GB-ra hízik - ezt a CPU-tehermentesítés megéri.
+# CUDA torch/torchvision: YOLO inference runs on the NVIDIA GPU, not the CPU.
+# PyPI's default Linux torch wheel brings the CUDA runtime with it
+# (nvidia-* packages); the host only needs the driver. In exchange the image grows
+# from ~2 GB to ~6 GB - taking the load off the CPU is worth it.
 RUN pip install --no-cache-dir torch torchvision \
     && pip install --no-cache-dir -r requirements.txt
 

@@ -44,7 +44,7 @@ snapshots:
   bounding_box: false
   retain:
     default: 14
-# A kamerákat a Discovery oldal (vagy `discovery.py --update-frigate`) veszi fel ide.
+# Cameras are added here by the Discovery page (or `discovery.py --update-frigate`).
 go2rtc:
   streams: {}
 cameras: {}

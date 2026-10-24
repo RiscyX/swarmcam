@@ -45,8 +45,8 @@ async def login(request: Request):
     try:
         r = await loop.run_in_executor(
             None,
-            # A Frigate jelszó-ellenőrzése (bcrypt) gyenge CPU-n 5s-nél tovább is
-            # tarthat, ezért ez hosszabb timeout-ot kap, mint a többi (gyors) hívás.
+            # Frigate's password check (bcrypt) can take longer than 5s on a weak CPU,
+            # so this gets a longer timeout than the other (fast) calls.
             lambda: http.post(f"{FRIGATE_URL}/api/login", json=body, timeout=20),
         )
         if r.status_code != 200:

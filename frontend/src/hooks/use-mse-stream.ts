@@ -2,36 +2,36 @@ import { useEffect, useState, type RefObject } from 'react'
 
 import { cameraMseUrl } from '@/lib/cameras'
 
-// A go2rtc ezt a listát egyezteti a stream tényleges codecjével, és a
-// válaszában adja vissza a konkrét MIME-típust a SourceBufferhez.
+// go2rtc matches this list against the stream's actual codec and returns
+// the concrete MIME type for the SourceBuffer in its reply.
 const CODECS = 'avc1.640029,avc1.64002a,avc1.4d002a,avc1.42e01f,mp4a.40.2'
-// Ennél hosszabb puffert vágunk, és ennél nagyobb lemaradásnál az élő
-// szélére ugrunk — enélkül a kép folyamatosan csúszna hátra.
+// A buffer longer than this is trimmed, and with more lag than this we jump to
+// the live edge — without it the picture would keep drifting behind.
 const MAX_BUFFER_S = 10
 const MAX_DRIFT_S = 1.5
-// Egy-egy megszakadt kapcsolat után újrapróbálkozunk, mert a telefon
-// wifije rendszeresen megbicsaklik; csak tartós hiba esetén esünk vissza.
+// Retry after a dropped connection, because the phone's Wi-Fi hiccups
+// regularly; only fall back on a persistent failure.
 const RETRY_DELAY_MS = 2000
 const MAX_ATTEMPTS = 3
-// Ekkora ablakon atlagoljuk a kepkockaszamot. Rovidebb ablaknal a kijelzett
-// szam lathatoan ugral, mert a telefon kepkockasebessege fenyfuggoen ingadozik.
+// The frame count is averaged over a window this long. With a shorter window the
+// displayed number visibly jumps, because the phone's frame rate varies with light.
 const FPS_WINDOW_MS = 3000
 
 const MSE_SUPPORTED = typeof MediaSource !== 'undefined'
 
 /**
- * A kamera H.264 streamjét játssza le a go2rtc MSE feedjéből, fMP4
- * szegmensekként. Nincs se szerveroldali, se kliensoldali újrakódolás:
- * a böngésző natív H.264 dekódere kapja meg ugyanazt a képfolyamot,
- * amiből a Frigate is dolgozik.
+ * Plays the camera's H.264 stream from go2rtc's MSE feed, as fMP4
+ * segments. There is no re-encoding on either the server or the client:
+ * the browser's native H.264 decoder gets the same picture stream
+ * Frigate works from.
  *
- * A visszatérési érték akkor igaz, ha az MSE tartósan nem működik — ilyenkor
- * a hívó az MJPEG proxyra eshet vissza.
+ * The return value is true if MSE persistently fails — the caller can then
+ * fall back to the MJPEG proxy.
  */
 export type MseStream = {
-  /** Az MSE tartosan nem mukodik — a hivo az MJPEG proxyra eshet vissza. */
+  /** MSE persistently fails — the caller can fall back to the MJPEG proxy. */
   failed: boolean
-  /** A stream tenyleges kepkockasebessege, vagy null, ha meg nem merheto. */
+  /** The stream's actual frame rate, or null if it cannot be measured yet. */
   fps: number | null
 }
 
@@ -75,7 +75,7 @@ export function useMseStream(
           buffer.remove(start, end - MAX_BUFFER_S / 2)
           return
         } catch {
-          /* a vágás kihagyása nem kritikus, a következő updateend újrapróbálja */
+          /* skipping the trim is not critical, the next updateend retries it */
         }
       }
       const target = videoRef.current
@@ -158,7 +158,7 @@ export function useMseStream(
         socket.onclose = giveUpOrRetry
       })
       target.src = objectUrl
-      void target.play().catch(() => { /* az autoplay a némított videón is elbukhat */ })
+      void target.play().catch(() => { /* autoplay can fail even on a muted video */ })
     }
 
     connect()
@@ -172,9 +172,9 @@ export function useMseStream(
     }
   }, [name, enabled, videoRef])
 
-  // A dekodolt kepkockak szamlalojanak novekmenye — ez a kamera altal
-  // ténylegesen szallitott sebesseg, nem a Frigate detect fps-e. Az eldobott
-  // kockak is beleszamitanak, mert azokat is elkuldte a kamera.
+  // The increment of the decoded-frame counter — this is the rate the camera
+  // actually delivers, not Frigate's detect fps. Dropped frames count too,
+  // because the camera did send them.
   useEffect(() => {
     const video = videoRef.current
     if (!enabled || !video || !MSE_SUPPORTED) return undefined
@@ -189,7 +189,7 @@ export function useMseStream(
       const frames = target.getVideoPlaybackQuality().totalVideoFrames
       const now = performance.now()
       const elapsed = (now - lastAt) / 1000
-      // Ujracsatlakozaskor a szamlalo nullazodik, olyankor csak ujraindulunk.
+      // On reconnect the counter resets; in that case we just start over.
       setFps(frames >= lastFrames && elapsed > 0 ? (frames - lastFrames) / elapsed : null)
       lastFrames = frames
       lastAt = now

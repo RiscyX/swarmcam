@@ -22,7 +22,7 @@ def _urls(entry) -> list[str]:
 
 
 def camera_rotation(config: dict, name: str) -> int:
-    """A go2rtc pipeline-ban ténylegesen alkalmazott forgatás (0/90/180/270)."""
+    """The rotation actually applied in the go2rtc pipeline (0/90/180/270)."""
     for url in _urls(_streams(config).get(name)):
         m = _ROTATE_RE.search(url)
         if m:
@@ -31,7 +31,7 @@ def camera_rotation(config: dict, name: str) -> int:
 
 
 def camera_source_url(config: dict, name: str) -> str | None:
-    """A telefon H.264 URL-je, akárhol is áll épp: a nyers vagy a _raw streamben."""
+    """The phone's H.264 URL, wherever it currently sits: in the plain or the _raw stream."""
     streams = _streams(config)
     for key in (name + RAW_SUFFIX, name):
         for url in _urls(streams.get(key)):
@@ -42,11 +42,11 @@ def camera_source_url(config: dict, name: str) -> str | None:
 
 def auto_detect_size(detect: dict) -> dict:
     """
-    Kiveszi a detect fix méretét, hogy a Frigate a streamből olvassa ki
-    (a `width`/`height` opcionális). Forgatott kameránál muszáj: a telefon
-    felbontása változhat (`streamRes: auto`), a configba írt méret pedig a
-    forgatás után nem stimmelne, és a Frigate fekete sávokkal tölti ki a
-    különbséget.
+    Removes the fixed detect size so Frigate reads it from the stream
+    (`width`/`height` are optional). Required for rotated cameras: the phone's
+    resolution may change (`streamRes: auto`), and a size written into the
+    config would not match after rotation, so Frigate would fill the
+    difference with black bars.
     """
     detect = dict(detect)
     detect.pop("width", None)
@@ -56,18 +56,18 @@ def auto_detect_size(detect: dict) -> dict:
 
 def set_camera_rotation(config: dict, name: str, rotation: int) -> dict:
     """
-    A forgatást a go2rtc-ben végezzük, nem a telefonon: a /video/h264 stream
-    figyelmen kívül hagyja a rotate paramétert, csak az MJPEG-et forgatja.
-    Forgatáskor a nyers telefon-URL a `{name}_raw` streambe kerül, a kamera
-    nevén pedig egy ffmpeg transpose forrás áll — így a Frigate detect/record,
-    a Frigate UI élő képe és a dashboard is ugyanazt a képállást kapja.
-    rotation == 0 esetén visszaáll az újrakódolás nélküli passthrough.
+    Rotation is done in go2rtc, not on the phone: the /video/h264 stream
+    ignores the rotate parameter, only MJPEG is rotated.
+    When rotating, the plain phone URL moves to the `{name}_raw` stream and the
+    camera's own name gets an ffmpeg transpose source — so Frigate detect/record,
+    the Frigate UI live view and the dashboard all get the same orientation.
+    rotation == 0 restores the passthrough without re-encoding.
 
-    A `#hardware=cuda` az NVDEC-en dekódol és NVENC-cel kódol vissza
+    `#hardware=cuda` decodes on NVDEC and re-encodes with NVENC
     (`-hwaccel cuda -hwaccel_output_format nv12 ... -vf transpose=N,hwupload`),
-    a transpose marad a CPU-n. Mérve 720p25-ön: libx264 44%, NVENC 6% egy
-    magból — kb. 7x olcsóbb, és a kimenet pixelre egyezik a szoftveres
-    transpose-zal (PSNR 44,7 dB / SSIM 0,993), tehát tényleg forgat.
+    the transpose stays on the CPU. Measured on 720p25: libx264 44%, NVENC 6% of
+    one core — about 7x cheaper, and the output matches the software transpose
+    pixel for pixel (PSNR 44.7 dB / SSIM 0.993), so it really does rotate.
     """
     src = camera_source_url(config, name)
     if src is None:
@@ -85,9 +85,9 @@ def set_camera_rotation(config: dict, name: str, rotation: int) -> dict:
     go2rtc["streams"] = streams
     config["go2rtc"] = go2rtc
 
-    # A fix detect-méretet csak forgatáskor kell elengedni; 0-ra visszaállva
-    # a beállított méret maradjon meg, különben minden forgatás-kapcsolgatás
-    # némán elveszítené a Settings oldalon megadott detect felbontást.
+    # The fixed detect size only needs to be dropped when rotating; when set back
+    # to 0 the configured size must stay, otherwise every rotation toggle would
+    # silently lose the detect resolution set on the Settings page.
     cam = (config.get("cameras") or {}).get(name)
     if cam:
         detect = cam.get("detect") or {"enabled": True}
@@ -137,8 +137,8 @@ def extract_settings(config: dict) -> ConfigSettings:
         for inp in cams[0].get("ffmpeg", {}).get("inputs", []):
             args = str(inp.get("input_args", ""))
             rtsp_transport = "udp" if "udp" in args else "tcp"
-    # Forgatott kamerán nincs kiírt méret (a Frigate detektálja) — a globális
-    # beállítás értékét az első olyan kameráról vesszük, amelyiken van.
+    # Rotated cameras have no explicit size (Frigate detects it) — the global
+    # setting's value is taken from the first camera that has one.
     for cam in cams:
         d = cam.get("detect", {})
         if "width" in d and "height" in d:
@@ -191,15 +191,15 @@ def apply_settings(config: dict, s: ConfigSettings) -> dict:
         cam["detect"] = detect
         ffmpeg = cam.setdefault("ffmpeg", {})
         ffmpeg.pop("hwaccel_args", None)
-        # A Frigate csak akkor cseréli ki a presetet, ha az input_args pontosan
-        # a preset neve — nyers kapcsolót nem szabad mellé fűzni, mert akkor
-        # az ffmpeg a preset nevét kimeneti fájlnak veszi és elszáll.
+        # Frigate only substitutes the preset if input_args is exactly the
+        # preset name — no raw flag may be appended, otherwise ffmpeg takes
+        # the preset name as an output file and crashes.
         #
-        # Forgatott kameránál a go2rtc újrakódol, és a transzkód elveszti az
-        # időbélyegeket (a stream 90k tbr-rel jön). A detect ág `fps=5` szűrője
-        # PTS alapján válogat, így nulla frame-et adna — a record ág (`-c:v
-        # copy`) közben látszólag működik. A generic preset `+genpts` és
-        # `-use_wallclock_as_timestamps 1` kapcsolói pótolják a bélyegeket.
+        # For rotated cameras go2rtc re-encodes, and the transcode loses the
+        # timestamps (the stream arrives with 90k tbr). The detect branch's
+        # `fps=5` filter selects on PTS, so it would emit zero frames — while the
+        # record branch (`-c:v copy`) seemingly works. The generic preset's
+        # `+genpts` and `-use_wallclock_as_timestamps 1` flags restore them.
         if s.rtsp_transport == "udp":
             preset = "preset-rtsp-udp"
         elif camera_rotation(config, cam_name):
@@ -213,7 +213,7 @@ def apply_settings(config: dict, s: ConfigSettings) -> dict:
 
 
 def compose_writable() -> bool:
-    """A compose fájl :ro mountról is olvasható, de írni csak rw mountról lehet."""
+    """The compose file can be read from a :ro mount, but only written through an rw mount."""
     return COMPOSE_FILE.exists() and os.access(COMPOSE_FILE, os.W_OK)
 
 

@@ -58,8 +58,8 @@ async def _startup():
             # (e.g. https://192.168.0.100:4444/video/h264), keyed by camera name.
             streams = (cfg.get("go2rtc") or {}).get("streams") or {}
             for name, entry in streams.items():
-                # Forgatott kameránál a telefon URL-je a `{name}_raw` streamben
-                # él, a kamera nevén a go2rtc ffmpeg transpose forrása áll.
+                # For a rotated camera the phone URL lives in the `{name}_raw` stream;
+                # the camera's own name holds go2rtc's ffmpeg transpose source.
                 cam_name = name[: -len(RAW_SUFFIX)] if name.endswith(RAW_SUFFIX) else name
                 urls = [entry] if isinstance(entry, str) else (entry or [])
                 for url in urls:

@@ -159,7 +159,7 @@ swarmcam/
     ├── USER_GUIDE.md            # How to set up a camera phone and use the dashboard
     ├── ARCHITECTURE.md          # Detailed system architecture and design decisions
     ├── API.md                   # Full REST + WebSocket API reference
-    └── FEJLESZTESI_TERV.md      # Development plan (Hungarian)
+    └── THIRD_PARTY_LICENSES.md  # Third-party licenses and model provenance
 ```
 
 ## Running the backend locally (without Docker)
@@ -184,7 +184,7 @@ docker compose up frigate mosquitto -d
 - [User Guide](docs/USER_GUIDE.md) — how to set up a camera phone and use the dashboard
 - [Architecture](docs/ARCHITECTURE.md) — how the components fit together and why
 - [API Reference](docs/API.md) — every REST endpoint and WebSocket message
-- [Development Plan](docs/FEJLESZTESI_TERV.md) — planned features and implementation notes
+- [Design Decisions](DECISIONS.md) — major technical decisions and their trade-offs
 
 ## Security and responsibility
 

@@ -1,8 +1,8 @@
-"""go2rtc HTTP REST API kliens — streamek dinamikus módosítása Frigate restart nélkül.
+"""go2rtc HTTP REST API client — changes streams dynamically without a Frigate restart.
 
-A go2rtc (a Frigate-be ágyazva) REST API-t kínál a stream konfiguráció
-módosítására a futó folyamatban. Ez a modul ezeket a hívásokat csomagolja
-async függvényekbe, hogy a backend többi része egyszerűen használhassa.
+go2rtc (embedded in Frigate) offers a REST API for changing the stream
+configuration in the running process. This module wraps those calls in
+async functions so the rest of the backend can use them easily.
 
 API referencia: https://github.com/AlexxIT/go2rtc (PUT/PATCH/DELETE /api/streams)
 """
@@ -14,11 +14,11 @@ import requests as http
 from settings import GO2RTC_API_URL
 
 logger = logging.getLogger(__name__)
-_TIMEOUT = 3  # másodperc — go2rtc helyi hálózaton, gyors válasz
+_TIMEOUT = 3  # seconds — go2rtc is on the local network, replies fast
 
 
 async def go2rtc_list_streams() -> dict:
-    """Visszaadja az összes go2rtc stream állapotát."""
+    """Returns the state of every go2rtc stream."""
     loop = asyncio.get_event_loop()
     try:
         r = await loop.run_in_executor(
@@ -33,13 +33,13 @@ async def go2rtc_list_streams() -> dict:
 
 
 async def go2rtc_put_stream(name: str, src: str) -> bool:
-    """Létrehozza vagy lecseréli a megadott streamet.
+    """Creates or replaces the given stream.
 
-    A PUT művelet teljesen lecseréli a stream forrását. Ha a stream nem
-    létezik, létrehozza. A módosítás azonnal érvénybe lép a go2rtc
-    in-memory állapotában, és persistálódik a go2rtc config fájlba.
+    PUT replaces the stream's source entirely. If the stream does not exist,
+    it is created. The change takes effect immediately in go2rtc's in-memory
+    state and is persisted to the go2rtc config file.
 
-    Visszatérés: True ha a művelet sikeres (200 OK).
+    Returns: True if the operation succeeded (200 OK).
     """
     loop = asyncio.get_event_loop()
     try:
@@ -61,9 +61,9 @@ async def go2rtc_put_stream(name: str, src: str) -> bool:
 
 
 async def go2rtc_delete_stream(name: str) -> bool:
-    """Törli a megadott streamet a go2rtc-ből.
+    """Deletes the given stream from go2rtc.
 
-    Visszatérés: True ha a művelet sikeres (200 OK).
+    Returns: True if the operation succeeded (200 OK).
     """
     loop = asyncio.get_event_loop()
     try:
@@ -85,7 +85,7 @@ async def go2rtc_delete_stream(name: str) -> bool:
 
 
 async def go2rtc_is_available() -> bool:
-    """Ellenőrzi, hogy a go2rtc HTTP API elérhető-e."""
+    """Checks whether the go2rtc HTTP API is reachable."""
     loop = asyncio.get_event_loop()
     try:
         r = await loop.run_in_executor(

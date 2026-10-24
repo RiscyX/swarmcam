@@ -94,9 +94,9 @@ async def camera_snapshot(name: str):
 
 @router.get("/api/cameras/{name}/stream")
 async def camera_stream(name: str):
-    # Live view a Frigate MJPEG feedjéről megy (ugyanaz a go2rtc H264 stream,
-    # amiből a felvételek készülnek) — így a képállás és a simaság is egyezik
-    # a Frigate UI-val, és kikerüljük a telefon MJPEG throttlingját.
+    # Live view comes from Frigate's MJPEG feed (the same go2rtc H264 stream
+    # the recordings are made from) — so framing and smoothness match the
+    # Frigate UI, and we avoid the phone's MJPEG throttling.
     cam = next((c for c in state._last_cameras if c["name"] == name), None)
     if not cam:
         raise HTTPException(404, "Camera not found")
@@ -126,13 +126,13 @@ async def camera_stream(name: str):
 @router.websocket("/ws/cameras/{name}/mse")
 async def camera_mse(ws: WebSocket, name: str):
     """
-    A go2rtc MSE streamjének átjátszása a böngészőnek: fMP4 szegmensek
-    ugyanabból a H.264 forrásból, amiből a Frigate detektál és felvesz.
-    A go2rtc csak újracsomagol, nem kódol újra — az MJPEG proxyval szemben
-    nincs JPEG-enkódolás, és a képfrissítés nincs a detect fps-hez kötve.
+    Relays go2rtc's MSE stream to the browser: fMP4 segments from the same
+    H.264 source Frigate detects on and records from.
+    go2rtc only repackages, it does not re-encode — unlike the MJPEG proxy
+    there is no JPEG encoding, and the refresh rate is not tied to the detect fps.
 
-    A /ws prefix nem esztétikai: a dashboard nginxében csak az a location
-    adja tovább a WebSocket Upgrade headert, az /api/ nem.
+    The /ws prefix is not cosmetic: in the dashboard's nginx only that location
+    passes on the WebSocket Upgrade header, /api/ does not.
     """
     if not any(c["name"] == name for c in state._last_cameras):
         await ws.close(code=1008)
@@ -160,7 +160,7 @@ async def camera_mse(ws: WebSocket, name: str):
             for task in pending:
                 task.cancel()
     except Exception:
-        # A relay bármelyik vége normálisan is elszakadhat (fülváltás, navigáció).
+        # Either end of the relay may also drop normally (tab switch, navigation).
         pass
     finally:
         with contextlib.suppress(Exception):
@@ -212,7 +212,7 @@ _ROTATIONS = (0, 90, 180, 270)
 
 
 def _pipeline_rotation(name: str) -> int:
-    """A kamerára ténylegesen alkalmazott forgatás a Frigate configból."""
+    """The rotation actually applied to the camera, from the Frigate config."""
     if not FRIGATE_CONFIG.exists():
         return 0
     try:
@@ -223,9 +223,9 @@ def _pipeline_rotation(name: str) -> int:
 
 async def _clear_phone_rotation(ip: str, port: int) -> None:
     """
-    Nullázza a telefon saját rotate-jét. A /video/h264 streamet az nem forgatja
-    el, csak beleilleszti a kisebbre skálázott képet a változatlan méretű keretbe
-    (fekete sávok) — a forgatás után ez dupla munka és felbontásvesztés lenne.
+    Resets the phone's own rotate setting. It does not rotate the /video/h264
+    stream, it only fits a downscaled image into the unchanged frame (black
+    bars) — on top of our rotation that would be double work and lost resolution.
     """
     loop = asyncio.get_event_loop()
     try:
@@ -240,10 +240,10 @@ async def _clear_phone_rotation(ip: str, port: int) -> None:
 
 async def _apply_rotation(name: str, orientation: str, ip: str, port: int) -> tuple[bool, bool]:
     """
-    Beírja a forgatást a go2rtc streamekbe.
-    Először megpróbálja a go2rtc API-t (Frigrate restart nélkül),
-    ha az nem működik, visszaesik a Frigate restart-ra.
-    Visszatérés: (érvényben van-e a kért forgatás, újraindult-e a Frigate).
+    Writes the rotation into the go2rtc streams.
+    First tries the go2rtc API (without a Frigate restart);
+    if that does not work, falls back to restarting Frigate.
+    Returns: (whether the requested rotation is in effect, whether Frigate restarted).
     """
     try:
         rotation = int(orientation)
@@ -258,21 +258,21 @@ async def _apply_rotation(name: str, orientation: str, ip: str, port: int) -> tu
     if camera_rotation(config, name) == rotation:
         return True, False
 
-    # Config dict módosítás (mindig szükséges a persistáláshoz)
+    # Modify the config dict (always needed for persistence)
     try:
         modified_config = set_camera_rotation(config, name, rotation)
     except KeyError:
         return False, False
 
-    # Dinamikus go2rtc módosítás (Frigrate restart nélkül)
+    # Dynamic go2rtc change (without a Frigate restart)
     go2rtc_ok = False
     if await go2rtc_is_available():
         go2rtc_ok = await _apply_go2rtc_rotation(name, rotation, modified_config)
 
-    # Config fájl írás (mindig — persistálás Frigate restart esetére)
+    # Write the config file (always — persists across a Frigate restart)
     write_yaml(FRIGATE_CONFIG, modified_config)
 
-    # Frigate restart csak ha a go2rtc API nem működött
+    # Restart Frigate only if the go2rtc API did not work
     if not go2rtc_ok:
         try:
             await frigate_post("/api/restart", timeout=10)
@@ -284,30 +284,30 @@ async def _apply_rotation(name: str, orientation: str, ip: str, port: int) -> tu
 
 
 async def _apply_go2rtc_rotation(name: str, rotation: int, config: dict) -> bool:
-    """Elküldi a rotációs módosítást a go2rtc HTTP API-nak.
+    """Sends the rotation change to the go2rtc HTTP API.
 
-    A go2rtc API azonnal módosítja a stream forrását a futó folyamatban.
-    A config dict-et a hívó fél már módosította (a write_yaml előtt hívjuk).
+    The go2rtc API changes the stream source immediately in the running process.
+    The caller has already modified the config dict (called before write_yaml).
     """
     streams = (config.get("go2rtc") or {}).get("streams") or {}
     raw = name + RAW_SUFFIX
 
     try:
         if rotation:
-            # _raw stream létrehozása a telefon URL-jével
+            # Create the _raw stream with the phone's URL
             raw_src = streams.get(raw, [None])[0]
             if raw_src:
                 await go2rtc_put_stream(raw, raw_src)
-            # Fő stream cseréje ffmpeg transpose szűrőre
+            # Switch the main stream to an ffmpeg transpose filter
             main_src = streams.get(name, [None])[0]
             if main_src:
                 await go2rtc_put_stream(name, main_src)
         else:
-            # Fő stream visszaállítása közvetlen telefon URL-re
+            # Restore the main stream to the direct phone URL
             main_src = streams.get(name, [None])[0]
             if main_src:
                 await go2rtc_put_stream(name, main_src)
-            # _raw stream törlése
+            # Delete the _raw stream
             await go2rtc_delete_stream(raw)
         return True
     except Exception:
@@ -349,10 +349,10 @@ async def get_camera_settings(name: str):
         except (KeyError, TypeError, ValueError):
             video_fps = None
 
-        # A forgatás kivételével minden érték a telefonról jön (lensSettings,
-        # csupa string). A forgatást viszont a go2rtc pipeline végzi, ezért azt
-        # a Frigate configból olvassuk — az mutatja, mit lát ténylegesen a
-        # felhasználó a dashboardon, a Frigate UI-n és a felvételeken.
+        # Every value except rotation comes from the phone (lensSettings, all
+        # strings). Rotation, however, is done by the go2rtc pipeline, so it is
+        # read from the Frigate config — that shows what the user actually sees
+        # on the dashboard, in the Frigate UI and in the recordings.
         return CameraSettings(
             orientation=str(_pipeline_rotation(name)),
             video_size=video_size,
@@ -384,8 +384,8 @@ async def set_camera_settings(name: str, body: CameraSettings):
     ip, port = cam["ip"], cam["port"]
     loop = asyncio.get_event_loop()
     fields = body.model_dump(exclude_none=True)
-    # A forgatás nem a telefonra megy, hanem a go2rtc pipeline-ba — lásd
-    # _apply_rotation. A többi beállítás egyetlen kérésben: GET /?k1=v1&k2=v2
+    # Rotation does not go to the phone but into the go2rtc pipeline — see
+    # _apply_rotation. The other settings go in a single request: GET /?k1=v1&k2=v2
     phone_fields = {k: v for k, v in fields.items() if k != "orientation"}
     params = {
         _KEY_MAP[k]: (str(v).lower() if isinstance(v, bool) else str(v))

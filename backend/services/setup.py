@@ -27,7 +27,7 @@ async def ensure_default_user() -> None:
                         lambda: http.post(
                             f"{FRIGATE_URL}/api/users",
                             json={"username": DEFAULT_USER, "password": DEFAULT_PASSWORD, "role": "admin"},
-                            # a jelszó-hasheléshez (bcrypt) gyenge CPU-n hosszabb idő kellhet
+                            # password hashing (bcrypt) may take longer on a weak CPU
                             timeout=20,
                         ),
                     )

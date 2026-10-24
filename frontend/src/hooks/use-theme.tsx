@@ -13,8 +13,8 @@ const THEME_COLORS: Record<Theme, string> = { dark: '#111111', light: '#f7f5f3' 
 
 const ThemeContext = createContext<ThemeContextValue | null>(null)
 
-// Az index.html boot scriptje már kifestette a <html>-t az első render előtt —
-// azt olvassuk vissza, hogy a React ne kerüljön ki szinkronból a képernyővel.
+// index.html's boot script already painted <html> before the first render —
+// read that back so React does not get out of sync with the screen.
 function readPaintedTheme(): Theme {
   return document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark'
 }
@@ -25,7 +25,7 @@ function applyTheme(theme: Theme) {
   try {
     localStorage.setItem(THEME_STORAGE_KEY, theme)
   } catch {
-    // localStorage elérhetetlen (privát mód, letiltott sütik) — a téma csak eddig a reloadig él
+    // localStorage unavailable (private mode, blocked cookies) — the theme only lasts until reload
   }
 }
 

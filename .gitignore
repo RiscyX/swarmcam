@@ -4,11 +4,11 @@ backend/fire_snapshots/
 backend/fire_events.db
 /fire_events.db
 
-# Telepítésfüggő Frigate config — a sablon a config.example.yml
+# Deployment-specific Frigate config — the template is config.example.yml
 docker/frigate/config.yml
 benchmark/config.yml.original
 
-# Docker volumes (runtime data, ne kerüljön gitbe)
+# Docker volumes (runtime data, keep out of git)
 docker/media/
 docker/mosquitto/data/
 docker/mosquitto/log/
@@ -28,26 +28,26 @@ venv/
 .claude/
 *.swp
 
-# Nagy binárisok — letölthetők, ne hízlalják a repót
+# Large binaries — downloadable, keep them out of the repo
 docker/frigate/model_cache/
 fire-detector/models/*.pt
 cloudflared.deb
 
-# Teszt- és fejlesztési artifactok
+# Test and development artifacts
 .playwright-mcp/
 /*.png
 
-# Képernyőképek — a lakás/kamerák képe nem publikus
+# Screenshots — images of the home/cameras are not public
 docs/screenshots/
 
-# Backup fájlok
+# Backup files
 *.bak
 *.bak.*
 
-# Obsidian illékony UI-állapot (a jegyzetek maradnak)
+# Obsidian volatile UI state (the notes stay)
 SwarmCAM/.obsidian/workspace.json
 
-# Szemelyes / kulso anyagok — a gepen maradnak, de nem a repoban
+# Personal / external material — stays on the machine, not in the repo
 feladatkiiras.pdf
 velemeny.pdf
 opencode.md
@@ -59,7 +59,7 @@ SwarmCAM/
 docs/VEDES_BESZEDVAZLAT.md
 brag-output*/
 
-# Szakdolgozat-építő pipeline — csak a fejlesztői gépen, nem a repóban
+# Thesis build pipeline — only on the dev machine, not in the repo
 docs/build_all.sh
 docs/build_thesis.py
 docs/finalize_docx.py

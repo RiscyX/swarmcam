@@ -50,9 +50,9 @@ RAW_SUFFIX = "_raw"
 
 def rotation_of(config: dict, name: str) -> int:
     """
-    Forgatás a go2rtc source stringből (`ffmpeg:..#rotate=90..`), 0 ha nincs.
-    A backend `services/frigate_config.py`-ja írja; ez a szkript standalone is
-    fut, ezért nem importál onnan.
+    Rotation from the go2rtc source string (`ffmpeg:..#rotate=90..`), 0 if none.
+    Written by the backend's `services/frigate_config.py`; this script also runs
+    standalone, so it does not import from there.
     """
     streams = (config.get("go2rtc") or {}).get("streams") or {}
     entry = streams.get(name)
@@ -86,8 +86,8 @@ class Camera:
         hwaccel args from it instead of hardcoding.
         """
         # Detect settings: from config, otherwise the phone's stream resolution.
-        # Ha egyik sem ismert, a width/height kimarad és a Frigate olvassa ki a
-        # streamből — tippelni rosszabb, mint nem írni semmit.
+        # If neither is known, width/height are left out and Frigate reads them
+        # from the stream — guessing is worse than writing nothing.
         detect_fps = 5
         size = self.resolution
         hwaccel_args = None
@@ -103,15 +103,15 @@ class Camera:
                 if "width" in d and "height" in d:
                     size = (d["width"], d["height"])
                 hwaccel_args = sample.get("ffmpeg", {}).get("hwaccel_args")
-            # A detect méret a saját forgatásához igazodik (90/270 → álló kép);
-            # a minta másik kameráé is lehet, ezért itt kell visszaigazítani.
+            # The detect size follows the camera's own rotation (90/270 → portrait);
+            # the template may come from another camera, so it is re-aligned here.
             if size and (rotation in (90, 270)) != (size[1] > size[0]):
                 size = (size[1], size[0])
 
-        # A forgatott kamera go2rtc-ben újrakódolva jön, és a transzkód elveszti
-        # az időbélyegeket; a detect ág `fps=N` szűrője emiatt nulla frame-et ad.
-        # A generic preset `+genpts` és `-use_wallclock_as_timestamps 1` kapcsolói
-        # pótolják — lásd `backend/services/frigate_config.py::apply_settings`.
+        # A rotated camera arrives re-encoded by go2rtc, and the transcode loses
+        # the timestamps; the detect branch's `fps=N` filter then emits zero frames.
+        # The generic preset's `+genpts` and `-use_wallclock_as_timestamps 1` flags
+        # restore them — see `backend/services/frigate_config.py::apply_settings`.
         input_args = "preset-rtsp-generic" if rotation else "preset-rtsp-restream"
 
         detect: dict = {"enabled": True, "fps": detect_fps}
@@ -194,13 +194,13 @@ def _active_camera(info: dict) -> dict | None:
 
 def _parse_resolution(info: dict) -> tuple[int, int] | None:
     """
-    A *stream* felbontása, vagy None ha a telefon nem mondja meg.
+    The *stream's* resolution, or None if the phone does not report it.
 
-    Nincs fallback a `cameras[].sizes` legnagyobb elemére: az a szenzor
-    legnagyobb fotómérete, soha nem a videóstreamé — `streamRes: auto`
-    mellett egy 800x600-as streamre 3840x2160-at adna vissza. Ez a szám
-    korábban a Frigate `detect` méretébe került, és a felskálázott
-    mozgásdetektálás önmagában 290% CPU-t evett.
+    No fallback to the largest entry of `cameras[].sizes`: that is the sensor's
+    largest photo size, never the video stream's — with `streamRes: auto` it
+    would return 3840x2160 for an 800x600 stream. That number used to end up
+    in Frigate's `detect` size, and the upscaled motion detection alone ate
+    290% CPU.
     """
     try:
         res_str = info["settings"]["streamRes"]     # e.g. "1280x720", "auto", "max"
@@ -302,8 +302,8 @@ def update_frigate_config(cameras: list[Camera], config_path: Path = FRIGATE_CON
         go2rtc["streams"] = {}
 
     for cam in cameras:
-        # Ha a kamerán forgatás van, a cam.name streamet a go2rtc ffmpeg
-        # transpose forrása foglalja — az URL ilyenkor a _raw streambe megy.
+        # If the camera is rotated, the cam.name stream is taken by go2rtc's ffmpeg
+        # transpose source — the URL then goes into the _raw stream.
         raw = cam.name + RAW_SUFFIX
         go2rtc["streams"][raw if raw in go2rtc["streams"] else cam.name] = [cam.stream_url]
         config["cameras"][cam.name] = cam.to_frigate_camera(config)

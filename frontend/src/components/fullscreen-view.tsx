@@ -85,7 +85,7 @@ export function FullscreenView({ camera, onClose, onToggleTorch, torchEnabled }:
         className="flex min-h-0 flex-1 items-center justify-center overflow-hidden"
         style={{ containerType: 'size' }}
       >
-        {/* Fix 16:9 keret, a rendelkezésre álló helyre skálázva */}
+        {/* Fixed 16:9 frame, scaled to the available space */}
         <div className="aspect-video" style={{ width: 'min(100cqw, calc(100cqh * 16 / 9))' }}>
           <img
             alt={`${getCameraDisplayName(camera)} fullscreen stream`}

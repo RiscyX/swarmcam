@@ -95,7 +95,7 @@ async def _handle_fire_event(raw: bytes | str) -> None:
 
     await broadcast(json.dumps({
         "type":    "alert",
-        "message": f"🔥 Tűz/füst érzékelve: {camera} ({score:.0%})",
+        "message": f"🔥 Fire/smoke detected: {camera} ({score:.0%})",
     }))
     await broadcast(json.dumps({
         "type":   "frigate_event",

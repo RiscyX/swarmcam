@@ -1,30 +1,29 @@
 #!/usr/bin/env python3
 """
-SwarmCam mérőszkript a szakdolgozat 3.5. fejezetéhez (Tesztelés és eredmények).
+SwarmCam measurement script for the thesis's testing and results chapter.
 
-Három alparancs:
-  resources  – CPU/RAM terhelés a docker konténerekre, az aktuális kameraszámmal
-               címkézve. Futtasd egyszer minden vizsgált kameraszámnál
-               (pl. 1, 2, 3 aktív telefonnal).
-  latency    – a health_loop ciklus szórása (jitter) + a Frigate/tűzdetektor
-               MQTT esemény -> WebSocket kézbesítés közti késleltetés.
-  detection  – a Frigate detektor átlagos inferencia-idejét és a kamerák
-               detection_fps-ét méri; --label gpu / --label cpu, hogy a két
-               futás (GPU-gyorsítással, majd a config.yml-ben CPU-only
-               detektorra állítva + frigate újraindítva) összehasonlítható
-               legyen.
+Three subcommands:
+  resources  – CPU/RAM load of the docker containers, tagged with the current
+               camera count. Run it once for every camera count under test
+               (e.g. with 1, 2, 3 active phones).
+  latency    – spread (jitter) of the health_loop cycle + the latency between a
+               Frigate/fire-detector MQTT event and its WebSocket delivery.
+  detection  – measures the Frigate detector's mean inference time and the
+               cameras' detection_fps; --label gpu / --label cpu, so the two
+               runs (with GPU acceleration, then with the detector set to
+               CPU-only in config.yml + frigate restarted) can be compared.
 
-Használat:
-  pip install requests websockets paho-mqtt   # ha még nincs telepítve
+Usage:
+  pip install requests websockets paho-mqtt   # if not installed yet
 
   python3 measure.py resources --duration 60
   python3 measure.py latency --duration 120
   python3 measure.py detection --label gpu --duration 60
-  # ... majd a config.yml detector szekcióját cpu-ra állítva, frigate restart után:
+  # ... then, with the config.yml detector section set to cpu and frigate restarted:
   python3 measure.py detection --label cpu --duration 60
 
-Minden alparancs eredményt fűz a benchmark/results/*.csv fájlokhoz, hogy
-több futtatás (pl. különböző kameraszámmal) egymás alá gyűljön.
+Every subcommand appends its results to benchmark/results/*.csv, so several
+runs (e.g. with different camera counts) accumulate one below the other.
 """
 import argparse
 import csv
@@ -64,7 +63,7 @@ def _append_csv(path: str, rows: list[dict]) -> None:
 
 
 def _parse_mem_to_mb(mem_str: str) -> float:
-    """'123.4MiB' / '1.2GiB' / '512KiB' -> megabytes (MiB alapon)."""
+    """'123.4MiB' / '1.2GiB' / '512KiB' -> megabytes (MiB based)."""
     mem_str = mem_str.strip()
     units = (("GiB", 1024.0), ("MiB", 1.0), ("KiB", 1 / 1024.0), ("B", 1 / (1024.0 * 1024.0)))
     for suffix, multiplier in units:
@@ -85,7 +84,7 @@ def _get_camera_count(backend_url: str) -> int | None:
         resp.raise_for_status()
         return len(resp.json())
     except Exception as e:
-        print(f"WARN: nem sikerült lekérni a kameraszámot a backendtől ({e})", file=sys.stderr)
+        print(f"WARN: could not get the camera count from the backend ({e})", file=sys.stderr)
         return None
 
 
@@ -96,11 +95,11 @@ def _get_camera_count(backend_url: str) -> int | None:
 def cmd_resources(args):
     cam_count = args.cameras if args.cameras is not None else _get_camera_count(args.backend_url)
     if cam_count is None:
-        print("Adj meg kameraszámot a --cameras kapcsolóval, ha a backend nem elérhető.", file=sys.stderr)
+        print("Pass the camera count with --cameras if the backend is not reachable.", file=sys.stderr)
         sys.exit(1)
 
     n_samples = max(1, int(args.duration / args.interval))
-    print(f"[resources] {n_samples} minta, {args.interval}s-enként (~{args.duration}s), kameraszám={cam_count}")
+    print(f"[resources] {n_samples} samples, every {args.interval}s (~{args.duration}s), cameras={cam_count}")
 
     samples = {c: {"cpu": [], "mem_mb": []} for c in CONTAINERS}
     for i in range(n_samples):
@@ -110,7 +109,7 @@ def cmd_resources(args):
                 capture_output=True, text=True, timeout=10, check=True,
             ).stdout
         except Exception as e:
-            print(f"WARN: docker stats hiba: {e}", file=sys.stderr)
+            print(f"WARN: docker stats error: {e}", file=sys.stderr)
             time.sleep(args.interval)
             continue
 
@@ -130,7 +129,7 @@ def cmd_resources(args):
             samples[name]["cpu"].append(cpu)
             samples[name]["mem_mb"].append(mem_mb)
 
-        print(f"  minta {i + 1}/{n_samples}", end="\r", file=sys.stderr)
+        print(f"  sample {i + 1}/{n_samples}", end="\r", file=sys.stderr)
         time.sleep(args.interval)
     print(file=sys.stderr)
 
@@ -138,7 +137,7 @@ def cmd_resources(args):
     rows = []
     for name, d in samples.items():
         if not d["cpu"]:
-            print(f"WARN: nincs adat a(z) '{name}' konténerhez (fut-e docker compose-ból?)", file=sys.stderr)
+            print(f"WARN: no data for container '{name}' (is it running from docker compose?)", file=sys.stderr)
             continue
         rows.append({
             "timestamp": ts,
@@ -153,11 +152,11 @@ def cmd_resources(args):
 
     out_path = os.path.join(RESULTS_DIR, "resources.csv")
     _append_csv(out_path, rows)
-    print(f"\n{'konténer':24s} {'CPU átlag':>10s} {'CPU max':>10s} {'RAM átlag':>12s} {'RAM max':>12s}")
+    print(f"\n{'container':24s} {'CPU mean':>10s} {'CPU max':>10s} {'RAM mean':>12s} {'RAM max':>12s}")
     for r in rows:
         print(f"{r['container']:24s} {r['cpu_mean_pct']:>9.1f}% {r['cpu_max_pct']:>9.1f}% "
               f"{r['mem_mean_mb']:>10.1f}M {r['mem_max_mb']:>10.1f}M")
-    print(f"\n[resources] eredmény hozzáfűzve: {out_path}")
+    print(f"\n[resources] results appended: {out_path}")
 
 
 # ---------------------------------------------------------------------------
@@ -210,7 +209,7 @@ def cmd_latency(args):
         uri = args.ws_url
         try:
             async with websockets.connect(uri) as ws:
-                print(f"[latency] csatlakozva: {uri}")
+                print(f"[latency] connected: {uri}")
                 end_time = time.time() + args.duration
                 while time.time() < end_time:
                     try:
@@ -233,10 +232,10 @@ def cmd_latency(args):
                                 "label": data.get("label"),
                             })
         except Exception as e:
-            print(f"HIBA: WebSocket kapcsolat sikertelen ({e}). Fut-e a backend a {uri} címen?", file=sys.stderr)
+            print(f"ERROR: WebSocket connection failed ({e}). Is the backend running at {uri}?", file=sys.stderr)
 
-    print(f"[latency] mérés indul, {args.duration}s ... generálj eseményeket a mérés alatt "
-          f"(mozogj a kamera előtt / tarts tüzet a lencse elé), hogy legyen mit mérni.")
+    print(f"[latency] measuring for {args.duration}s ... generate events during the measurement "
+          f"(move in front of the camera / hold a flame in front of the lens) so there is something to measure.")
     asyncio.run(ws_listener())
 
     mqtt_client.loop_stop()
@@ -284,20 +283,20 @@ def cmd_latency(args):
     out_path = os.path.join(RESULTS_DIR, "latency.csv")
     _append_csv(out_path, [row])
 
-    print("\n--- health_loop ciklus (WebSocket 'status' üzenetek közti idő) ---")
+    print("\n--- health_loop cycle (time between WebSocket 'status' messages) ---")
     if intervals:
-        print(f"  minta: {len(intervals)}, átlag: {row['health_interval_mean_s']}s, szórás: {row['health_interval_stdev_s']}s")
+        print(f"  samples: {len(intervals)}, mean: {row['health_interval_mean_s']}s, stdev: {row['health_interval_stdev_s']}s")
     else:
-        print("  nincs elég 'status' üzenet (legalább 2 kell) - fut-e legalább egy kamera?")
+        print("  not enough 'status' messages (at least 2 needed) - is at least one camera running?")
 
-    print("\n--- MQTT esemény -> WebSocket kézbesítés késleltetése ---")
-    print(f"  MQTT eseményből érkezett: {len(mqtt_events)}, ebből párosítva: {len(latencies_ms)}")
+    print("\n--- MQTT event -> WebSocket delivery latency ---")
+    print(f"  MQTT events received: {len(mqtt_events)}, matched: {len(latencies_ms)}")
     if latencies_ms:
-        print(f"  átlag: {row['relay_latency_mean_ms']} ms, p95: {row['relay_latency_p95_ms']} ms")
+        print(f"  mean: {row['relay_latency_mean_ms']} ms, p95: {row['relay_latency_p95_ms']} ms")
     else:
-        print("  nem történt detektálási esemény a mérés alatt - generálj eseményt (mozgás/tűz) és ismételd meg.")
+        print("  no detection event during the measurement - generate an event (motion/fire) and repeat.")
 
-    print(f"\n[latency] eredmény hozzáfűzve: {out_path}")
+    print(f"\n[latency] results appended: {out_path}")
 
 
 # ---------------------------------------------------------------------------
@@ -313,11 +312,11 @@ def cmd_detection(args):
                           json={"user": args.user, "password": args.password}, timeout=5)
         r.raise_for_status()
     except Exception as e:
-        print(f"HIBA: Frigate bejelentkezés sikertelen ({e}).", file=sys.stderr)
+        print(f"ERROR: Frigate login failed ({e}).", file=sys.stderr)
         sys.exit(1)
 
     n_samples = max(1, int(args.duration / args.interval))
-    print(f"[detection] label='{args.label}', {n_samples} minta, {args.interval}s-enként")
+    print(f"[detection] label='{args.label}', {n_samples} samples, every {args.interval}s")
 
     detector_speeds: dict[str, list[float]] = {}
     total_detection_fps: list[float] = []
@@ -328,7 +327,7 @@ def cmd_detection(args):
             r.raise_for_status()
             stats = r.json()
         except Exception as e:
-            print(f"WARN: /api/stats hiba: {e}", file=sys.stderr)
+            print(f"WARN: /api/stats error: {e}", file=sys.stderr)
             time.sleep(args.interval)
             continue
 
@@ -341,7 +340,7 @@ def cmd_detection(args):
         fps_sum = sum(c.get("detection_fps", 0) or 0 for c in cams.values())
         total_detection_fps.append(fps_sum)
 
-        print(f"  minta {i + 1}/{n_samples}", end="\r", file=sys.stderr)
+        print(f"  sample {i + 1}/{n_samples}", end="\r", file=sys.stderr)
         time.sleep(args.interval)
     print(file=sys.stderr)
 
@@ -359,18 +358,18 @@ def cmd_detection(args):
         })
 
     if not rows:
-        print("HIBA: nem érkezett detector statisztika - ellenőrizd, hogy legalább egy kamera aktívan detektál-e.",
+        print("ERROR: no detector statistics received - check that at least one camera is actively detecting.",
               file=sys.stderr)
         sys.exit(1)
 
     out_path = os.path.join(RESULTS_DIR, "detection.csv")
     _append_csv(out_path, rows)
     for row in rows:
-        print(f"  detector={row['detector']:12s} inferencia átlag={row['inference_speed_mean_ms']:6.2f}ms "
-              f"max={row['inference_speed_max_ms']:6.2f}ms  összes detection_fps={row['detection_fps_total_mean']}")
-    print(f"\n[detection] eredmény hozzáfűzve: {out_path}")
-    print("Futtasd le mindkét label-lel (pl. 'gpu' és 'cpu', a config.yml detector szekciójának "
-          "átállítása + frigate újraindítás után), hogy a detection.csv-ben összehasonlítható legyen.")
+        print(f"  detector={row['detector']:12s} inference mean={row['inference_speed_mean_ms']:6.2f}ms "
+              f"max={row['inference_speed_max_ms']:6.2f}ms  total detection_fps={row['detection_fps_total_mean']}")
+    print(f"\n[detection] results appended: {out_path}")
+    print("Run it with both labels (e.g. 'gpu' and 'cpu', after switching the config.yml detector "
+          "section + restarting frigate) so detection.csv can be compared.")
 
 
 # ---------------------------------------------------------------------------
@@ -379,24 +378,24 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="command", required=True)
 
-    p_res = sub.add_parser("resources", help="CPU/RAM a kameraszám függvényében")
-    p_res.add_argument("--duration", type=float, default=60, help="mérés hossza másodpercben (alap: 60)")
-    p_res.add_argument("--interval", type=float, default=2, help="mintavételi köz másodpercben (alap: 2)")
-    p_res.add_argument("--cameras", type=int, default=None, help="kameraszám kézi megadása (alap: backendtől lekérve)")
+    p_res = sub.add_parser("resources", help="CPU/RAM as a function of camera count")
+    p_res.add_argument("--duration", type=float, default=60, help="measurement length in seconds (default: 60)")
+    p_res.add_argument("--interval", type=float, default=2, help="sampling interval in seconds (default: 2)")
+    p_res.add_argument("--cameras", type=int, default=None, help="set the camera count manually (default: fetched from the backend)")
     p_res.add_argument("--backend-url", dest="backend_url", default="http://localhost:8000")
     p_res.set_defaults(func=cmd_resources)
 
-    p_lat = sub.add_parser("latency", help="health_loop jitter + MQTT->WebSocket késleltetés")
-    p_lat.add_argument("--duration", type=float, default=120, help="mérés hossza másodpercben (alap: 120)")
+    p_lat = sub.add_parser("latency", help="health_loop jitter + MQTT->WebSocket latency")
+    p_lat.add_argument("--duration", type=float, default=120, help="measurement length in seconds (default: 120)")
     p_lat.add_argument("--ws-url", dest="ws_url", default="ws://localhost:8000/ws/cameras")
     p_lat.add_argument("--mqtt-host", dest="mqtt_host", default="localhost")
     p_lat.add_argument("--mqtt-port", dest="mqtt_port", type=int, default=1883)
     p_lat.set_defaults(func=cmd_latency)
 
-    p_det = sub.add_parser("detection", help="Frigate detektor inferencia-idő (GPU vs CPU-only)")
-    p_det.add_argument("--label", required=True, help="pl. 'gpu' vagy 'cpu' - a config.yml aktuális detektor módja")
-    p_det.add_argument("--duration", type=float, default=60, help="mérés hossza másodpercben (alap: 60)")
-    p_det.add_argument("--interval", type=float, default=2, help="mintavételi köz másodpercben (alap: 2)")
+    p_det = sub.add_parser("detection", help="Frigate detector inference time (GPU vs CPU-only)")
+    p_det.add_argument("--label", required=True, help="e.g. 'gpu' or 'cpu' - the current detector mode in config.yml")
+    p_det.add_argument("--duration", type=float, default=60, help="measurement length in seconds (default: 60)")
+    p_det.add_argument("--interval", type=float, default=2, help="sampling interval in seconds (default: 2)")
     p_det.add_argument("--frigate-url", dest="frigate_url", default="http://localhost:5000")
     p_det.add_argument("--user", default="admin")
     p_det.add_argument("--password", default="admin")

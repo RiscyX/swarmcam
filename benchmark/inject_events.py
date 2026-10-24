@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Szintetikus Frigate-esemenyeket publikal az MQTT brokerre, hogy a
-MQTT -> backend -> WebSocket relay keslelteteset merni lehessen akkor is,
-amikor eppen nincs valodi mozgas a kamera elott. A payload formatuma
-megegyezik a Frigate frigate/events uzeneteivel; a backend nem irja adatbazisba."""
+"""Publishes synthetic Frigate events to the MQTT broker, so the
+MQTT -> backend -> WebSocket relay latency can be measured even when
+there is no real motion in front of the camera. The payload format
+matches Frigate's frigate/events messages; the backend does not store them."""
 import json
 import sys
 import time

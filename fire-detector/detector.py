@@ -21,7 +21,7 @@ BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 SCAN_INTERVAL = int(os.getenv("SCAN_INTERVAL", 5))
 CONFIDENCE = float(os.getenv("CONFIDENCE", 0.8))
 MODEL_PATH = os.getenv("MODEL_PATH", "models/fire_smoke.pt")
-# A YOLO inference az NVIDIA GPU-ra megy, ha van; a CPU-t nem terheljuk vele.
+# YOLO inference runs on the NVIDIA GPU if there is one; it is kept off the CPU.
 DEVICE = os.getenv("DEVICE") or ("cuda:0" if torch.cuda.is_available() else "cpu")
 
 # Setup logging

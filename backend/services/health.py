@@ -44,7 +44,7 @@ def _orientation_label(angle) -> str | None:
 
 
 def _pipeline_orientation(camera_name: str | None) -> str | None:
-    """A kamera tényleges orientációja a go2rtc pipeline alapján."""
+    """The camera's actual orientation, based on the go2rtc pipeline."""
     if not camera_name or not FRIGATE_CONFIG.exists():
         return None
     try:
@@ -66,7 +66,7 @@ def _parse_info(info: dict, camera_name: str | None = None) -> dict:
     # User-set rotation lives in lensSettings.rotate; sensorOrientation is the
     # constant hardware mounting angle, not meaningful to display.
     lens = (active or {}).get("lensSettings", {}) if active else {}
-    # Pipeline orientáció (go2rtc config)优先, ha elérhető
+    # Prefer the pipeline orientation (go2rtc config) when available
     pipeline_orient = _pipeline_orientation(camera_name)
     return {
         "battery_level":  int(info["batteryPercent"]) if "batteryPercent" in info else None,

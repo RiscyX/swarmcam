@@ -108,18 +108,18 @@ export function CameraSpotlight({
   torchStates,
 }: CameraSpotlightProps) {
   const isMobile = useBreakpoint() === 'mobile'
-  // Ha a fókuszált kamera eltűnt a listából (törlés, újrascan), az elsőre esünk vissza.
+  // If the focused camera disappeared from the list (deleted, rescanned), fall back to the first one.
   const hero = cameras.find((camera) => camera.name === focusId) ?? cameras[0]
   const strip = cameras.filter((camera) => camera.name !== hero.name)
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      {/* key: promotáláskor a CameraCard cleanupja kinullázná az <img> src-jét — remount kell, mint a gridben */}
+      {/* key: on promotion CameraCard's cleanup would null the <img> src — it needs a remount, like in the grid */}
       <div
         className={isMobile ? 'w-full shrink-0' : 'flex min-h-0 flex-1 items-center justify-center overflow-hidden'}
         style={isMobile ? undefined : { containerType: 'size' }}
       >
-        {/* A hero mindig 16:9, a rendelkezésre álló helyre skálázva (cqw/cqh a fenti size-containerből) */}
+        {/* The hero is always 16:9, scaled to the available space (cqw/cqh from the size container above) */}
         <div
           className="aspect-video bg-[var(--bg-tile)]"
           style={{ width: isMobile ? '100%' : 'min(100cqw, calc(100cqh * 16 / 9))' }}

@@ -38,7 +38,7 @@ function readStoredLayout(): CameraLayout {
     const stored = localStorage.getItem(LAYOUT_STORAGE_KEY)
     if (stored && (VALID_LAYOUTS as string[]).includes(stored)) return stored as CameraLayout
   } catch {
-    // localStorage elérhetetlen (privát mód, letiltott sütik) — marad az alapértelmezett
+    // localStorage unavailable (private mode, blocked cookies) — keep the default
   }
   return 'auto'
 }
@@ -75,7 +75,7 @@ export function AppShell() {
     try {
       localStorage.setItem(LAYOUT_STORAGE_KEY, next)
     } catch {
-      // localStorage írás sikertelen — a layout csak addig él, amíg az oldal meg van nyitva
+      // localStorage write failed — the layout only lasts while the page is open
     }
   }, [])
 

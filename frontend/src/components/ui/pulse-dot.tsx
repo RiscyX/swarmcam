@@ -21,9 +21,9 @@ export interface PulseDotProps
     VariantProps<typeof pulseDotVariants> {
   /** Oldalhossz px-ben. */
   size?: number
-  /** Ciklusidő másodpercben. */
+  /** Cycle time in seconds. */
   speed?: number
-  /** Ha false, statikus pötty animáció nélkül, teljes opacitáson. */
+  /** If false, a static dot without animation, at full opacity. */
   animated?: boolean
 }
 
